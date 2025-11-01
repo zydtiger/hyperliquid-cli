@@ -1,3 +1,10 @@
+"""
+Order-related models and enums for the Hyperliquid CLI.
+
+This module provides enumerations for order time-in-force settings and other
+order-related configurations used in the Hyperliquid trading system.
+"""
+
 from enum import Enum
 
 
