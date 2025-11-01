@@ -49,7 +49,10 @@ class TestHyperliquidConfig:
             network="mainnet",
         )
         assert config.account_address == "0x1234567890123456789012345678901234567890"
-        assert config.private_key == "0x1234567890123456789012345678901234567890123456789012345678901234"
+        assert (
+            config.private_key
+            == "0x1234567890123456789012345678901234567890123456789012345678901234"
+        )
         assert config.network == NetworkType.MAINNET
 
     def test_valid_config_with_enum(self):
@@ -155,7 +158,12 @@ class TestTradingConfig:
     def test_slippage_constraints(self):
         """Test slippage field constraints."""
         # Valid values
-        valid_values = [Decimal("0.001"), Decimal("0.1"), Decimal("0.5"), Decimal("0.99")]
+        valid_values = [
+            Decimal("0.001"),
+            Decimal("0.1"),
+            Decimal("0.5"),
+            Decimal("0.99"),
+        ]
         for value in valid_values:
             config = TradingConfig(default_slippage=value)
             assert config.default_slippage == value
@@ -375,7 +383,10 @@ class TestConfig:
         }
         config = Config(**config_data)
 
-        assert config.hyperliquid.account_address == "0x1234567890123456789012345678901234567890"
+        assert (
+            config.hyperliquid.account_address
+            == "0x1234567890123456789012345678901234567890"
+        )
         assert config.hyperliquid.network == NetworkType.MAINNET
         assert config.trading.default_slippage == Decimal("0.02")
         assert config.trading.default_time_in_force == OrderTif.IOC
@@ -445,7 +456,10 @@ class TestConfig:
         }
         config = Config(**config_data)
         assert isinstance(config, Config)
-        assert config.hyperliquid.account_address == "0x1234567890123456789012345678901234567890"
+        assert (
+            config.hyperliquid.account_address
+            == "0x1234567890123456789012345678901234567890"
+        )
 
     def test_from_file_method(self):
         """Test from_file class method."""
@@ -461,7 +475,7 @@ class TestConfig:
         }
 
         # Create temporary config file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(config_data, f)
             temp_path = Path(f.name)
 
@@ -482,7 +496,7 @@ class TestConfig:
     def test_from_file_invalid_json(self):
         """Test from_file raises error for invalid JSON."""
         # Create temporary file with invalid JSON
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write('{"invalid": json}')  # Invalid JSON
             temp_path = Path(f.name)
 
@@ -502,7 +516,7 @@ class TestConfig:
         }
 
         # Create temporary config file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(config_data, f)
             temp_path = Path(f.name)
 
@@ -515,12 +529,14 @@ class TestConfig:
 
     def test_validate_assignment(self):
         """Test assignment validation works on nested configs."""
-        config = Config(**{
-            "hyperliquid": {
-                "account_address": "0x1234567890123456789012345678901234567890",
-                "private_key": "0x1234567890123456789012345678901234567890123456789012345678901234",
+        config = Config(
+            **{
+                "hyperliquid": {
+                    "account_address": "0x1234567890123456789012345678901234567890",
+                    "private_key": "0x1234567890123456789012345678901234567890123456789012345678901234",
+                }
             }
-        })
+        )
 
         # Valid assignments should work
         config.trading.default_slippage = Decimal("0.05")
@@ -564,7 +580,10 @@ class TestConfigIntegration:
         config = Config(**config_data)
 
         # Verify all values are correctly parsed and converted
-        assert config.hyperliquid.account_address == "0xabcdef123456789012345678901234567890abcdef"
+        assert (
+            config.hyperliquid.account_address
+            == "0xabcdef123456789012345678901234567890abcdef"
+        )
         assert config.hyperliquid.network == NetworkType.TESTNET
         assert config.trading.default_slippage == Decimal("0.025")
         assert config.trading.default_time_in_force == OrderTif.ALO
@@ -596,27 +615,37 @@ class TestConfigIntegration:
 
     def test_config_copy_and_update(self):
         """Test config copying and updating functionality."""
-        original_config = Config(**{
+
+        config_dict = {
             "hyperliquid": {
                 "account_address": "0x1234567890123456789012345678901234567890",
                 "private_key": "0x1234567890123456789012345678901234567890123456789012345678901234",
             }
-        })
+        }
+
+        original_config = Config(**config_dict)
 
         # Test copy
         copied_config = original_config.model_copy()
-        assert copied_config.hyperliquid.account_address == original_config.hyperliquid.account_address
+        assert (
+            copied_config.hyperliquid.account_address
+            == original_config.hyperliquid.account_address
+        )
 
         # Test copy with update
-        updated_config = original_config.model_copy(update={
-            "trading": TradingConfig(default_slippage=Decimal("0.05"))
-        })
+        updated_config = original_config.model_copy(
+            update={"trading": TradingConfig(default_slippage=Decimal("0.05"))}
+        )
         assert updated_config.trading.default_slippage == Decimal("0.05")
-        assert original_config.trading.default_slippage == Decimal("0.01")  # Original unchanged
+        assert original_config.trading.default_slippage == Decimal(
+            "0.01"
+        )  # Original unchanged
 
         # Validation should still work on update
         with pytest.raises(Exception) as exc_info:
-            original_config.model_copy(update={
-                "trading": TradingConfig(default_slippage=Decimal("2.0"))  # Invalid
-            })
+            original_config.model_copy(
+                update={
+                    "trading": TradingConfig(default_slippage=Decimal("2.0"))  # Invalid
+                }
+            )
         assert "Input should be less than 1" in str(exc_info.value)
