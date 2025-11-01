@@ -20,7 +20,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class NetworkType(Enum):
+class NetworkType(str, Enum):
     """Constants for network types."""
 
     MAINNET = "mainnet"
