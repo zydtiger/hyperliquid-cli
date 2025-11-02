@@ -11,7 +11,7 @@ import yaml
 
 import pytest
 
-from src.models.config import (
+from models.config import (
     BackendConfig,
     Config,
     ConfigurationError,
@@ -20,7 +20,7 @@ from src.models.config import (
     NetworkType,
     TradingConfig,
 )
-from src.models.order import OrderTif
+from models.order import OrderTif
 
 
 class TestNetworkType:
