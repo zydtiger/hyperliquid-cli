@@ -9,7 +9,7 @@ import shutil
 import typer
 from pathlib import Path
 
-from .interactive import InteractiveCLI
+from .interactive_cli import InteractiveCLI
 
 
 app = typer.Typer(

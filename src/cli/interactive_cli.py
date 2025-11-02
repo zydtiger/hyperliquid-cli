@@ -46,11 +46,15 @@ class InteractiveCLI(cmd.Cmd):
         print(f"Configured account: {self.config.hyperliquid.account_address}")
         print(f"Network: {self.config.hyperliquid.network}")
 
+        # TODO: use api.get_root for status, and format it
+
     def help_status(self) -> None:
         """Show help for the status command."""
         print("status - Show account status and information")
         print("Usage: status")
         print("This command is currently under development")
+
+        # TODO: update this
 
     def do_positions(self, args: str) -> None:
         """Show current positions (not implemented yet)."""
