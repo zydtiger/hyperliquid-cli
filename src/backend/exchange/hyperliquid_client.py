@@ -9,7 +9,7 @@ from decimal import Decimal
 from typing import List
 
 from .hyperliquid_connection import HyperliquidConnection
-from models.backend import (
+from models.api import (
     Ticker,
     CoinMetadata,
     PositionInfo,

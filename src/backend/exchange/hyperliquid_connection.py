@@ -13,7 +13,7 @@ from hyperliquid.exchange import Exchange
 from hyperliquid.utils import constants
 import eth_account
 
-from models.backend import ExchangeError
+from models.api import ExchangeError
 from models.config import Config, NetworkType
 
 
