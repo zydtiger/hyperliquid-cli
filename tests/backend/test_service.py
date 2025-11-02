@@ -23,6 +23,9 @@ from models.api import (
     PositionInfo,
     ExchangeError,
     LeverageType,
+    HealthResponse,
+    RootResponse,
+    HealthStatus,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
 
@@ -170,7 +173,8 @@ class TestCreateApp(TestBackendService):
         response = test_app.get("/health")
 
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy"}
+        expected_response = HealthResponse(status=HealthStatus.HEALTHY)
+        assert response.json() == expected_response.model_dump()
 
     def test_health_endpoint_failure(self, test_app: TestClient, mock_client: Mock):
         """Test health endpoint when connection fails."""
@@ -179,7 +183,8 @@ class TestCreateApp(TestBackendService):
         response = test_app.get("/health")
 
         assert response.status_code == 200
-        assert response.json() == {"status": "unhealthy"}
+        expected_response = HealthResponse(status=HealthStatus.UNHEALTHY)
+        assert response.json() == expected_response.model_dump()
 
     def test_health_endpoint_exception(self, test_app: TestClient, mock_client: Mock):
         """Test health endpoint when client throws exception."""
@@ -190,13 +195,17 @@ class TestCreateApp(TestBackendService):
         assert response.status_code == 503
         assert "Service unavailable" in response.json()["detail"]
 
-    def test_root_endpoint(self, test_app: TestClient):
+    def test_root_endpoint(self, test_app: TestClient, mock_client: Mock):
         """Test root endpoint returns API information."""
+        mock_client.test_connection.return_value = True
+
         response = test_app.get("/")
 
         assert response.status_code == 200
-        expected = {"api": "Hyperliquid API", "version": "1.0.0", "status": "running"}
-        assert response.json() == expected
+        expected_response = RootResponse(
+            api="Hyperliquid API", version="1.0.0", status=HealthStatus.HEALTHY
+        )
+        assert response.json() == expected_response.model_dump()
 
 
 class TestRequestHandlers(TestBackendService):
@@ -456,7 +465,8 @@ class TestIntegration(TestBackendService):
         # Test health
         response = test_app.get("/health")
         assert response.status_code == 200
-        assert response.json()["status"] == "healthy"
+        expected_health = HealthResponse(status=HealthStatus.HEALTHY)
+        assert response.json() == expected_health.model_dump()
 
         # Test available coins
         response = test_app.get("/available_coins")
