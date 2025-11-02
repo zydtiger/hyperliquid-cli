@@ -78,10 +78,13 @@ def create_app(config: Config) -> FastAPI:
         """Health check endpoint."""
         try:
             is_healthy = client.test_connection()
-            return HealthResponse(status=HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY)
+            return HealthResponse(
+                status=HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY
+            )
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Service unavailable: {str(e)}"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Service unavailable: {str(e)}",
             )
 
     # Add root endpoint
@@ -93,11 +96,12 @@ def create_app(config: Config) -> FastAPI:
             return RootResponse(
                 api="Hyperliquid API",
                 version="1.0.0",
-                status=HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY
+                status=HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY,
             )
         except Exception as e:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Service unavailable: {str(e)}"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Service unavailable: {str(e)}",
             )
 
     return app
