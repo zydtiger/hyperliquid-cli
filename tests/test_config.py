@@ -4,10 +4,10 @@ Comprehensive unit tests for configuration models.
 Tests all configuration classes, validators, constraints, and Pydantic V2 features.
 """
 
-import json
 import tempfile
 from decimal import Decimal
 from pathlib import Path
+import yaml
 
 import pytest
 
@@ -475,8 +475,8 @@ class TestConfig:
         }
 
         # Create temporary config file
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(config_data, f)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_data, f)
             temp_path = Path(f.name)
 
         try:
@@ -489,19 +489,34 @@ class TestConfig:
 
     def test_from_file_not_found(self):
         """Test from_file raises error for non-existent file."""
-        non_existent_path = Path("/tmp/does_not_exist_config.json")
+        non_existent_path = Path("/tmp/does_not_exist_config.yaml")
         with pytest.raises(ConfigurationError, match="Configuration file not found"):
             Config.from_file(non_existent_path)
 
-    def test_from_file_invalid_json(self):
-        """Test from_file raises error for invalid JSON."""
-        # Create temporary file with invalid JSON
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write('{"invalid": json}')  # Invalid JSON
+    def test_from_file_invalid_yaml(self):
+        """Test from_file raises error for invalid YAML."""
+        # Create temporary file with invalid YAML
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("invalid: yaml: content: [")  # Invalid YAML
             temp_path = Path(f.name)
 
         try:
-            with pytest.raises(Exception):  # Should raise JSON parsing error
+            with pytest.raises(
+                ConfigurationError, match="Invalid YAML in configuration file"
+            ):
+                Config.from_file(temp_path)
+        finally:
+            temp_path.unlink()
+
+    def test_from_file_empty_file(self):
+        """Test from_file raises error for empty file."""
+        # Create temporary empty file
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("")  # Empty file
+            temp_path = Path(f.name)
+
+        try:
+            with pytest.raises(ConfigurationError, match="Configuration file is empty"):
                 Config.from_file(temp_path)
         finally:
             temp_path.unlink()
@@ -516,8 +531,8 @@ class TestConfig:
         }
 
         # Create temporary config file
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            json.dump(config_data, f)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config_data, f)
             temp_path = Path(f.name)
 
         try:

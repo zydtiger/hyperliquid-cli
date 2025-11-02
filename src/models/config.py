@@ -8,7 +8,7 @@ with their respective validation logic.
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from jsoncomment import JsonComment
+import yaml
 from pydantic import BaseModel, Field, field_validator
 
 from .order import OrderTif
@@ -91,7 +91,7 @@ class Config(BaseModel, extra="forbid", validate_assignment=True):
     @classmethod
     def from_file(cls, config_path: Path) -> "Config":
         """
-        Load configuration from a JSONC file.
+        Load configuration from a YAML file.
 
         Args:
             config_path: Path to the configuration file
@@ -105,9 +105,16 @@ class Config(BaseModel, extra="forbid", validate_assignment=True):
         if not config_path.exists():
             raise ConfigurationError(f"Configuration file not found: {config_path}")
 
-        with open(config_path, "r") as f:
-            parser = JsonComment()
-            data = parser.load(f)
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise ConfigurationError(f"Invalid YAML in configuration file: {e}")
+        except Exception as e:
+            raise ConfigurationError(f"Error reading configuration file: {e}")
+
+        if data is None:
+            raise ConfigurationError("Configuration file is empty")
 
         return cls(**data)
 
