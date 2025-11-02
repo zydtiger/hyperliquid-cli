@@ -11,11 +11,12 @@ from typing import Optional
 
 import typer
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from .exchange.hyperliquid_client import HyperliquidClient
 from .request_handlers import setup_request_handlers
+from models.api import HealthResponse, RootResponse, HealthStatus
 from models.config import Config
 
 
@@ -72,22 +73,32 @@ def create_app(config: Config) -> FastAPI:
     setup_request_handlers(app, client)
 
     # Add health check endpoint
-    @app.get("/health")
+    @app.get("/health", response_model=HealthResponse)
     async def health_check():
         """Health check endpoint."""
         try:
             is_healthy = client.test_connection()
-            return {"status": "healthy" if is_healthy else "unhealthy"}
+            return HealthResponse(status=HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY)
         except Exception as e:
             raise HTTPException(
-                status_code=503, detail=f"Service unavailable: {str(e)}"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Service unavailable: {str(e)}"
             )
 
     # Add root endpoint
-    @app.get("/")
+    @app.get("/", response_model=RootResponse)
     async def root():
         """Root endpoint with API information."""
-        return {"api": "Hyperliquid API", "version": "1.0.0", "status": "running"}
+        try:
+            is_healthy = client.test_connection()
+            return RootResponse(
+                api="Hyperliquid API",
+                version="1.0.0",
+                status=HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Service unavailable: {str(e)}"
+            )
 
     return app
 

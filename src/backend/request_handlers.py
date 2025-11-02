@@ -11,7 +11,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Path, status
 
 from .exchange.hyperliquid_client import HyperliquidClient
-from models.backend import Ticker, CoinMetadata, PositionInfo, ExchangeError
+from models.api import Ticker, CoinMetadata, PositionInfo, ExchangeError
 
 
 logger = logging.getLogger(__name__)
