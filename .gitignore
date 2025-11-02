@@ -1,4 +1,4 @@
-config.jsonc
+config.yaml
 
 # Temporary files
 *.tmp

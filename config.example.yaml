@@ -1,0 +1,15 @@
+hyperliquid:
+  account_address: "your_ethereum_address_here"
+  private_key: "your_hyperliquid_private_key_here"
+  network: "mainnet" # 'mainnet' or 'testnet'
+
+trading:
+  default_slippage: 0.005 # 0.5%
+  default_time_in_force: "GTC"
+
+backend:
+  host: "localhost"
+  port: 8080
+
+  logging:
+    level: "INFO"

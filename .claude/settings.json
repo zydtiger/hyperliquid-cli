@@ -1,5 +1,5 @@
 {
   "permissions": {
-    "deny": ["Read(config.json)"]
+    "deny": ["Read(config.yaml)"]
   }
 }
