@@ -8,6 +8,9 @@ market orders, limit orders, stop orders, and intelligent TP/SL management.
 import os
 import shutil
 import typer
+from pathlib import Path
+
+from .interactive import InteractiveCLI
 
 
 app = typer.Typer(
@@ -18,11 +21,11 @@ app = typer.Typer(
 
 @app.command()
 def run(
-    config: str = typer.Option(
-        "config.jsonc",
+    config: Path = typer.Option(
+        "config.yaml",
         "--config",
         "-c",
-        help="Path to configuration file (default: config.jsonc)",
+        help="Path to configuration file (default: config.yaml)",
     ),
 ):
 
@@ -34,10 +37,8 @@ def run(
 
     # Run the CLI
     try:
-        # TODO: implement cli
-        # cli = InteractiveCLI(config)
-        # cli.run()
-        pass
+        cli = InteractiveCLI(config)
+        cli.run()
     except KeyboardInterrupt:
         typer.echo("\n👋 Goodbye!")
     except Exception as e:
@@ -49,7 +50,7 @@ def run(
 def create_config():
     """Create a default configuration file."""
     try:
-        shutil.copyfile("config.example.jsonc", "config.jsonc")
+        shutil.copyfile("config.example.yaml", "config.yaml")
         typer.echo("✅ Default configuration file created successfully!")
     except Exception as e:
         typer.echo(f"❌ Failed to create configuration file: {e}", err=True)
