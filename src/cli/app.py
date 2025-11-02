@@ -5,7 +5,6 @@ A command-line interface for the modular order system with support for
 market orders, limit orders, stop orders, and intelligent TP/SL management.
 """
 
-import os
 import shutil
 import typer
 from pathlib import Path
@@ -26,15 +25,12 @@ def run(
         "--config",
         "-c",
         help="Path to configuration file (default: config.yaml)",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
     ),
 ):
-
-    # Check if config file exists
-    if not os.path.exists(config):
-        typer.echo(f"❌ Configuration file '{config}' not found!", err=True)
-        typer.echo("Run 'create-config' to create a default configuration file.")
-        raise typer.Exit(1)
-
     # Run the CLI
     try:
         cli = InteractiveCLI(config)
