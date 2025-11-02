@@ -79,3 +79,13 @@ This is a Hyperliquid smart order trading system. The codebase follows a structu
 - Maintains compatibility with specific API structures
 - Uses type hints extensively for better code reliability
 - Follows Python best practices and SOLID principles
+
+## API Documentation Maintenance
+
+- **Important**: Whenever new API endpoints are added to the backend service or existing endpoints are modified, the API documentation at `docs/api.md` must be updated accordingly
+- The API documentation should include:
+  - Complete endpoint descriptions with HTTP methods and paths
+  - Request parameters (path, query, body) with types and descriptions
+  - Response schemas with examples
+  - Error responses with status codes and descriptions
+  - Usage examples where appropriate
