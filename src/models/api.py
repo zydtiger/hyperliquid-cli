@@ -1,17 +1,45 @@
 """
-Backend type definitions for the Hyperliquid CLI.
+API response models and error types for the Hyperliquid CLI.
 
-This module provides data models and exception classes used throughout the backend
-components for consistent behavior and debugging.
+This module provides Pydantic models and exception classes used for
+API communication between the CLI frontend and backend service.
 """
 
 from decimal import Decimal
 from enum import Enum
+from typing import Optional
+
 from pydantic import BaseModel, Field
+
+
+# ============================================================================
+# EXCEPTIONS / ERRORS
+# ============================================================================
+
+
+class APIError(Exception):
+    """Exception raised when the backend API returns an error response."""
+
+    def __init__(self, message: str, status_code: Optional[int] = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.message = message
 
 
 class ExchangeError(Exception):
     """Base exception class for exchange-related errors."""
+
+
+# ============================================================================
+# ENUMS / TYPES
+# ============================================================================
+
+
+class HealthStatus(str, Enum):
+    """Health status enum."""
+
+    HEALTHY = "healthy"
+    UNHEALTHY = "unhealthy"
 
 
 class LeverageType(str, Enum):
@@ -19,6 +47,25 @@ class LeverageType(str, Enum):
 
     ISOLATED = "isolated"
     CROSS = "cross"
+
+
+# ============================================================================
+# RESPONSE MODELS
+# ============================================================================
+
+
+class HealthResponse(BaseModel):
+    """Health check response model."""
+
+    status: HealthStatus
+
+
+class RootResponse(BaseModel):
+    """Root endpoint response model."""
+
+    api: str
+    version: str
+    status: HealthStatus
 
 
 class Ticker(BaseModel):
@@ -49,14 +96,27 @@ class PositionInfo(BaseModel):
     mark_price: Decimal = Field(..., description="Current mark price")
     unrealized_pnl: Decimal = Field(..., description="Unrealized profit and loss")
     leverage: int = Field(..., description="Position leverage")
-    leverage_type: LeverageType = Field(..., description="Type of leverage (isolated or cross)")
+    leverage_type: LeverageType = Field(
+        ..., description="Type of leverage (isolated or cross)"
+    )
     margin_used: Decimal = Field(..., description="Margin used for the position")
     cum_funding: Decimal = Field(..., description="Cumulative funding payments")
 
 
+# ============================================================================
+# EXPORTS
+# ============================================================================
+
 __all__ = [
+    # Exceptions
+    "APIError",
     "ExchangeError",
+    # Enums/Types
+    "HealthStatus",
     "LeverageType",
+    # Response Models
+    "HealthResponse",
+    "RootResponse",
     "Ticker",
     "CoinMetadata",
     "PositionInfo",
