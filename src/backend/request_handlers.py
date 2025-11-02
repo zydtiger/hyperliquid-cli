@@ -1,0 +1,161 @@
+"""
+FastAPI request handlers for Hyperliquid exchange operations.
+
+This module defines REST API endpoints that expose Hyperliquid client functionality
+through HTTP requests with proper error handling and response formatting.
+"""
+
+import logging
+from typing import List
+
+from fastapi import FastAPI, HTTPException, Path, status
+
+from .exchange.hyperliquid_client import HyperliquidClient
+from models.backend import Ticker, CoinMetadata, PositionInfo, ExchangeError
+
+
+logger = logging.getLogger(__name__)
+
+
+def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
+    """
+    Setup FastAPI request handlers with the provided Hyperliquid client.
+
+    Args:
+        app: FastAPI application instance
+        client: Shared Hyperliquid client instance
+    """
+
+    @app.get("/available_coins", response_model=List[str])
+    async def get_available_coins():
+        """
+        Get list of available trading coins.
+
+        Returns:
+            List[str]: List of available coin symbols
+        """
+        try:
+            coins = client.get_available_coins()
+            return coins
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting available coins: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error getting available coins: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.get("/ticker/{coin}", response_model=Ticker)
+    async def get_ticker(
+        coin: str = Path(..., description="Symbol of the cryptocurrency")
+    ):
+        """
+        Get ticker information for a specific coin.
+
+        Args:
+            coin: Symbol of the cryptocurrency
+
+        Returns:
+            Ticker: Ticker data
+        """
+        try:
+            ticker = client.get_ticker(coin)
+            return ticker
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting ticker for {coin}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error getting ticker for {coin}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.get("/metadata/{coin}", response_model=CoinMetadata)
+    async def get_metadata(
+        coin: str = Path(..., description="Symbol of the cryptocurrency")
+    ):
+        """
+        Get metadata for a specific coin.
+
+        Args:
+            coin: Symbol of the cryptocurrency
+
+        Returns:
+            CoinMetadata: Coin metadata
+        """
+        try:
+            metadata = client.get_metadata(coin)
+            return metadata
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting metadata for {coin}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error getting metadata for {coin}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.get("/positions", response_model=List[PositionInfo])
+    async def get_positions():
+        """
+        Get current open positions.
+
+        Returns:
+            List[PositionInfo]: List of open positions
+        """
+        try:
+            positions = client.get_positions()
+            return positions
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting positions: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error getting positions: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.get("/positions/{coin}", response_model=PositionInfo)
+    async def get_position(
+        coin: str = Path(..., description="Symbol of the cryptocurrency")
+    ):
+        """
+        Get position information for a specific coin.
+
+        Args:
+            coin: Symbol of the cryptocurrency
+
+        Returns:
+            PositionInfo: Position information
+        """
+        try:
+            positions = client.get_positions()
+
+            # Find position for the specified coin
+            for position in positions:
+                if position.coin == coin:
+                    return position
+
+            # If no position found, return empty position
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No position found for {coin}",
+            )
+
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting position for {coin}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except HTTPException:
+            # Re-raise HTTP exceptions (like 404)
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error getting position for {coin}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
