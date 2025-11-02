@@ -13,7 +13,7 @@ from typing import List, Dict, Any
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
 from backend.exchange.hyperliquid_connection import HyperliquidConnection
-from models.backend import (
+from models.api import (
     Ticker,
     CoinMetadata,
     ExchangeError,

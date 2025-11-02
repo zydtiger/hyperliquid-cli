@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from backend.service import create_app
 from backend.request_handlers import setup_request_handlers
 from backend.exchange.hyperliquid_client import HyperliquidClient
-from models.backend import (
+from models.api import (
     Ticker,
     CoinMetadata,
     PositionInfo,
