@@ -179,7 +179,7 @@ class Prompts:
         """
         while True:
             print("\n🎯 Select time-in-force policy:")
-            print("1. GTC - Good Till Cancelled (default)")
+            print("1. GTC - Good Till Cancelled")
             print("2. IOC - Immediate or Cancel")
             print("3. ALO - At Limit Order")
 
