@@ -14,7 +14,12 @@ from .config import (
     Config,
 )
 
-from .order import OrderTif
+from .order import (
+    OrderSide,
+    OrderTif,
+    MarketOrder,
+    LimitOrder,
+)
 
 __all__ = [
     "ConfigurationError",
@@ -24,5 +29,8 @@ __all__ = [
     "LoggingConfig",
     "BackendConfig",
     "Config",
+    "OrderSide",
     "OrderTif",
+    "MarketOrder",
+    "LimitOrder",
 ]
