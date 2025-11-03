@@ -5,6 +5,6 @@ This module provides the main interactive command-line interface
 with tab completion support and command handling.
 """
 
-from .interactive_cli import InteractiveCLI
+from .order_wizard import OrderWizard
 
-__all__ = ["InteractiveCLI"]
+__all__ = ["OrderWizard"]

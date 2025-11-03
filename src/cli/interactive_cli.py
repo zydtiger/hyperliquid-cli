@@ -13,6 +13,7 @@ from typing import List
 from models import Config
 from .api import BackendAPI
 from .formatters import TableFormatter
+from .interactive import OrderWizard
 
 
 class InteractiveCLI(cmd.Cmd):
@@ -33,14 +34,39 @@ class InteractiveCLI(cmd.Cmd):
         self.running = True
 
     def do_order(self, args: str) -> None:
-        """Place an order (not implemented yet)."""
-        print("🚧 Order functionality not implemented yet")
+        """
+        Place a new order using interactive wizard.
+
+        This command launches an interactive wizard that guides the user
+        through creating a new order with proper validation and market data.
+        """
+        try:
+            with BackendAPI(self.config) as api:
+                wizard = OrderWizard(self.config, api)
+                order = wizard.run()
+
+                # TODO: Submit order through API when implemented
+
+        except KeyboardInterrupt:
+            print("[CANCELLED] Order creation cancelled\n")
+        except Exception as e:
+            print(f"[ERROR] Failed to create order: {e}\n")
 
     def help_order(self) -> None:
         """Show help for the order command."""
-        print("order - Place a new order")
-        print("Usage: order <parameters>")
-        print("This command is currently under development")
+        print("order - Launch interactive order creation wizard")
+        print("Usage: order")
+        print()
+        print("This command starts an interactive wizard that guides you through:")
+        print("- Selecting a trading coin")
+        print("- Choosing order side (buy/sell)")
+        print("- Selecting order type (market/limit)")
+        print("- Setting price (for limit orders)")
+        print("- Specifying quantity")
+        print("- Configuring additional options")
+        print()
+        print("The wizard provides market data suggestions and validates all inputs.")
+        print("Order submission will be implemented in a future version.")
 
     def do_status(self, args: str) -> None:
         """Show account status."""
