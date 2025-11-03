@@ -13,6 +13,7 @@ from typing import List
 from models import Config
 from .api import BackendAPI
 from .formatters import TableFormatter
+from .formatters.order_formatter import OrderFormatter
 from .interactive import OrderWizard
 
 
@@ -48,9 +49,9 @@ class InteractiveCLI(cmd.Cmd):
                 # TODO: Submit order through API when implemented
 
         except KeyboardInterrupt:
-            print("[CANCELLED] Order creation cancelled\n")
+            print("❌ Order creation cancelled\n")
         except Exception as e:
-            print(f"[ERROR] Failed to create order: {e}\n")
+            print(f"❌ Failed to create order: {e}\n")
 
     def help_order(self) -> None:
         """Show help for the order command."""
@@ -201,10 +202,66 @@ class InteractiveCLI(cmd.Cmd):
         print(f"❌ Unknown command: {line}")
         print("Type 'help' or '?' to see available commands")
 
+    def do_order_status(self, args: str) -> None:
+        """
+        Get status and details of a specific order.
+
+        Usage: order_status <order_id>
+
+        Example: order_status 12345
+        """
+        if not args.strip():
+            print("❌ Error: Order ID is required")
+            print("Usage: order_status <order_id>")
+            print("Example: order_status 12345")
+            return
+
+        try:
+            order_id = int(args.strip())
+            if order_id <= 0:
+                raise ValueError("Order ID must be a positive integer")
+        except ValueError as e:
+            print(f"❌ Invalid order ID: {e}")
+            print("Order ID must be a positive integer")
+            return
+
+        try:
+            with BackendAPI(self.config) as api:
+                order_info = api.get_order_status(order_id)
+
+                # Use the order formatter to display OrderInfo
+                formatter = OrderFormatter()
+                print()
+                print(formatter.format(order_info))
+                print()
+
+        except Exception as e:
+            print(f"❌ Error fetching order status: {e}")
+
+    def help_order_status(self) -> None:
+        """Show help for the order_status command."""
+        print("order_status - Get status and details of a specific order")
+        print("Usage: order_status <order_id>")
+        print()
+        print("Arguments:")
+        print("  order_id    Order identifier (integer OID)")
+        print()
+        print("Example:")
+        print("  order_status 12345")
+        print()
+        print("This command displays comprehensive order information including:")
+        print("- Order ID, coin, side, and type")
+        print("- Current status (open, filled, cancelled, etc.)")
+        print("- Quantity, filled amount, and remaining amount")
+        print("- Price information (limit price, average fill price)")
+        print("- Order settings (TIF, reduce-only)")
+        print("- Creation timestamp")
+
     def completenames(self, text: str, *ignored: str) -> List[str]:
         """Override to provide custom command completion."""
         commands = [
             "order",
+            "order_status",
             "status",
             "positions",
             "conditionals",

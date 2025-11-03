@@ -18,6 +18,7 @@ from models.api import (
     CoinMetadata,
     PositionInfo,
 )
+from models.order import OrderInfo
 from models.config import Config
 
 
@@ -207,6 +208,27 @@ class BackendAPI:
             return PositionInfo(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get position for {coin}: {e}")
+            raise APIError(f"Connection error: {str(e)}")
+
+    def get_order_status(self, order_id: int) -> OrderInfo:
+        """
+        Get status and details of a specific order by its ID.
+
+        Args:
+            order_id: Order identifier (integer OID)
+
+        Returns:
+            OrderInfo: Detailed order information
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.get(f"/order_status/{order_id}")
+            self._handle_response_error(response)
+            return OrderInfo(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to get order status for {order_id}: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
     def close(self) -> None:
