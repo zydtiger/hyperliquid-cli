@@ -9,7 +9,7 @@ error handling, and edge cases.
 import pytest
 from decimal import Decimal
 from unittest.mock import Mock, patch
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Callable
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
 from backend.exchange.hyperliquid_connection import HyperliquidConnection
@@ -20,6 +20,7 @@ from models.api import (
     LeverageType,
     PositionInfo,
 )
+from models.order import OrderInfo, OrderSide, OrderType, OrderStatus, OrderTif
 from models.config import Config, HyperliquidConfig, NetworkType
 
 
@@ -40,7 +41,18 @@ class TestHyperliquidClient:
     def mock_connection(self) -> Mock:
         """Create a mock HyperliquidConnection."""
         connection = Mock(spec=HyperliquidConnection)
+        # Set up the info attribute as a mock object
+        connection.info = Mock()
         return connection
+
+    @pytest.fixture
+    def mock_retry_operation(self) -> Callable:
+        """Mock retry_operation that executes the function."""
+
+        def mock_retry_operation(func):
+            return func()
+
+        return mock_retry_operation
 
     @pytest.fixture
     def client(self, mock_config: Config, mock_connection: Mock) -> HyperliquidClient:
@@ -223,13 +235,14 @@ class TestHyperliquidClientAvailableCoins(TestHyperliquidClient):
         self,
         client: HyperliquidClient,
         mock_connection: Mock,
+        mock_retry_operation: Callable,
         sample_meta_response: Dict[str, Any],
     ):
         """Test successful retrieval of available coins."""
         mock_info = Mock()
         mock_info.meta.return_value = sample_meta_response
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_available_coins()
 
@@ -237,13 +250,16 @@ class TestHyperliquidClientAvailableCoins(TestHyperliquidClient):
         mock_connection.retry_operation.assert_called_once()
 
     def test_get_available_coins_empty_universe(
-        self, client: HyperliquidClient, mock_connection: Mock
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
     ):
         """Test handling of empty universe in meta response."""
         mock_info = Mock()
         mock_info.meta.return_value = {"universe": []}
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_available_coins()
 
@@ -299,6 +315,7 @@ class TestHyperliquidClientTicker(TestHyperliquidClient):
         self,
         client: HyperliquidClient,
         mock_connection: Mock,
+        mock_retry_operation: Callable,
         sample_meta_response: Dict[str, Any],
         sample_asset_ctxs_response: List[Dict[str, Any]],
     ):
@@ -309,7 +326,7 @@ class TestHyperliquidClientTicker(TestHyperliquidClient):
             sample_asset_ctxs_response,
         )
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         with pytest.raises(
             ExchangeError, match="Coin 'DOGE' not found in available trading pairs"
@@ -317,13 +334,16 @@ class TestHyperliquidClientTicker(TestHyperliquidClient):
             client.get_ticker("DOGE")
 
     def test_get_ticker_meta_failure(
-        self, client: HyperliquidClient, mock_connection: Mock
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
     ):
         """Test ticker retrieval when meta call fails."""
         mock_info = Mock()
         mock_info.meta_and_asset_ctxs.return_value = (None, [])
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         with pytest.raises(
             ExchangeError, match="Failed to retrieve market metadata from exchange"
@@ -351,13 +371,14 @@ class TestHyperliquidClientMetadata(TestHyperliquidClient):
         self,
         client: HyperliquidClient,
         mock_connection: Mock,
+        mock_retry_operation: Callable,
         sample_meta_response: Dict[str, Any],
     ):
         """Test successful metadata retrieval."""
         mock_info = Mock()
         mock_info.meta.return_value = sample_meta_response
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_metadata("ETH")
 
@@ -372,13 +393,14 @@ class TestHyperliquidClientMetadata(TestHyperliquidClient):
         self,
         client: HyperliquidClient,
         mock_connection: Mock,
+        mock_retry_operation: Callable,
         sample_meta_response: Dict[str, Any],
     ):
         """Test metadata retrieval for non-existent coin."""
         mock_info = Mock()
         mock_info.meta.return_value = sample_meta_response
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         with pytest.raises(
             ExchangeError, match="Coin 'DOGE' not found in available trading pairs"
@@ -386,13 +408,16 @@ class TestHyperliquidClientMetadata(TestHyperliquidClient):
             client.get_metadata("DOGE")
 
     def test_get_metadata_meta_failure(
-        self, client: HyperliquidClient, mock_connection: Mock
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
     ):
         """Test metadata retrieval when meta call fails."""
         mock_info = Mock()
         mock_info.meta.return_value = None
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         with pytest.raises(
             ExchangeError, match="Failed to retrieve market metadata from exchange"
@@ -494,33 +519,42 @@ class TestHyperliquidClientPositions(TestHyperliquidClient):
         assert positions_by_coin["BTC"] == expected_btc_position
 
     def test_get_positions_empty_positions(
-        self, client: HyperliquidClient, mock_connection: Mock
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
     ):
         """Test positions retrieval when no positions exist."""
         mock_info = Mock()
         mock_info.user_state.return_value = {"assetPositions": []}
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_positions()
 
         assert result == []
 
     def test_get_positions_no_asset_positions_key(
-        self, client: HyperliquidClient, mock_connection: Mock
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
     ):
         """Test positions retrieval when assetPositions key is missing."""
         mock_info = Mock()
         mock_info.user_state.return_value = {}
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_positions()
 
         assert result == []
 
     def test_get_positions_only_zero_sized(
-        self, client: HyperliquidClient, mock_connection: Mock
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
     ):
         """Test positions retrieval when all positions are zero-sized."""
         user_state = {
@@ -551,7 +585,7 @@ class TestHyperliquidClientPositions(TestHyperliquidClient):
         mock_info = Mock()
         mock_info.user_state.return_value = user_state
         mock_connection.info = mock_info
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_positions()
 
@@ -696,10 +730,13 @@ class TestHyperliquidClientEdgeCases(TestHyperliquidClient):
         assert len(result) == 0
 
     def test_retry_operation_called_on_all_methods(
-        self, client: HyperliquidClient, mock_connection: Mock
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
     ):
         """Test that retry_operation is called on all data retrieval methods."""
-        mock_connection.retry_operation.side_effect = lambda func: func()
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         # Mock the info object
         mock_info = Mock()
@@ -721,3 +758,516 @@ class TestHyperliquidClientEdgeCases(TestHyperliquidClient):
 
         # Verify retry_operation was called for each method
         assert mock_connection.retry_operation.call_count == 4
+
+
+class TestHyperliquidClientOrderStatus(TestHyperliquidClient):
+    """Test cases for the get_order_status method."""
+
+    def test_get_order_status_success_limit_order(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ):
+        """Test successful order status retrieval for a limit order."""
+        # Mock API response matching actual structure
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3700.0",
+                    "sz": "0.002",  # remaining quantity
+                    "oid": 220717680685,
+                    "timestamp": 1762141573004,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",  # original quantity
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762141573004,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=220717680685,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.003"),
+            price=Decimal("3700.0"),
+            filled_quantity=Decimal("0.001"),  # origSz - sz
+            remaining_quantity=Decimal("0.002"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1762141573004,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(220717680685)
+
+        assert result == expected_order
+        mock_connection.info.query_order_by_oid.assert_called_once_with(
+            "0x1234567890123456789012345678901234567890", 220717680685
+        )
+
+    def test_get_order_status_success_market_order(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ):
+        """Test successful order status retrieval for a market order."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "BTC",
+                    "side": "S",
+                    "sz": "0.0",  # fully filled
+                    "oid": 220717680686,
+                    "timestamp": 1762141573005,
+                    "reduceOnly": False,
+                    "orderType": "Market",
+                    "origSz": "0.1",
+                    "averageFillPx": "42500.5",
+                },
+                "status": "filled",
+                "statusTimestamp": 1762141573006,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=220717680686,
+            coin="BTC",
+            side=OrderSide.SELL,
+            order_type=OrderType.MARKET,
+            quantity=Decimal("0.1"),
+            price=None,  # Market orders have no limit price
+            filled_quantity=Decimal("0.1"),
+            remaining_quantity=Decimal("0.0"),
+            average_fill_price=Decimal("42500.5"),
+            status=OrderStatus.FILLED,
+            timestamp=1762141573005,
+            reduce_only=False,
+            time_in_force=None,  # Market orders typically don't have TIF
+        )
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(220717680686)
+
+        assert result == expected_order
+
+    def test_get_order_status_partially_filled(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ):
+        """Test order status retrieval for a partially filled order."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "SOL",
+                    "side": "B",
+                    "limitPx": "150.0",
+                    "sz": "0.5",  # remaining quantity
+                    "oid": 220717680687,
+                    "timestamp": 1762141573007,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "1.0",  # original quantity
+                    "tif": "Ioc",
+                    "averageFillPx": "149.8",
+                },
+                "status": "partially_filled",
+                "statusTimestamp": 1762141573008,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=220717680687,
+            coin="SOL",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("1.0"),
+            price=Decimal("150.0"),
+            filled_quantity=Decimal("0.5"),
+            remaining_quantity=Decimal("0.5"),
+            average_fill_price=Decimal("149.8"),
+            status=OrderStatus.PARTIALLY_FILLED,
+            timestamp=1762141573007,
+            reduce_only=False,
+            time_in_force=OrderTif.IOC,
+        )
+
+        mock_connection.retry_operation.return_value = expected_order
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(220717680687)
+
+        assert result == expected_order
+
+    def test_get_order_status_order_status_mapped_to_open(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ):
+        """Test that 'order' status from API is mapped to OPEN."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3700.0",
+                    "sz": "0.003",
+                    "oid": 220717680688,
+                    "timestamp": 1762141573009,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "order",  # API returns "order" status
+                "statusTimestamp": 1762141573009,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=220717680688,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.003"),
+            price=Decimal("3700.0"),
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("0.003"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,  # Should be mapped from "order" to "open"
+            timestamp=1762141573009,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+
+        mock_connection.retry_operation.return_value = expected_order
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(220717680688)
+
+        assert result.status == OrderStatus.OPEN
+
+    def test_get_order_status_not_found(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ):
+        """Test order status retrieval when order is not found."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = None
+
+        with pytest.raises(ExchangeError) as exc_info:
+            client.get_order_status(999999999)
+
+        assert "Order 999999999 not found" in str(exc_info.value)
+
+    def test_get_order_status_empty_response(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ):
+        """Test order status retrieval when API returns empty response."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = {}
+
+        with pytest.raises(ExchangeError) as exc_info:
+            client.get_order_status(999999999)
+
+        assert "Order 999999999 not found" in str(exc_info.value)
+
+    def test_get_order_status_api_error(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ):
+        """Test order status retrieval when API returns an error."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.side_effect = Exception("API Error")
+
+        with pytest.raises(ExchangeError) as exc_info:
+            client.get_order_status(123456)
+
+        assert "Failed to get order status: API Error" in str(exc_info.value)
+
+    def test_get_order_status_with_retry_mechanism(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ):
+        """Test that retry mechanism is used for order status retrieval."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "BTC",
+                    "side": "B",
+                    "sz": "0.1",
+                    "oid": 220717680689,
+                    "timestamp": 1762141573010,
+                    "reduceOnly": True,
+                    "orderType": "Limit",
+                    "origSz": "0.1",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762141573010,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=220717680689,
+            coin="BTC",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.1"),
+            price=None,
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("0.1"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1762141573010,
+            reduce_only=True,
+            time_in_force=OrderTif.GTC,
+        )
+
+        mock_connection.retry_operation.return_value = expected_order
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(220717680689)
+
+        assert result == expected_order
+        # Verify retry_operation was called
+        mock_connection.retry_operation.assert_called_once()
+
+    def test_get_order_status_reduce_only_order(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ):
+        """Test order status retrieval for a reduce-only order."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "S",  # Reduce-only sell order
+                    "limitPx": "3800.0",
+                    "sz": "0.05",
+                    "oid": 220717680690,
+                    "timestamp": 1762141573011,
+                    "reduceOnly": True,
+                    "orderType": "Limit",
+                    "origSz": "0.1",
+                    "tif": "Alo",
+                },
+                "status": "open",
+                "statusTimestamp": 1762141573011,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=220717680690,
+            coin="ETH",
+            side=OrderSide.SELL,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.1"),
+            price=Decimal("3800.0"),
+            filled_quantity=Decimal("0.05"),
+            remaining_quantity=Decimal("0.05"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1762141573011,
+            reduce_only=True,
+            time_in_force=OrderTif.ALO,
+        )
+
+        mock_connection.retry_operation.return_value = expected_order
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(220717680690)
+
+        assert result == expected_order
+        assert result.reduce_only is True
+
+    def test_get_order_status_cancelled_order(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ):
+        """Test order status retrieval for a cancelled order."""
+        # Mock API response matching the cancelled order sample structure
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3842.3",
+                    "sz": "0.003",
+                    "oid": 217754135125,
+                    "timestamp": 1761876222838,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "canceled",
+                "statusTimestamp": 1761876248833,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=217754135125,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.003"),
+            price=Decimal("3842.3"),
+            filled_quantity=Decimal("0.0"),  # Order was cancelled before any fills
+            remaining_quantity=Decimal("0.003"),  # Full quantity remaining
+            average_fill_price=None,
+            status=OrderStatus.CANCELLED,
+            timestamp=1761876222838,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+
+        mock_connection.retry_operation.return_value = expected_order
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(217754135125)
+
+        assert result == expected_order
+        assert result.status == OrderStatus.CANCELLED
+        assert result.filled_quantity == Decimal("0.0")
+        assert result.remaining_quantity == Decimal("0.003")
+
+    def test_get_order_status_cancelled_with_partial_fill(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ):
+        """Test order status retrieval for a cancelled order with partial fills."""
+        # Mock API response for a cancelled order that had partial fills
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "BTC",
+                    "side": "S",
+                    "limitPx": "50000.0",
+                    "sz": "0.1",  # Remaining quantity after partial fill
+                    "oid": 217754135126,
+                    "timestamp": 1761876222839,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.2",  # Original quantity was larger
+                    "tif": "Ioc",
+                    "averageFillPx": "49500.0",  # Average fill price for partial fills
+                },
+                "status": "canceled",
+                "statusTimestamp": 1761876248834,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=217754135126,
+            coin="BTC",
+            side=OrderSide.SELL,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.2"),  # Original quantity
+            price=Decimal("50000.0"),
+            filled_quantity=Decimal("0.1"),  # Partial fill amount
+            remaining_quantity=Decimal("0.1"),  # Remaining amount
+            average_fill_price=Decimal("49500.0"),
+            status=OrderStatus.CANCELLED,
+            timestamp=1761876222839,
+            reduce_only=False,
+            time_in_force=OrderTif.IOC,
+        )
+
+        mock_connection.retry_operation.return_value = expected_order
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(217754135126)
+
+        assert result == expected_order
+        assert result.status == OrderStatus.CANCELLED
+        assert result.filled_quantity == Decimal("0.1")
+        assert result.remaining_quantity == Decimal("0.1")
+        assert result.average_fill_price == Decimal("49500.0")
+
+    @pytest.mark.parametrize(
+        "api_status,expected_status",
+        [
+            ("canceled", OrderStatus.CANCELLED),
+            ("cancelled", OrderStatus.CANCELLED),
+            ("filled", OrderStatus.FILLED),
+            ("rejected", OrderStatus.REJECTED),
+            ("failed", OrderStatus.REJECTED),
+        ],
+    )
+    def test_get_order_status_status_variations(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        api_status: str,
+        expected_status: OrderStatus,
+    ):
+        """Test order status retrieval with various status strings from API."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3000.0",
+                    "sz": "0.1",
+                    "oid": 217754135127,
+                    "timestamp": 1761876222840,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.1",
+                    "tif": "Gtc",
+                },
+                "status": api_status,
+                "statusTimestamp": 1761876248835,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=217754135127,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.1"),
+            price=Decimal("3000.0"),
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("0.1"),
+            average_fill_price=None,
+            status=expected_status,
+            timestamp=1761876222840,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+
+        mock_connection.retry_operation.return_value = expected_order
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(217754135127)
+        assert result.status == expected_status

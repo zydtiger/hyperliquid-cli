@@ -7,6 +7,7 @@ handling data retrieval and portfolio management operations.
 
 from decimal import Decimal
 from typing import List
+from hyperliquid.utils.signing import Tif
 
 from .hyperliquid_connection import HyperliquidConnection
 from models.api import (
@@ -15,6 +16,16 @@ from models.api import (
     PositionInfo,
     ExchangeError,
     LeverageType,
+)
+from models.order import (
+    MarketOrder,
+    LimitOrder,
+    OrderResult,
+    OrderSide,
+    OrderStatus,
+    OrderTif,
+    OrderType,
+    OrderInfo,
 )
 from models.config import Config
 
@@ -194,6 +205,149 @@ class HyperliquidClient:
             return positions
 
         return self.connection.retry_operation(_get_positions)
+
+    def get_order_status(self, order_id: int) -> OrderInfo:
+        """
+        Get the status and details of an order by its ID.
+
+        Args:
+            order_id: Order identifier (integer OID)
+
+        Returns:
+            OrderInfo: Detailed order information
+
+        Raises:
+            ExchangeError: If order status query fails
+        """
+
+        def _get_order_status():
+            try:
+                user_address = self.config.hyperliquid.account_address
+                result = self.connection.info.query_order_by_oid(user_address, order_id)
+
+                print(result)
+
+                if not result or not result.get("order"):
+                    raise ExchangeError(f"Order {order_id} not found")
+
+                # order_status_sample = {
+                #     "status": "order",
+                #     "order": {
+                #         "order": {
+                #             "coin": "ETH",
+                #             "side": "B",
+                #             "limitPx": "3700.0",
+                #             "sz": "0.003",
+                #             "oid": 220717680685,
+                #             "timestamp": 1762141573004,
+                #             "triggerCondition": "N/A",
+                #             "isTrigger": False,
+                #             "triggerPx": "0.0",
+                #             "children": [],
+                #             "isPositionTpsl": False,
+                #             "reduceOnly": False,
+                #             "orderType": "Limit",
+                #             "origSz": "0.003",
+                #             "tif": "Gtc",
+                #             "cloid": None,
+                #         },
+                #         "status": "open",
+                #         "statusTimestamp": 1762141573004,
+                #     },
+                # }
+
+                # order_status_sample_cancel = {
+                #     "status": "order",
+                #     "order": {
+                #         "order": {
+                #             "coin": "ETH",
+                #             "side": "B",
+                #             "limitPx": "3842.3",
+                #             "sz": "0.003",
+                #             "oid": 217754135125,
+                #             "timestamp": 1761876222838,
+                #             "triggerCondition": "N/A",
+                #             "isTrigger": False,
+                #             "triggerPx": "0.0",
+                #             "children": [],
+                #             "isPositionTpsl": False,
+                #             "reduceOnly": False,
+                #             "orderType": "Limit",
+                #             "origSz": "0.003",
+                #             "tif": "Gtc",
+                #             "cloid": None,
+                #         },
+                #         "status": "canceled",
+                #         "statusTimestamp": 1761876248833,
+                #     },
+                # }
+
+                # Extract order wrapper and actual order data from nested structure
+                order_wrapper = result["order"]
+                order_data = order_wrapper["order"]
+                status_str = order_wrapper.get("status", "unknown").lower()
+
+                # Map status strings to our enum
+                if status_str == "open":
+                    status = OrderStatus.OPEN
+                elif status_str == "filled":
+                    status = OrderStatus.FILLED
+                elif status_str == "canceled":
+                    status = OrderStatus.CANCELLED
+                elif status_str in ("rejected", "failed"):
+                    status = OrderStatus.REJECTED
+                else:
+                    status = OrderStatus.PARTIALLY_FILLED
+
+                # Convert quantities and prices from API field names
+                # Use origSz for original quantity, sz for current remaining quantity
+                original_quantity = Decimal(str(order_data.get("origSz", "0")))
+                current_quantity = Decimal(str(order_data.get("sz", "0")))
+                filled_quantity = original_quantity - current_quantity
+                remaining_quantity = current_quantity
+
+                # Get limit price if available (limitPx is the API field name)
+                limit_px = order_data.get("limitPx")
+                price = Decimal(str(limit_px)) if limit_px and limit_px != "0" else None
+
+                # Get average fill price if available
+                avg_fill_px = order_data.get("averageFillPx")
+                average_fill_price = Decimal(str(avg_fill_px)) if avg_fill_px else None
+
+                # Convert TIF if available (tif field exists in API)
+                tif_value = order_data.get("tif")
+                time_in_force = OrderTif(tif_value.upper()) if tif_value else None
+
+                # Determine order type from API orderType field
+                order_type_str = order_data.get("orderType", "Limit").upper()
+                order_type = (
+                    OrderType.LIMIT if order_type_str == "LIMIT" else OrderType.MARKET
+                )
+
+                return OrderInfo(
+                    order_id=order_id,
+                    coin=order_data.get("coin", ""),
+                    side=(
+                        OrderSide.BUY
+                        if order_data.get("side") == "B"
+                        else OrderSide.SELL
+                    ),
+                    order_type=order_type,
+                    quantity=original_quantity,
+                    price=price,
+                    filled_quantity=filled_quantity,
+                    remaining_quantity=remaining_quantity,
+                    average_fill_price=average_fill_price,
+                    status=status,
+                    timestamp=int(order_data.get("timestamp", 0)),
+                    reduce_only=bool(order_data.get("reduceOnly", False)),
+                    time_in_force=time_in_force,
+                )
+
+            except Exception as e:
+                raise ExchangeError(f"Failed to get order status: {e}")
+
+        return self.connection.retry_operation(_get_order_status)
 
 
 __all__ = [
