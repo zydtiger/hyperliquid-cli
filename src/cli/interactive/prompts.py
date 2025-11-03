@@ -192,7 +192,7 @@ class Prompts:
                     f"Enter choice (1-3, default={default_index}): "
                 ).strip() or str(default_index)
                 choice = int(choice_str)
-                return tif_values[choice]
+                return tif_values[choice - 1]
 
             except (ValueError, IndexError):
                 print("❌ Please enter 1, 2, or 3")
