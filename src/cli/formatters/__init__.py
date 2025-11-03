@@ -6,5 +6,6 @@ in the command-line interface.
 """
 
 from .table_formatter import TableFormatter
+from .order_formatter import OrderFormatter
 
-__all__ = ["TableFormatter"]
+__all__ = ["TableFormatter", "OrderFormatter"]
