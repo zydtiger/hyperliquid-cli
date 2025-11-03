@@ -21,7 +21,7 @@ Root endpoint with API information.
 ```json
 {
   "api": "Hyperliquid API",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "status": "running"
 }
 ```
@@ -102,6 +102,93 @@ Get metadata for a specific cryptocurrency, including trading specifications.
 - `400 Bad Request`: Invalid coin symbol or exchange error
 - `500 Internal Server Error`: Unexpected server error
 
+### Order Endpoints
+
+#### GET /order_status/{order_id}
+Get status and details of a specific order by its ID.
+
+**Path Parameters:**
+- `order_id` (integer): Order identifier (OID) from the exchange
+
+**Response:**
+```json
+{
+  "order_id": 220717680685,
+  "coin": "ETH",
+  "side": "buy",
+  "order_type": "limit",
+  "quantity": "0.003",
+  "price": "3842.3",
+  "filled_quantity": "0.003",
+  "remaining_quantity": "0.0",
+  "average_fill_price": "3842.5",
+  "status": "filled",
+  "timestamp": 1762141573004,
+  "reduce_only": false,
+  "time_in_force": "GTC"
+}
+```
+
+**Field Descriptions:**
+- `order_id`: Unique order identifier from the exchange
+- `coin`: Trading pair symbol
+- `side`: Order side ("buy" or "sell")
+- `order_type`: Order type ("limit" or "market")
+- `quantity`: Original order quantity
+- `price`: Limit price (null for market orders)
+- `filled_quantity`: Quantity that has been filled
+- `remaining_quantity`: Quantity remaining to be filled
+- `average_fill_price`: Average price of filled orders (null if no fills)
+- `status`: Order status ("open", "filled", "cancelled", "rejected", "partially_filled")
+- `timestamp`: Order creation timestamp (Unix timestamp in milliseconds)
+- `reduce_only`: Whether the order is reduce-only (true/false)
+- `time_in_force`: Time in force policy ("GTC" = Good Till Cancelled, "IOC" = Immediate or Cancel, "ALO" = At Limit Order, null for market orders)
+
+**Error Responses:**
+- `400 Bad Request`: Invalid order ID or exchange error
+- `404 Not Found`: Order not found
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Get order status
+curl http://localhost:8080/order_status/220717680685
+
+# Response for cancelled order
+{
+  "order_id": 217754135125,
+  "coin": "ETH",
+  "side": "buy",
+  "order_type": "limit",
+  "quantity": "0.003",
+  "price": "3842.3",
+  "filled_quantity": "0.0",
+  "remaining_quantity": "0.003",
+  "average_fill_price": null,
+  "status": "cancelled",
+  "timestamp": 1761876222838,
+  "reduce_only": false,
+  "time_in_force": "GTC"
+}
+
+# Response for partially filled IOC order
+{
+  "order_id": 217754135126,
+  "coin": "BTC",
+  "side": "sell",
+  "order_type": "limit",
+  "quantity": "0.2",
+  "price": "50000.0",
+  "filled_quantity": "0.1",
+  "remaining_quantity": "0.1",
+  "average_fill_price": "49500.0",
+  "status": "cancelled",
+  "timestamp": 1761876222839,
+  "reduce_only": false,
+  "time_in_force": "IOC"
+}
+```
+
 ### Portfolio Endpoints
 
 #### GET /positions
@@ -180,8 +267,14 @@ curl http://localhost:8080/available_coins
 # Get BTC ticker
 curl http://localhost:8080/ticker/BTC
 
+# Get order status
+curl http://localhost:8080/order_status/220717680685
+
 # Get all positions
 curl http://localhost:8080/positions
+
+# Get specific position
+curl http://localhost:8080/positions/BTC
 
 # Health check
 curl http://localhost:8080/health

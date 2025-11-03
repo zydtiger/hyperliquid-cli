@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, Path, status
 
 from .exchange.hyperliquid_client import HyperliquidClient
 from models.api import Ticker, CoinMetadata, PositionInfo, ExchangeError
+from models.order import OrderInfo
 
 
 logger = logging.getLogger(__name__)
@@ -155,6 +156,32 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             raise
         except Exception as e:
             logger.error(f"Unexpected error getting position for {coin}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.get("/order_status/{order_id}", response_model=OrderInfo)
+    async def get_order_status(
+        order_id: int = Path(..., description="Order ID (integer OID)", ge=1)
+    ):
+        """
+        Get status and details of a specific order by its ID.
+
+        Args:
+            order_id: Order identifier (integer OID)
+
+        Returns:
+            OrderInfo: Detailed order information
+        """
+        try:
+            order_info = client.get_order_status(order_id)
+            return order_info
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting order status for {order_id}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error getting order status for {order_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
