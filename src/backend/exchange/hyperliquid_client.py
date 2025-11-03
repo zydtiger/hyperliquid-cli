@@ -349,6 +349,129 @@ class HyperliquidClient:
 
         return self.connection.retry_operation(_get_order_status)
 
+    def submit_market_order(self, order: MarketOrder) -> OrderResult:
+        """
+        Submit a market order to the exchange.
+
+        Args:
+            order: MarketOrder object containing order parameters
+
+        Returns:
+            OrderResult: Result of the order submission
+
+        Raises:
+            ExchangeError: If order submission fails
+        """
+
+        def _submit_market_order():
+            try:
+                # Use market_open for buying, market_close for selling
+                slippage = float(self.config.trading.default_slippage)
+                if order.side.value == "buy":
+                    result = self.connection.exchange.market_open(
+                        name=order.coin,
+                        is_buy=True,
+                        sz=float(order.quantity),
+                        px=None,  # Market price
+                        slippage=slippage,
+                    )
+                else:  # sell
+                    result = self.connection.exchange.market_close(
+                        coin=order.coin,
+                        sz=float(order.quantity),
+                        px=None,  # Market price
+                        slippage=slippage,
+                    )
+
+                # Parse response
+                if result.get("status") == "ok":
+                    return OrderResult(
+                        success=True,
+                        order_id=result.get("response", {}).get("order_id"),
+                        status=OrderStatus.OPEN,
+                        message="Market order submitted successfully",
+                    )
+                else:
+                    return OrderResult(
+                        success=False,
+                        status=OrderStatus.REJECTED,
+                        message="Market order submission failed",
+                        error=result.get("response", "Unknown error"),
+                    )
+
+            except Exception as e:
+                return OrderResult(
+                    success=False,
+                    status=OrderStatus.REJECTED,
+                    message="Market order submission failed",
+                    error=str(e),
+                )
+
+        return self.connection.retry_operation(_submit_market_order)
+
+    def submit_limit_order(self, order: LimitOrder) -> OrderResult:
+        """
+        Submit a limit order to the exchange.
+
+        Args:
+            order: LimitOrder object containing order parameters
+
+        Returns:
+            OrderResult: Result of the order submission
+
+        Raises:
+            ExchangeError: If order submission fails
+        """
+
+        def _submit_limit_order():
+            try:
+                result = self.connection.exchange.order(
+                    name=order.coin,
+                    is_buy=(order.side.value == "buy"),
+                    sz=float(order.quantity),
+                    limit_px=float(order.price),
+                    order_type={
+                        "limit": {
+                            "tif": self._convert_tif_value(order.time_in_force),
+                        }
+                    },
+                    reduce_only=order.reduce_only,
+                )
+
+                # Parse response
+                if result.get("status") == "ok":
+                    return OrderResult(
+                        success=True,
+                        order_id=result.get("response", {}).get("order_id"),
+                        status=OrderStatus.OPEN,
+                        message="Limit order submitted successfully",
+                    )
+                else:
+                    return OrderResult(
+                        success=False,
+                        status=OrderStatus.REJECTED,
+                        message="Limit order submission failed",
+                        error=result.get("response", "Unknown error"),
+                    )
+
+            except Exception as e:
+                return OrderResult(
+                    success=False,
+                    status=OrderStatus.REJECTED,
+                    message="Limit order submission failed",
+                    error=str(e),
+                )
+
+        return self.connection.retry_operation(_submit_limit_order)
+
+    def _convert_tif_value(self, tif: OrderTif) -> Tif:
+        if tif == OrderTif.GTC:
+            return "Gtc"
+        elif tif == OrderTif.IOC:
+            return "Ioc"
+        else:
+            return "Alo"
+
 
 __all__ = [
     "HyperliquidClient",
