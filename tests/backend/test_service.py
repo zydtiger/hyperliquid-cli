@@ -27,6 +27,7 @@ from models.api import (
     RootResponse,
     HealthStatus,
 )
+from models.order import OrderInfo, OrderSide, OrderType, OrderStatus, OrderTif
 from models.config import Config, HyperliquidConfig, NetworkType
 
 
@@ -226,6 +227,7 @@ class TestRequestHandlers(TestBackendService):
             "/metadata/{coin}",
             "/positions",
             "/positions/{coin}",
+            "/order_status/{order_id}",
         ]
 
         for route in expected_routes:
@@ -429,6 +431,79 @@ class TestRequestHandlers(TestBackendService):
 
         assert response.status_code == 400
         assert "API error" in response.json()["detail"]
+
+    def test_order_status_endpoint_success(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test successful /order_status/{order_id} endpoint."""
+        sample_order = OrderInfo(
+            order_id=123456,
+            coin="BTC",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.1"),
+            price=Decimal("42000.00"),
+            filled_quantity=Decimal("0.05"),
+            remaining_quantity=Decimal("0.05"),
+            average_fill_price=Decimal("42100.00"),
+            status=OrderStatus.PARTIALLY_FILLED,
+            timestamp=1704067200000,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+        mock_client.get_order_status.return_value = sample_order
+
+        response = test_app.get("/order_status/123456")
+
+        assert response.status_code == 200
+        expected = {
+            "order_id": 123456,
+            "coin": "BTC",
+            "side": "buy",
+            "order_type": "limit",
+            "quantity": "0.1",
+            "price": "42000.00",
+            "filled_quantity": "0.05",
+            "remaining_quantity": "0.05",
+            "average_fill_price": "42100.00",
+            "status": "partially_filled",
+            "timestamp": 1704067200000,
+            "reduce_only": False,
+            "time_in_force": "GTC",
+        }
+        assert response.json() == expected
+        mock_client.get_order_status.assert_called_once_with(123456)
+
+    def test_order_status_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /order_status/{order_id} endpoint with exchange error."""
+        mock_client.get_order_status.side_effect = ExchangeError("Order not found")
+
+        response = test_app.get("/order_status/999999")
+
+        assert response.status_code == 400
+        assert "Order not found" in response.json()["detail"]
+
+    def test_order_status_endpoint_unexpected_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /order_status/{order_id} endpoint with unexpected error."""
+        mock_client.get_order_status.side_effect = Exception("Network error")
+
+        response = test_app.get("/order_status/123456")
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+
+    def test_order_status_endpoint_invalid_order_id(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /order_status/{order_id} endpoint with invalid order_id."""
+        response = test_app.get("/order_status/0")  # Invalid: less than 1
+
+        assert response.status_code == 422  # FastAPI validation error
+        assert "greater than or equal to 1" in response.json()["detail"][0]["msg"]
 
 
 class TestIntegration(TestBackendService):
