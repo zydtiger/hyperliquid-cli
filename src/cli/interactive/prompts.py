@@ -36,27 +36,27 @@ class Prompts:
         """
         try:
             coins = self.api.get_available_coins()
-            print(f"\n[INFO] Available coins: {', '.join(coins[:10])}...")
+            print(f"\nℹ️ Available coins: {', '.join(coins[:10])}...")
 
             while True:
-                coin = input("\n[INPUT] Enter coin symbol: ").strip().upper()
+                coin = input("\n📝 Enter coin symbol: ").strip().upper()
                 if not coin:
-                    print("[ERROR] Coin symbol is required")
+                    print("❌ Coin symbol is required")
                     continue
                 if coin in coins:
                     return coin
                 else:
                     print(
-                        f"[ERROR] '{coin}' is not available. Choose from: {', '.join(coins[:5])}..."
+                        f"❌ '{coin}' is not available. Choose from: {', '.join(coins[:5])}..."
                     )
         except Exception:
             # Fallback if API fails
-            print("\n[WARNING] Unable to fetch available coins, using manual input")
+            print("\n⚠️ Unable to fetch available coins, using manual input")
             while True:
-                coin = input("[INPUT] Enter coin symbol (e.g., BTC): ").strip().upper()
+                coin = input("📝 Enter coin symbol (e.g., BTC): ").strip().upper()
                 if coin:
                     return coin
-                print("[ERROR] Coin symbol is required")
+                print("❌ Coin symbol is required")
 
     def get_side_selection(self) -> OrderSide:
         """
@@ -66,7 +66,7 @@ class Prompts:
             OrderSide: Selected order side
         """
         while True:
-            print("\n[SELECT] Select order side:")
+            print("\n🎯 Select order side:")
             print("1. Buy")
             print("2. Sell")
 
@@ -77,7 +77,7 @@ class Prompts:
             elif choice == "2":
                 return OrderSide.SELL
             else:
-                print("[ERROR] Please enter 1 (Buy) or 2 (Sell)")
+                print("❌ Please enter 1 (Buy) or 2 (Sell)")
 
     def get_order_type_selection(self) -> str:
         """
@@ -87,7 +87,7 @@ class Prompts:
             str: "market" or "limit"
         """
         while True:
-            print("\n[SELECT] Select order type:")
+            print("\n🎯 Select order type:")
             print("1. Market Order (immediate execution)")
             print("2. Limit Order (price controlled)")
 
@@ -98,7 +98,7 @@ class Prompts:
             elif choice == "2":
                 return "limit"
             else:
-                print("[ERROR] Please enter 1 (Market) or 2 (Limit)")
+                print("❌ Please enter 1 (Market) or 2 (Limit)")
 
     def get_price_input(self, coin: str, side: OrderSide) -> Decimal:
         """
@@ -115,26 +115,26 @@ class Prompts:
         try:
             ticker = self.api.get_ticker(coin)
             current_price = float(ticker.mark_price)
-            print(f"\n[INFO] Current {coin} price: ${current_price:.4f}")
+            print(f"\nℹ️ Current {coin} price: ${current_price:.4f}")
 
             if side == OrderSide.BUY:
                 suggestion = f"Suggested buy price: ${current_price * 0.999:.4f} (slightly below market)"
             else:
                 suggestion = f"Suggested sell price: ${current_price * 1.001:.4f} (slightly above market)"
-            print(f"[INFO] {suggestion}")
+            print(f"ℹ️ {suggestion}")
         except Exception:
-            print(f"\n[INPUT] Enter {coin} price:")
+            print(f"\n📝 Enter {coin} price:")
 
         while True:
             try:
-                price_input = input(f"[INPUT] Enter limit price for {coin}: ").strip()
+                price_input = input(f"📝 Enter limit price for {coin}: ").strip()
                 price = Decimal(price_input)
                 if price <= 0:
-                    print("[ERROR] Price must be greater than 0")
+                    print("❌ Price must be greater than 0")
                     continue
                 return price
             except (InvalidOperation, ValueError):
-                print("[ERROR] Please enter a valid number (e.g., 45000.50)")
+                print("❌ Please enter a valid number (e.g., 45000.50)")
 
     def get_quantity_input(self, coin: str) -> Decimal:
         """
@@ -154,21 +154,21 @@ class Prompts:
             decimals = 2
 
         precision = Decimal(f"1e-{decimals}")
-        print(f"\n[INFO] {coin} quantity precision: {precision}")
+        print(f"\nℹ️ {coin} quantity precision: {precision}")
 
         while True:
             try:
-                quantity_input = input(f"[INPUT] Enter quantity for {coin}: ").strip()
+                quantity_input = input(f"📝 Enter quantity for {coin}: ").strip()
                 quantity = Decimal(quantity_input)
                 if quantity <= 0:
-                    print("[ERROR] Quantity must be greater than 0")
+                    print("❌ Quantity must be greater than 0")
                     continue
                 elif quantity % precision != 0:
-                    print(f"[ERROR] Quantity must be a multiple of {precision}")
+                    print(f"❌ Quantity must be a multiple of {precision}")
                     continue
                 return quantity
             except (InvalidOperation, ValueError):
-                print("[ERROR] Please enter a valid number (e.g., 0.1)")
+                print("❌ Please enter a valid number (e.g., 0.1)")
 
     def get_time_in_force_selection(self) -> OrderTif:
         """
@@ -178,7 +178,7 @@ class Prompts:
             OrderTif: Selected time-in-force policy
         """
         while True:
-            print("\n[SELECT] Select time-in-force policy:")
+            print("\n🎯 Select time-in-force policy:")
             print("1. GTC - Good Till Cancelled (default)")
             print("2. IOC - Immediate or Cancel")
             print("3. ALO - At Limit Order")
@@ -195,7 +195,7 @@ class Prompts:
                 return tif_values[choice]
 
             except (ValueError, IndexError):
-                print("[ERROR] Please enter 1, 2, or 3")
+                print("❌ Please enter 1, 2, or 3")
                 continue
 
     def get_yes_no_input(self, prompt: str, default: Optional[bool] = None) -> bool:
@@ -226,7 +226,7 @@ class Prompts:
             elif response in ["n", "no", "false", "0"]:
                 return False
             else:
-                print("[ERROR] Please enter 'y' (yes) or 'n' (no)")
+                print("❌ Please enter 'y' (yes) or 'n' (no)")
 
 
 __all__ = [
