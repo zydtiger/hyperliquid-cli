@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Path, status
 
 from .exchange.hyperliquid_client import HyperliquidClient
 from models.api import Ticker, CoinMetadata, PositionInfo, ExchangeError
-from models.order import OrderInfo
+from models.order import OrderInfo, MarketOrder, LimitOrder, OrderResult
 
 
 logger = logging.getLogger(__name__)
@@ -182,6 +182,54 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         except Exception as e:
             logger.error(f"Unexpected error getting order status for {order_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.post("/market_order", response_model=OrderResult)
+    async def submit_market_order(order: MarketOrder):
+        """
+        Submit a market order for immediate execution.
+
+        Args:
+            order: Market order details including coin, side, quantity, and reduce_only flag
+
+        Returns:
+            OrderResult: Result of the order submission with order ID and status
+        """
+        try:
+            result = client.submit_market_order(order)
+            return result
+        except ExchangeError as e:
+            logger.error(f"Exchange error submitting market order: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error submitting market order: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.post("/limit_order", response_model=OrderResult)
+    async def submit_limit_order(order: LimitOrder):
+        """
+        Submit a limit order with specified price and time-in-force.
+
+        Args:
+            order: Limit order details including coin, side, quantity, price, reduce_only flag, and time-in-force
+
+        Returns:
+            OrderResult: Result of the order submission with order ID and status
+        """
+        try:
+            result = client.submit_limit_order(order)
+            return result
+        except ExchangeError as e:
+            logger.error(f"Exchange error submitting limit order: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error submitting limit order: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",

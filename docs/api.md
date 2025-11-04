@@ -189,6 +189,156 @@ curl http://localhost:8080/order_status/220717680685
 }
 ```
 
+#### POST /market_order
+Submit a market order for immediate execution at the best available price.
+
+**Request Body:**
+```json
+{
+  "coin": "ETH",
+  "side": "buy",
+  "quantity": "0.1",
+  "reduce_only": false
+}
+```
+
+**Field Descriptions:**
+- `coin` (string): Trading pair symbol (e.g., "BTC", "ETH")
+- `side` (string): Order side ("buy" or "sell")
+- `quantity` (string): Order quantity as decimal string
+- `reduce_only` (boolean): Whether the order is reduce-only (true/false)
+
+**Response:**
+```json
+{
+  "success": true,
+  "order_id": 123456789,
+  "status": "open",
+  "message": "Market order submitted successfully"
+}
+```
+
+**Field Descriptions:**
+- `success`: Whether the order was successfully submitted
+- `order_id`: Order identifier from the exchange (null if submission failed)
+- `status`: Order status ("open", "rejected", etc.)
+- `message`: Success/error message
+- `error`: Error details (null on success)
+
+**Error Responses:**
+- `400 Bad Request`: Invalid order data or exchange error
+- `422 Unprocessable Entity`: Request validation failure
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Submit market buy order
+curl -X POST http://localhost:8080/market_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "ETH",
+    "side": "buy",
+    "quantity": "0.1",
+    "reduce_only": false
+  }'
+
+# Response
+{
+  "success": true,
+  "order_id": 123456789,
+  "status": "open",
+  "message": "Market order submitted successfully"
+}
+
+# Submit market sell order (reduce-only)
+curl -X POST http://localhost:8080/market_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "BTC",
+    "side": "sell",
+    "quantity": "0.05",
+    "reduce_only": true
+  }'
+```
+
+#### POST /limit_order
+Submit a limit order with specified price and time-in-force policy.
+
+**Request Body:**
+```json
+{
+  "coin": "BTC",
+  "side": "sell",
+  "quantity": "0.05",
+  "price": "50000.0",
+  "reduce_only": false,
+  "time_in_force": "GTC"
+}
+```
+
+**Field Descriptions:**
+- `coin` (string): Trading pair symbol (e.g., "BTC", "ETH")
+- `side` (string): Order side ("buy" or "sell")
+- `quantity` (string): Order quantity as decimal string
+- `price` (string): Limit price as decimal string
+- `reduce_only` (boolean): Whether the order is reduce-only (true/false)
+- `time_in_force` (string): Time in force policy ("GTC", "IOC", "ALO")
+
+**Time-in-Force Options:**
+- `GTC`: Good Till Cancelled - active until filled or cancelled
+- `IOC`: Immediate or Cancel - execute immediately or cancel remaining quantity
+- `ALO`: At Limit Order - active until touched, then becomes limit order
+
+**Response:**
+```json
+{
+  "success": true,
+  "order_id": 987654321,
+  "status": "open",
+  "message": "Limit order submitted successfully"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid order data or exchange error
+- `422 Unprocessable Entity`: Request validation failure
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Submit limit buy order
+curl -X POST http://localhost:8080/limit_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "ETH",
+    "side": "buy",
+    "quantity": "0.1",
+    "price": "3000.0",
+    "reduce_only": false,
+    "time_in_force": "GTC"
+  }'
+
+# Response
+{
+  "success": true,
+  "order_id": 987654321,
+  "status": "open",
+  "message": "Limit order submitted successfully"
+}
+
+# Submit IOC limit sell order
+curl -X POST http://localhost:8080/limit_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "SOL",
+    "side": "sell",
+    "quantity": "10.0",
+    "price": "150.0",
+    "reduce_only": false,
+    "time_in_force": "IOC"
+  }'
+```
+
 ### Portfolio Endpoints
 
 #### GET /positions
@@ -269,6 +419,28 @@ curl http://localhost:8080/ticker/BTC
 
 # Get order status
 curl http://localhost:8080/order_status/220717680685
+
+# Submit market order
+curl -X POST http://localhost:8080/market_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "ETH",
+    "side": "buy",
+    "quantity": "0.1",
+    "reduce_only": false
+  }'
+
+# Submit limit order
+curl -X POST http://localhost:8080/limit_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "BTC",
+    "side": "sell",
+    "quantity": "0.05",
+    "price": "50000.0",
+    "reduce_only": false,
+    "time_in_force": "GTC"
+  }'
 
 # Get all positions
 curl http://localhost:8080/positions

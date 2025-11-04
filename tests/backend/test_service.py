@@ -27,7 +27,16 @@ from models.api import (
     RootResponse,
     HealthStatus,
 )
-from models.order import OrderInfo, OrderSide, OrderType, OrderStatus, OrderTif
+from models.order import (
+    OrderInfo,
+    OrderSide,
+    OrderType,
+    OrderStatus,
+    OrderTif,
+    MarketOrder,
+    LimitOrder,
+    OrderResult,
+)
 from models.config import Config, HyperliquidConfig, NetworkType
 
 
@@ -83,6 +92,38 @@ class TestBackendService:
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("420.00"),
             cum_funding=Decimal("15.25"),
+        )
+
+    @pytest.fixture
+    def sample_market_order(self) -> MarketOrder:
+        """Sample market order for testing."""
+        return MarketOrder(
+            coin="ETH",
+            side=OrderSide.BUY,
+            quantity=Decimal("0.1"),
+            reduce_only=False,
+        )
+
+    @pytest.fixture
+    def sample_limit_order(self) -> LimitOrder:
+        """Sample limit order for testing."""
+        return LimitOrder(
+            coin="BTC",
+            side=OrderSide.SELL,
+            quantity=Decimal("0.05"),
+            price=Decimal("50000.0"),
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+
+    @pytest.fixture
+    def sample_order_result(self) -> OrderResult:
+        """Sample order result for testing."""
+        return OrderResult(
+            success=True,
+            order_id=123456789,
+            status=OrderStatus.OPEN,
+            message="Order submitted successfully",
         )
 
     @pytest.fixture
@@ -228,6 +269,8 @@ class TestRequestHandlers(TestBackendService):
             "/positions",
             "/positions/{coin}",
             "/order_status/{order_id}",
+            "/market_order",
+            "/limit_order",
         ]
 
         for route in expected_routes:
@@ -504,6 +547,323 @@ class TestRequestHandlers(TestBackendService):
 
         assert response.status_code == 422  # FastAPI validation error
         assert "greater than or equal to 1" in response.json()["detail"][0]["msg"]
+
+    def test_market_order_endpoint_success(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_market_order: MarketOrder,
+        sample_order_result: OrderResult,
+    ):
+        """Test successful /market_order endpoint."""
+        mock_client.submit_market_order.return_value = sample_order_result
+
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                "quantity": "0.1",
+                "reduce_only": False,
+            },
+        )
+
+        assert response.status_code == 200
+        expected = {
+            "success": True,
+            "order_id": 123456789,
+            "status": "open",
+            "message": "Order submitted successfully",
+            "error": None,
+        }
+        assert response.json() == expected
+        mock_client.submit_market_order.assert_called_once()
+
+        # Verify the order object passed to client
+        call_args = mock_client.submit_market_order.call_args[0][0]
+        assert call_args.coin == "ETH"
+        assert call_args.side == OrderSide.BUY
+        assert call_args.quantity == Decimal("0.1")
+        assert call_args.reduce_only is False
+
+    def test_market_order_endpoint_sell_success(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+    ):
+        """Test successful market sell order."""
+        order_result = OrderResult(
+            success=True,
+            order_id=987654321,
+            status=OrderStatus.OPEN,
+            message="Market order submitted successfully",
+        )
+        mock_client.submit_market_order.return_value = order_result
+
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "BTC",
+                "side": "sell",
+                "quantity": "0.05",
+                "reduce_only": True,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert response.json()["order_id"] == 987654321
+
+        # Verify reduce_only flag is properly passed
+        call_args = mock_client.submit_market_order.call_args[0][0]
+        assert call_args.reduce_only is True
+
+    def test_market_order_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /market_order endpoint with exchange error."""
+        mock_client.submit_market_order.side_effect = ExchangeError(
+            "Insufficient balance"
+        )
+
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                "quantity": "100.0",  # Large quantity to trigger balance error
+                "reduce_only": False,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Insufficient balance" in response.json()["detail"]
+
+    def test_market_order_endpoint_unexpected_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /market_order endpoint with unexpected error."""
+        mock_client.submit_market_order.side_effect = Exception("Network error")
+
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                "quantity": "0.1",
+                "reduce_only": False,
+            },
+        )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+
+    def test_market_order_endpoint_invalid_request_body(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /market_order endpoint with invalid request body."""
+        # Missing required field
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                # Missing quantity and reduce_only
+            },
+        )
+
+        assert response.status_code == 422  # FastAPI validation error
+        assert "quantity" in str(response.json()["detail"])
+
+    def test_market_order_endpoint_invalid_side(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /market_order endpoint with invalid side."""
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "ETH",
+                "side": "invalid",  # Invalid side
+                "quantity": "0.1",
+                "reduce_only": False,
+            },
+        )
+
+        assert response.status_code == 422  # FastAPI validation error
+
+    def test_limit_order_endpoint_success(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_limit_order: LimitOrder,
+        sample_order_result: OrderResult,
+    ):
+        """Test successful /limit_order endpoint."""
+        mock_client.submit_limit_order.return_value = sample_order_result
+
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "BTC",
+                "side": "sell",
+                "quantity": "0.05",
+                "price": "50000.0",
+                "reduce_only": False,
+                "time_in_force": "GTC",
+            },
+        )
+
+        assert response.status_code == 200
+        expected = {
+            "success": True,
+            "order_id": 123456789,
+            "status": "open",
+            "message": "Order submitted successfully",
+            "error": None,
+        }
+        assert response.json() == expected
+        mock_client.submit_limit_order.assert_called_once()
+
+        # Verify the order object passed to client
+        call_args = mock_client.submit_limit_order.call_args[0][0]
+        assert call_args.coin == "BTC"
+        assert call_args.side == OrderSide.SELL
+        assert call_args.quantity == Decimal("0.05")
+        assert call_args.price == Decimal("50000.0")
+        assert call_args.reduce_only is False
+        assert call_args.time_in_force == OrderTif.GTC
+
+    def test_limit_order_endpoint_different_tif(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test limit order with different time-in-force values."""
+        order_result = OrderResult(
+            success=True,
+            order_id=555666777,
+            status=OrderStatus.OPEN,
+            message="IOC order submitted successfully",
+        )
+        mock_client.submit_limit_order.return_value = order_result
+
+        # Test IOC order
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "SOL",
+                "side": "buy",
+                "quantity": "10.0",
+                "price": "150.0",
+                "reduce_only": False,
+                "time_in_force": "IOC",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["order_id"] == 555666777
+
+        # Verify TIF is properly passed
+        call_args = mock_client.submit_limit_order.call_args[0][0]
+        assert call_args.time_in_force == OrderTif.IOC
+
+    def test_limit_order_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /limit_order endpoint with exchange error."""
+        mock_client.submit_limit_order.side_effect = ExchangeError(
+            "Insufficient margin"
+        )
+
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "BTC",
+                "side": "buy",
+                "quantity": "10.0",  # Large quantity with insufficient margin
+                "price": "50000.0",
+                "reduce_only": False,
+                "time_in_force": "GTC",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Insufficient margin" in response.json()["detail"]
+
+    def test_limit_order_endpoint_unexpected_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /limit_order endpoint with unexpected error."""
+        mock_client.submit_limit_order.side_effect = Exception("Connection timeout")
+
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                "quantity": "0.1",
+                "price": "3000.0",
+                "reduce_only": False,
+                "time_in_force": "GTC",
+            },
+        )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+
+    def test_limit_order_endpoint_invalid_request_body(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /limit_order endpoint with invalid request body."""
+        # Missing required fields
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                # Missing quantity, price, reduce_only, time_in_force
+            },
+        )
+
+        assert response.status_code == 422  # FastAPI validation error
+        errors = response.json()["detail"]
+        assert any("quantity" in str(error) for error in errors)
+        assert any("price" in str(error) for error in errors)
+
+    def test_limit_order_endpoint_invalid_price(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /limit_order endpoint with invalid price (negative)."""
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                "quantity": "0.1",
+                "price": "-1000.0",  # Negative price should be rejected by validation
+                "reduce_only": False,
+                "time_in_force": "GTC",
+            },
+        )
+
+        # FastAPI should catch negative values via Pydantic validation
+        assert response.status_code in [422, 400]
+
+    def test_limit_order_endpoint_invalid_tif(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /limit_order endpoint with invalid time-in-force."""
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                "quantity": "0.1",
+                "price": "3000.0",
+                "reduce_only": False,
+                "time_in_force": "INVALID",  # Invalid TIF
+            },
+        )
+
+        assert response.status_code == 422  # FastAPI validation error
 
 
 class TestIntegration(TestBackendService):
