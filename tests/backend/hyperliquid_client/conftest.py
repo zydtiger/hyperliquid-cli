@@ -453,3 +453,157 @@ def expected_balance_info() -> BalanceInfo:
             pending_withdrawal_count=2,
         ),
     )
+
+
+# Open orders fixtures for get_open_orders tests
+@pytest.fixture
+def sample_open_orders_response() -> List[Dict[str, Any]]:
+    """Sample response from open_orders API."""
+    return [
+        {
+            "coin": "ETH",
+            "side": "B",
+            "limitPx": "3000.0",
+            "sz": "0.003",
+            "oid": 222605232959,
+            "timestamp": 1762271506632,
+            "origSz": "0.003",
+        },
+        {
+            "coin": "BTC",
+            "side": "S",
+            "limitPx": "50000.0",
+            "sz": "0.05",
+            "oid": 222605232960,
+            "timestamp": 1762271506633,
+            "origSz": "0.1",
+        },
+        {
+            "coin": "SOL",
+            "side": "B",
+            "limitPx": "150.0",
+            "sz": "1.0",
+            "oid": 222605232961,
+            "timestamp": 1762271506634,
+            "origSz": "2.0",
+        },
+    ]
+
+
+@pytest.fixture
+def sample_open_orders_empty_response() -> List[Dict[str, Any]]:
+    """Sample empty response from open_orders API."""
+    return []
+
+
+@pytest.fixture
+def sample_order_status_responses() -> Dict[int, Dict[str, Any]]:
+    """Sample order status responses for the open orders."""
+    return {
+        222605232959: {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3000.0",
+                    "sz": "0.003",
+                    "oid": 222605232959,
+                    "timestamp": 1762271506632,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271506632,
+            }
+        },
+        222605232960: {
+            "order": {
+                "order": {
+                    "coin": "BTC",
+                    "side": "S",
+                    "limitPx": "50000.0",
+                    "sz": "0.05",
+                    "oid": 222605232960,
+                    "timestamp": 1762271506633,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.1",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271506633,
+            }
+        },
+        222605232961: {
+            "order": {
+                "order": {
+                    "coin": "SOL",
+                    "side": "B",
+                    "limitPx": "150.0",
+                    "sz": "1.0",
+                    "oid": 222605232961,
+                    "timestamp": 1762271506634,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "2.0",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271506634,
+            }
+        },
+    }
+
+
+@pytest.fixture
+def expected_open_orders() -> List[OrderInfo]:
+    """Expected OrderInfo objects for open orders testing."""
+    return [
+        OrderInfo(
+            order_id=222605232959,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.003"),
+            price=Decimal("3000.0"),
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("0.003"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1762271506632,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        ),
+        OrderInfo(
+            order_id=222605232960,
+            coin="BTC",
+            side=OrderSide.SELL,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.1"),
+            price=Decimal("50000.0"),
+            filled_quantity=Decimal("0.05"),
+            remaining_quantity=Decimal("0.05"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1762271506633,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        ),
+        OrderInfo(
+            order_id=222605232961,
+            coin="SOL",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("2.0"),
+            price=Decimal("150.0"),
+            filled_quantity=Decimal("1.0"),
+            remaining_quantity=Decimal("1.0"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1762271506634,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        ),
+    ]

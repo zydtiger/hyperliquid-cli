@@ -395,8 +395,6 @@ class HyperliquidClient:
                 user_address = self.config.hyperliquid.account_address
                 result = self.connection.info.query_order_by_oid(user_address, order_id)
 
-                print(result)
-
                 if not result or not result.get("order"):
                     raise ExchangeError(f"Order {order_id} not found")
 
@@ -518,6 +516,50 @@ class HyperliquidClient:
                 raise ExchangeError(f"Failed to get order status: {e}")
 
         return self.connection.retry_operation(_get_order_status)
+
+    def get_open_orders(self) -> List[OrderInfo]:
+        """
+        Get all open orders for the account.
+
+        Returns:
+            List[OrderInfo]: List of open orders with full details
+
+        Raises:
+            ExchangeError: If open orders retrieval fails
+        """
+
+        def _get_open_orders():
+            try:
+                # Get open orders list from the API
+                orders_data = self.connection.info.open_orders(
+                    self.config.hyperliquid.account_address
+                )
+
+                # sample_open_orders = [
+                #     {
+                #         "coin": "ETH",
+                #         "side": "B",
+                #         "limitPx": "3000.0",
+                #         "sz": "0.003",
+                #         "oid": 222605232959,
+                #         "timestamp": 1762271506632,
+                #         "origSz": "0.003",
+                #     }
+                # ]
+
+                open_orders = []
+                for order_data in orders_data:
+                    # Extract order ID and get full order details using existing method
+                    order_id = order_data["oid"]
+                    order_info = self.get_order_status(order_id)
+                    open_orders.append(order_info)
+
+                return open_orders
+
+            except Exception as e:
+                raise ExchangeError(f"Failed to get open orders: {e}")
+
+        return self.connection.retry_operation(_get_open_orders)
 
     def submit_market_order(self, order: MarketOrder) -> OrderResult:
         """
