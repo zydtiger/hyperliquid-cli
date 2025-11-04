@@ -58,6 +58,7 @@ def run(
 
     # Run the CLI
     try:
+        print()
         cli = InteractiveCLI(config)
         cli.run()
     except KeyboardInterrupt:
