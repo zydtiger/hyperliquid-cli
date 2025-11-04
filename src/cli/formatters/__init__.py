@@ -7,5 +7,6 @@ in the command-line interface.
 
 from .table_formatter import TableFormatter
 from .order_formatter import OrderFormatter
+from .account_formatter import AccountFormatter
 
-__all__ = ["TableFormatter", "OrderFormatter"]
+__all__ = ["TableFormatter", "OrderFormatter", "AccountFormatter"]

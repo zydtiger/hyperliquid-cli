@@ -12,8 +12,7 @@ from typing import List
 from models.config import Config
 from models.order import LimitOrder
 from .api import BackendAPI
-from .formatters import TableFormatter
-from .formatters.order_formatter import OrderFormatter
+from .formatters import TableFormatter, OrderFormatter, AccountFormatter
 from .interactive import OrderWizard
 
 
@@ -132,48 +131,8 @@ class InteractiveCLI(cmd.Cmd):
             with BackendAPI(self.config) as api:
                 positions = api.get_positions()
 
-                if not positions:
-                    print("\nNo open positions\n")
-                    return
-
-                # Format positions for display
-                headers = [
-                    "Coin",
-                    "Size",
-                    "Entry Price",
-                    "Mark Price",
-                    "PnL",
-                    "Leverage",
-                    "Margin",
-                ]
-                rows = []
-
-                for pos in positions:
-                    # Add color indicators for PnL
-                    pnl_value = float(pos.unrealized_pnl)
-                    pnl_display = f"${abs(pnl_value):.2f}"
-                    if pnl_value > 0:
-                        pnl_display = f"▲ ${pnl_value:.2f}"
-                    elif pnl_value < 0:
-                        pnl_display = f"▼ ${abs(pnl_value):.2f}"
-
-                    # Format size with appropriate precision
-                    size_display = f"{float(pos.size):.6f}".rstrip("0").rstrip(".")
-
-                    rows.append(
-                        [
-                            pos.coin,
-                            size_display,
-                            f"${float(pos.entry_price):.4f}",
-                            f"${float(pos.mark_price):.4f}",
-                            pnl_display,
-                            f"{pos.leverage}x {pos.leverage_type}",
-                            f"${float(pos.margin_used):.2f}",
-                        ]
-                    )
-
-                formatter = TableFormatter()
-                print(formatter.format((headers, rows), title="Open Positions"))
+                formatter = AccountFormatter()
+                print(formatter.format(positions))
                 print()
 
         except Exception as e:
@@ -184,6 +143,23 @@ class InteractiveCLI(cmd.Cmd):
         print("positions - Show current open positions")
         print("Usage: positions")
         print("Displays all open positions with detailed information")
+
+    def do_balances(self, args: str) -> None:
+        """Show comprehensive balance information."""
+        try:
+            with BackendAPI(self.config) as api:
+                balances = api.get_balances()
+                formatter = AccountFormatter()
+                print(formatter.format(balances))
+                print()
+        except Exception as e:
+            print(f"❌ Error fetching balances: {e}")
+
+    def help_balances(self) -> None:
+        """Show help for the balances command."""
+        print("balances - Show comprehensive balance information")
+        print("Usage: balances")
+        print("Displays perpetuals account, spot balances, and staking information")
 
     def do_conditionals(self, args: str) -> None:
         """Manage conditional orders (not implemented yet)."""
