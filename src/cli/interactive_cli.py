@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from models import Config
+from models import Config, LimitOrder
 from .api import BackendAPI
 from .formatters import TableFormatter
 from .formatters.order_formatter import OrderFormatter
@@ -46,12 +46,30 @@ class InteractiveCLI(cmd.Cmd):
                 wizard = OrderWizard(self.config, api)
                 order = wizard.run()
 
-                # TODO: Submit order through API when implemented
+                print("⏳ Submitting order...")
+
+                # Submit order based on type
+                try:
+                    if isinstance(order, LimitOrder):
+                        # Limit order
+                        result = api.submit_limit_order(order)
+                    else:
+                        # Market order
+                        result = api.submit_market_order(order)
+
+                    # Display result using formatter
+                    formatter = OrderFormatter()
+                    print(formatter.format(result))
+
+                except Exception as submission_err:
+                    print(f"❌ Failed to submit order: {submission_err}")
 
         except KeyboardInterrupt:
-            print("❌ Order creation cancelled\n")
+            print("❌ Order creation cancelled")
         except Exception as e:
-            print(f"❌ Failed to create order: {e}\n")
+            print(f"❌ Failed to create order: {e}")
+        finally:
+            print()
 
     def help_order(self) -> None:
         """Show help for the order command."""
@@ -67,7 +85,7 @@ class InteractiveCLI(cmd.Cmd):
         print("- Configuring additional options")
         print()
         print("The wizard provides market data suggestions and validates all inputs.")
-        print("Order submission will be implemented in a future version.")
+        print("Orders are submitted immediately upon confirmation.")
 
     def do_status(self, args: str) -> None:
         """Show account status."""

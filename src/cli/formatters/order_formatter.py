@@ -8,25 +8,31 @@ in a user-friendly way.
 from typing import Union
 from .base import Formatter
 from models import MarketOrder, LimitOrder
-from models.order import OrderInfo, OrderStatus
+from models.order import OrderInfo, OrderResult, OrderStatus
 
 
-class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo]]):
+class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderResult]]):
     """
     Formatter class for order data display.
     """
 
-    def format(self, data: Union[MarketOrder, LimitOrder, OrderInfo], **kwargs) -> str:
+    def format(
+        self, data: Union[MarketOrder, LimitOrder, OrderInfo, OrderResult], **kwargs
+    ) -> str:
         """
         Format an order for display.
 
         Args:
-            data: The order to format (MarketOrder, LimitOrder, or OrderInfo)
+            data: The order to format (MarketOrder, LimitOrder, OrderInfo, or OrderResult)
             **kwargs: Additional formatting options (unused for now)
 
         Returns:
-            str: Formatted order summary or status information
+            str: Formatted order summary, status, or result information
         """
+        # Handle OrderResult objects (order submission result)
+        if isinstance(data, OrderResult):
+            return self._format_order_result(data)
+
         # Handle OrderInfo objects (order status display)
         if isinstance(data, OrderInfo):
             return self._format_order_info(data)
@@ -98,6 +104,32 @@ class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo]]):
         lines.append(f"Timestamp:   {order.timestamp}")
 
         lines.append("=" * 50)
+
+        return "\n".join(lines)
+
+    def _format_order_result(self, result: OrderResult) -> str:
+        """
+        Format OrderResult objects for order submission result display.
+
+        Args:
+            result: OrderResult object to format
+
+        Returns:
+            str: Formatted order submission result information
+        """
+        lines = []
+
+        if result.success:
+            lines.append("✅ Order submitted successfully!")
+            if result.order_id is not None:
+                lines.append(f"📋 Order ID: {result.order_id}")
+            lines.append(f"📊 Status: {self._format_status(result.status)}")
+            lines.append(f"💬 Message: {result.message}")
+        else:
+            lines.append("❌ Order submission failed")
+            lines.append(f"💬 Message: {result.message}")
+            if result.error:
+                lines.append(f"🔍 Error details: {result.error}")
 
         return "\n".join(lines)
 
