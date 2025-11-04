@@ -18,7 +18,7 @@ from models.api import (
     CoinMetadata,
     PositionInfo,
 )
-from models.order import OrderInfo
+from models.order import OrderInfo, OrderResult, MarketOrder, LimitOrder
 from models.config import Config
 
 
@@ -229,6 +229,56 @@ class BackendAPI:
             return OrderInfo(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get order status for {order_id}: {e}")
+            raise APIError(f"Connection error: {str(e)}")
+
+    def submit_market_order(self, order: MarketOrder) -> OrderResult:
+        """
+        Submit a market order for immediate execution.
+
+        Args:
+            order: Market order details including coin, side, quantity, and reduce_only flag
+
+        Returns:
+            OrderResult: Result of the order submission with order ID and status
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.post(
+                "/market_order",
+                content=order.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+            )
+            self._handle_response_error(response)
+            return OrderResult(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to submit market order: {e}")
+            raise APIError(f"Connection error: {str(e)}")
+
+    def submit_limit_order(self, order: LimitOrder) -> OrderResult:
+        """
+        Submit a limit order with specified price and time-in-force.
+
+        Args:
+            order: Limit order details including coin, side, quantity, price, reduce_only flag, and time-in-force
+
+        Returns:
+            OrderResult: Result of the order submission with order ID and status
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.post(
+                "/limit_order",
+                content=order.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+            )
+            self._handle_response_error(response)
+            return OrderResult(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to submit limit order: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
     def close(self) -> None:
