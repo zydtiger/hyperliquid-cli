@@ -208,6 +208,27 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
+    @app.get("/open_orders", response_model=List[OrderInfo])
+    async def get_open_orders():
+        """
+        Get all open orders for the account.
+
+        Returns:
+            List[OrderInfo]: List of open orders with full details
+        """
+        try:
+            orders = client.get_open_orders()
+            return orders
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting open orders: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error getting open orders: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
     @app.post("/market_order", response_model=OrderResult)
     async def submit_market_order(order: MarketOrder):
         """

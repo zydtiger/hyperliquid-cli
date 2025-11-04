@@ -250,6 +250,24 @@ class BackendAPI:
             logger.error(f"Failed to get order status for {order_id}: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
+    def get_open_orders(self) -> List[OrderInfo]:
+        """
+        Get all open orders for the account.
+
+        Returns:
+            List[OrderInfo]: List of open orders with full details
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.get("/open_orders")
+            self._handle_response_error(response)
+            return [OrderInfo(**order) for order in response.json()]
+        except httpx.RequestError as e:
+            logger.error(f"Failed to get open orders: {e}")
+            raise APIError(f"Connection error: {str(e)}")
+
     def submit_market_order(self, order: MarketOrder) -> OrderResult:
         """
         Submit a market order for immediate execution.

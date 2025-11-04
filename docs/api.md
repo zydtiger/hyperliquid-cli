@@ -189,6 +189,74 @@ curl http://localhost:8080/order_status/220717680685
 }
 ```
 
+#### GET /open_orders
+Get all open orders for the configured account.
+
+**Response:**
+```json
+[
+  {
+    "order_id": 222605232959,
+    "coin": "ETH",
+    "side": "buy",
+    "order_type": "limit",
+    "quantity": "0.003",
+    "price": "3000.0",
+    "filled_quantity": "0.0",
+    "remaining_quantity": "0.003",
+    "average_fill_price": null,
+    "status": "open",
+    "timestamp": 1762271506632,
+    "reduce_only": false,
+    "time_in_force": "GTC"
+  },
+  {
+    "order_id": 222605232960,
+    "coin": "BTC",
+    "side": "sell",
+    "order_type": "limit",
+    "quantity": "0.1",
+    "price": "50000.0",
+    "filled_quantity": "0.05",
+    "remaining_quantity": "0.05",
+    "average_fill_price": "49800.0",
+    "status": "open",
+    "timestamp": 1762271506633,
+    "reduce_only": false,
+    "time_in_force": "GTC"
+  },
+  ...
+]
+```
+
+**Field Descriptions:**
+- `order_id`: Unique order identifier from the exchange
+- `coin`: Trading pair symbol
+- `side`: Order side ("buy" or "sell")
+- `order_type`: Order type ("limit" or "market")
+- `quantity`: Original order quantity
+- `price`: Limit price (null for market orders)
+- `filled_quantity`: Quantity that has been filled
+- `remaining_quantity`: Quantity remaining to be filled
+- `average_fill_price`: Average price of filled orders (null if no fills)
+- `status`: Order status ("open", "filled", "cancelled", "rejected", "partially_filled")
+- `timestamp`: Order creation timestamp (Unix timestamp in milliseconds)
+- `reduce_only`: Whether the order is reduce-only (true/false)
+- `time_in_force`: Time in force policy ("GTC" = Good Till Cancelled, "IOC" = Immediate or Cancel, "ALO" = At Limit Order, null for market orders)
+
+**Error Responses:**
+- `400 Bad Request`: Exchange error or authentication issues
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Get all open orders
+curl http://localhost:8080/open_orders
+
+# Response when no open orders
+[]
+```
+
 #### POST /market_order
 Submit a market order for immediate execution at the best available price.
 
@@ -472,6 +540,9 @@ curl http://localhost:8080/ticker/BTC
 
 # Get order status
 curl http://localhost:8080/order_status/220717680685
+
+# Get all open orders
+curl http://localhost:8080/open_orders
 
 # Submit market order
 curl -X POST http://localhost:8080/market_order \
