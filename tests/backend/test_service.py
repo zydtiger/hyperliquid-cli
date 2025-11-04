@@ -21,6 +21,9 @@ from models.api import (
     Ticker,
     CoinMetadata,
     PositionInfo,
+    BalanceInfo,
+    SpotBalance,
+    StakingInfo,
     ExchangeError,
     LeverageType,
     HealthResponse,
@@ -127,6 +130,28 @@ class TestBackendService:
         )
 
     @pytest.fixture
+    def sample_balance(self) -> BalanceInfo:
+        """Sample balance information for testing."""
+        return BalanceInfo(
+            perps_account_value=Decimal("3451.743653"),
+            perps_total_position_value=Decimal("10.8642"),
+            perps_total_raw_usd=Decimal("3440.879453"),
+            perps_margin_used=Decimal("5.318932"),
+            perps_withdrawable=Decimal("3451.324721"),
+            spot_balances=[
+                SpotBalance(coin="USDC", total=Decimal("1000.50")),
+                SpotBalance(coin="HYPE", total=Decimal("500.0")),
+                SpotBalance(coin="UETH", total=Decimal("0.002998111")),
+            ],
+            staking_info=StakingInfo(
+                delegated_amount=Decimal("100.61607572"),
+                undelegated_amount=Decimal("25.12345678"),
+                pending_withdrawals=Decimal("5.0"),
+                pending_withdrawal_count=2,
+            ),
+        )
+
+    @pytest.fixture
     def temp_config_file(self, mock_config: Config) -> Generator[Path, None, None]:
         """Create a temporary configuration file."""
         config_data = mock_config.model_dump()
@@ -184,7 +209,7 @@ class TestCreateApp(TestBackendService):
             for middleware in app.user_middleware:
                 if (
                     hasattr(middleware.cls, "__name__")
-                    and "CORSMiddleware" in middleware.cls.__name__
+                    and "CORSMiddleware" in middleware.cls.__name__  # type: ignore[attr-defined]
                 ):
                     cors_middleware = middleware
                     break
@@ -268,6 +293,7 @@ class TestRequestHandlers(TestBackendService):
             "/metadata/{coin}",
             "/positions",
             "/positions/{coin}",
+            "/balances",
             "/order_status/{order_id}",
             "/market_order",
             "/limit_order",
@@ -474,6 +500,61 @@ class TestRequestHandlers(TestBackendService):
 
         assert response.status_code == 400
         assert "API error" in response.json()["detail"]
+
+    def test_balances_endpoint_success(
+        self, test_app: TestClient, mock_client: Mock, sample_balance: BalanceInfo
+    ):
+        """Test successful /balances endpoint."""
+        mock_client.get_balances.return_value = sample_balance
+
+        response = test_app.get("/balances")
+
+        assert response.status_code == 200
+
+        # Check response structure and key values
+        data = response.json()
+        assert data["perps_account_value"] == "3451.743653"
+        assert data["perps_total_position_value"] == "10.8642"
+        assert data["perps_total_raw_usd"] == "3440.879453"
+        assert data["perps_margin_used"] == "5.318932"
+        assert data["perps_withdrawable"] == "3451.324721"
+
+        # Check spot balances structure
+        assert "spot_balances" in data
+        assert len(data["spot_balances"]) == 3
+        assert any(balance["coin"] == "USDC" for balance in data["spot_balances"])
+        assert any(balance["coin"] == "HYPE" for balance in data["spot_balances"])
+        assert any(balance["coin"] == "UETH" for balance in data["spot_balances"])
+
+        # Check staking info structure
+        assert "staking_info" in data
+        assert data["staking_info"]["delegated_amount"] == "100.61607572"
+        assert data["staking_info"]["undelegated_amount"] == "25.12345678"
+        assert data["staking_info"]["pending_withdrawal_count"] == 2
+
+        mock_client.get_balances.assert_called_once()
+
+    def test_balances_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /balances endpoint with exchange error."""
+        mock_client.get_balances.side_effect = ExchangeError("Authentication failed")
+
+        response = test_app.get("/balances")
+
+        assert response.status_code == 400
+        assert "Authentication failed" in response.json()["detail"]
+
+    def test_balances_endpoint_unexpected_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /balances endpoint with unexpected error."""
+        mock_client.get_balances.side_effect = Exception("Network error")
+
+        response = test_app.get("/balances")
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
 
     def test_order_status_endpoint_success(
         self, test_app: TestClient, mock_client: Mock
@@ -897,6 +978,26 @@ class TestIntegration(TestBackendService):
         )
         mock_client.get_positions.return_value = [position]
 
+        # Setup balance mock
+        balance = BalanceInfo(
+            perps_account_value=Decimal("3451.743653"),
+            perps_total_position_value=Decimal("10.8642"),
+            perps_total_raw_usd=Decimal("3440.879453"),
+            perps_margin_used=Decimal("5.318932"),
+            perps_withdrawable=Decimal("3451.324721"),
+            spot_balances=[
+                SpotBalance(coin="USDC", total=Decimal("1000.50")),
+                SpotBalance(coin="HYPE", total=Decimal("500.0")),
+            ],
+            staking_info=StakingInfo(
+                delegated_amount=Decimal("100.61607572"),
+                undelegated_amount=Decimal("25.12345678"),
+                pending_withdrawals=Decimal("5.0"),
+                pending_withdrawal_count=2,
+            ),
+        )
+        mock_client.get_balances.return_value = balance
+
         # Test health
         response = test_app.get("/health")
         assert response.status_code == 200
@@ -928,10 +1029,17 @@ class TestIntegration(TestBackendService):
         assert response.status_code == 200
         assert response.json()["coin"] == "BTC"
 
+        # Test balances
+        response = test_app.get("/balances")
+        assert response.status_code == 200
+        assert response.json()["perps_account_value"] == "3451.743653"
+        assert len(response.json()["spot_balances"]) == 2
+
         # Verify all client methods were called
         assert mock_client.get_available_coins.called
         assert mock_client.get_ticker.called
         assert mock_client.get_metadata.called
+        assert mock_client.get_balances.called
         assert (
             mock_client.get_positions.call_count == 2
         )  # Once for all positions, once for specific
@@ -946,6 +1054,7 @@ class TestIntegration(TestBackendService):
         mock_client.get_ticker.side_effect = ExchangeError("Invalid coin")
         mock_client.get_metadata.side_effect = ExchangeError("Metadata not found")
         mock_client.get_positions.side_effect = ExchangeError("Authentication failed")
+        mock_client.get_balances.side_effect = ExchangeError("Balance access denied")
 
         # Test all endpoints return 400 for exchange errors
         endpoints = [
@@ -954,6 +1063,7 @@ class TestIntegration(TestBackendService):
             "/metadata/BTC",
             "/positions",
             "/positions/BTC",
+            "/balances",
         ]
 
         for endpoint in endpoints:
