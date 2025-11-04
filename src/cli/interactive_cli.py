@@ -7,10 +7,10 @@ for managing orders, positions, and account status.
 
 import cmd
 import sys
-from pathlib import Path
 from typing import List
 
-from models import Config, LimitOrder
+from models.config import Config
+from models.order import LimitOrder
 from .api import BackendAPI
 from .formatters import TableFormatter
 from .formatters.order_formatter import OrderFormatter
@@ -28,10 +28,10 @@ class InteractiveCLI(cmd.Cmd):
     intro = "Welcome to Hyperliquid CLI. Type 'help' or '?' to list commands.\n"
     prompt = "hyperliquid> "
 
-    def __init__(self, config_path: Path) -> None:
+    def __init__(self, config: Config) -> None:
         """Initialize the CLI with configuration."""
         super().__init__()
-        self.config = Config.from_file(config_path)
+        self.config = config
         self.running = True
 
     def do_order(self, args: str) -> None:
