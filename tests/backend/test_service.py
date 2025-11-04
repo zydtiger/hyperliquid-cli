@@ -130,6 +130,57 @@ class TestBackendService:
         )
 
     @pytest.fixture
+    def sample_open_orders(self) -> list:
+        """Sample open orders for testing."""
+        return [
+            OrderInfo(
+                order_id=123456789,
+                coin="ETH",
+                side=OrderSide.BUY,
+                order_type=OrderType.LIMIT,
+                quantity=Decimal("0.1"),
+                price=Decimal("3000.0"),
+                filled_quantity=Decimal("0.0"),
+                remaining_quantity=Decimal("0.1"),
+                average_fill_price=None,
+                status=OrderStatus.OPEN,
+                timestamp=1762271506632,
+                reduce_only=False,
+                time_in_force=OrderTif.GTC,
+            ),
+            OrderInfo(
+                order_id=987654321,
+                coin="BTC",
+                side=OrderSide.SELL,
+                order_type=OrderType.LIMIT,
+                quantity=Decimal("0.05"),
+                price=Decimal("50000.0"),
+                filled_quantity=Decimal("0.02"),
+                remaining_quantity=Decimal("0.03"),
+                average_fill_price=Decimal("50100.0"),
+                status=OrderStatus.PARTIALLY_FILLED,
+                timestamp=1762271506633,
+                reduce_only=False,
+                time_in_force=OrderTif.IOC,
+            ),
+            OrderInfo(
+                order_id=555666777,
+                coin="SOL",
+                side=OrderSide.BUY,
+                order_type=OrderType.MARKET,
+                quantity=Decimal("10.0"),
+                price=None,
+                filled_quantity=Decimal("10.0"),
+                remaining_quantity=Decimal("0.0"),
+                average_fill_price=Decimal("150.5"),
+                status=OrderStatus.FILLED,
+                timestamp=1762271506634,
+                reduce_only=False,
+                time_in_force=None,
+            ),
+        ]
+
+    @pytest.fixture
     def sample_balance(self) -> BalanceInfo:
         """Sample balance information for testing."""
         return BalanceInfo(
@@ -295,6 +346,7 @@ class TestRequestHandlers(TestBackendService):
             "/positions/{coin}",
             "/balances",
             "/order_status/{order_id}",
+            "/open_orders",
             "/market_order",
             "/limit_order",
         ]
@@ -628,6 +680,131 @@ class TestRequestHandlers(TestBackendService):
 
         assert response.status_code == 422  # FastAPI validation error
         assert "greater than or equal to 1" in response.json()["detail"][0]["msg"]
+
+    def test_open_orders_endpoint_success(
+        self, test_app: TestClient, mock_client: Mock, sample_open_orders: list
+    ):
+        """Test successful /open_orders endpoint."""
+        mock_client.get_open_orders.return_value = sample_open_orders
+
+        response = test_app.get("/open_orders")
+
+        assert response.status_code == 200
+        expected = [
+            {
+                "order_id": 123456789,
+                "coin": "ETH",
+                "side": "buy",
+                "order_type": "limit",
+                "quantity": "0.1",
+                "price": "3000.0",
+                "filled_quantity": "0.0",
+                "remaining_quantity": "0.1",
+                "average_fill_price": None,
+                "status": "open",
+                "timestamp": 1762271506632,
+                "reduce_only": False,
+                "time_in_force": "GTC",
+            },
+            {
+                "order_id": 987654321,
+                "coin": "BTC",
+                "side": "sell",
+                "order_type": "limit",
+                "quantity": "0.05",
+                "price": "50000.0",
+                "filled_quantity": "0.02",
+                "remaining_quantity": "0.03",
+                "average_fill_price": "50100.0",
+                "status": "partially_filled",
+                "timestamp": 1762271506633,
+                "reduce_only": False,
+                "time_in_force": "IOC",
+            },
+            {
+                "order_id": 555666777,
+                "coin": "SOL",
+                "side": "buy",
+                "order_type": "market",
+                "quantity": "10.0",
+                "price": None,
+                "filled_quantity": "10.0",
+                "remaining_quantity": "0.0",
+                "average_fill_price": "150.5",
+                "status": "filled",
+                "timestamp": 1762271506634,
+                "reduce_only": False,
+                "time_in_force": None,
+            },
+        ]
+        assert response.json() == expected
+        mock_client.get_open_orders.assert_called_once()
+
+    def test_open_orders_endpoint_empty(self, test_app: TestClient, mock_client: Mock):
+        """Test /open_orders endpoint with no open orders."""
+        mock_client.get_open_orders.return_value = []
+
+        response = test_app.get("/open_orders")
+
+        assert response.status_code == 200
+        assert response.json() == []
+        mock_client.get_open_orders.assert_called_once()
+
+    def test_open_orders_endpoint_single_order(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /open_orders endpoint with a single order."""
+        single_order = [
+            OrderInfo(
+                order_id=999999999,
+                coin="DOGE",
+                side=OrderSide.BUY,
+                order_type=OrderType.LIMIT,
+                quantity=Decimal("1000.0"),
+                price=Decimal("0.08"),
+                filled_quantity=Decimal("0.0"),
+                remaining_quantity=Decimal("1000.0"),
+                average_fill_price=None,
+                status=OrderStatus.OPEN,
+                timestamp=1762271506635,
+                reduce_only=True,
+                time_in_force=OrderTif.GTC,
+            )
+        ]
+        mock_client.get_open_orders.return_value = single_order
+
+        response = test_app.get("/open_orders")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["order_id"] == 999999999
+        assert data[0]["coin"] == "DOGE"
+        assert data[0]["side"] == "buy"
+        assert data[0]["reduce_only"] is True
+        mock_client.get_open_orders.assert_called_once()
+
+    def test_open_orders_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /open_orders endpoint with exchange error."""
+        mock_client.get_open_orders.side_effect = ExchangeError("Authentication failed")
+
+        response = test_app.get("/open_orders")
+
+        assert response.status_code == 400
+        assert "Authentication failed" in response.json()["detail"]
+
+    def test_open_orders_endpoint_unexpected_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /open_orders endpoint with unexpected error."""
+        mock_client.get_open_orders.side_effect = Exception("Network error")
+
+        response = test_app.get("/open_orders")
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
 
     def test_market_order_endpoint_success(
         self,
