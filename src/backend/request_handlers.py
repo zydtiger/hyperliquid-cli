@@ -11,7 +11,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, Path, status
 
 from .exchange.hyperliquid_client import HyperliquidClient
-from models.api import Ticker, CoinMetadata, PositionInfo, ExchangeError
+from models.api import Ticker, CoinMetadata, PositionInfo, BalanceInfo, ExchangeError
 from models.order import OrderInfo, MarketOrder, LimitOrder, OrderResult
 
 
@@ -156,6 +156,27 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             raise
         except Exception as e:
             logger.error(f"Unexpected error getting position for {coin}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.get("/balances", response_model=BalanceInfo)
+    async def get_balances():
+        """
+        Get comprehensive balance information for the account.
+
+        Returns:
+            BalanceInfo: Comprehensive balance information including perpetuals, spot, and staking
+        """
+        try:
+            balances = client.get_balances()
+            return balances
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting balances: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error getting balances: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",

@@ -366,6 +366,59 @@ Get all current open positions for the configured account.
 - `400 Bad Request`: Exchange error or authentication issues
 - `500 Internal Server Error`: Unexpected server error
 
+#### GET /balances
+Get comprehensive balance information for the configured account, including perpetuals, spot balances, and staking information.
+
+**Response:**
+```json
+{
+  "perps_account_value": "3451.743653",
+  "perps_total_position_value": "10.8642",
+  "perps_total_raw_usd": "3440.879453",
+  "perps_margin_used": "5.318932",
+  "perps_withdrawable": "3451.324721",
+  "spot_balances": [
+    {
+      "coin": "USDC",
+      "total": "1000.50"
+    },
+    {
+      "coin": "HYPE",
+      "total": "500.0"
+    },
+    {
+      "coin": "UETH",
+      "total": "0.002998111"
+    }
+  ],
+  "staking_info": {
+    "delegated_amount": "100.61607572",
+    "undelegated_amount": "25.12345678",
+    "pending_withdrawals": "5.0",
+    "pending_withdrawal_count": 2
+  }
+}
+```
+
+**Field Descriptions:**
+- `perps_account_value`: Total perpetuals account value
+- `perps_total_position_value`: Total notional position size in perpetuals
+- `perps_total_raw_usd`: Remaining raw USD in perpetuals account
+- `perps_margin_used`: Total margin used by perpetual positions
+- `perps_withdrawable`: Available withdrawal amount from perpetuals account
+- `spot_balances`: Array of spot coin balances (empty if no spot holdings)
+- `staking_info`: Staking delegations and rewards (null if no staking activity)
+
+**Error Responses:**
+- `400 Bad Request`: Exchange error or authentication issues
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Get comprehensive balance information
+curl http://localhost:8080/balances
+```
+
 #### GET /positions/{coin}
 Get position information for a specific cryptocurrency.
 

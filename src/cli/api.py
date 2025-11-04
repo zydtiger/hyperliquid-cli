@@ -17,6 +17,7 @@ from models.api import (
     Ticker,
     CoinMetadata,
     PositionInfo,
+    BalanceInfo,
 )
 from models.order import OrderInfo, OrderResult, MarketOrder, LimitOrder
 from models.config import Config
@@ -187,6 +188,24 @@ class BackendAPI:
             return [PositionInfo(**position) for position in response.json()]
         except httpx.RequestError as e:
             logger.error(f"Failed to get positions: {e}")
+            raise APIError(f"Connection error: {str(e)}")
+
+    def get_balances(self) -> BalanceInfo:
+        """
+        Get comprehensive balance information for the account.
+
+        Returns:
+            BalanceInfo: Comprehensive balance information including perpetuals, spot, and staking
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.get("/balances")
+            self._handle_response_error(response)
+            return BalanceInfo(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to get balances: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
     def get_position(self, coin: str) -> PositionInfo:
