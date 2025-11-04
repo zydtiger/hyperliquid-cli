@@ -383,13 +383,63 @@ class HyperliquidClient:
                         slippage=slippage,
                     )
 
+                # success_response = {
+                #     "status": "ok",
+                #     "response": {
+                #         "type": "order",
+                #         "data": {
+                #             "statuses": [
+                #                 {
+                #                     "filled": {
+                #                         "totalSz": "0.003",
+                #                         "avgPx": "3593.5",
+                #                         "oid": 221679167225,
+                #                     }
+                #                 }
+                #             ]
+                #         },
+                #     },
+                # }
+
                 # Parse response
                 if result.get("status") == "ok":
+                    # Check individual order statuses from response.data
+                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+
+                    for status in statuses:
+                        if "resting" in status:
+                            oid = status["resting"]["oid"]
+                            return OrderResult(
+                                success=True,
+                                order_id=oid,
+                                status=OrderStatus.OPEN,
+                                message="Market order is resting on the book",
+                            )
+                        elif "error" in status:
+                            error = status["error"]
+                            return OrderResult(
+                                success=False,
+                                order_id=None,
+                                status=OrderStatus.REJECTED,
+                                message="Market order failed",
+                                error=error,
+                            )
+                        elif "filled" in status:
+                            fill = status["filled"]
+                            return OrderResult(
+                                success=True,
+                                order_id=fill["oid"],
+                                status=OrderStatus.FILLED,
+                                message=f"Market order filled {fill['totalSz']} at {fill['avgPx']}",
+                            )
+
+                    # Fallback if no statuses found
                     return OrderResult(
-                        success=True,
-                        order_id=result.get("response", {}).get("order_id"),
-                        status=OrderStatus.OPEN,
-                        message="Market order submitted successfully",
+                        success=False,
+                        order_id=None,
+                        status=OrderStatus.REJECTED,
+                        message="Market order submission failed - no status returned",
+                        error="Unknown response structure",
                     )
                 else:
                     return OrderResult(
@@ -438,13 +488,53 @@ class HyperliquidClient:
                     reduce_only=order.reduce_only,
                 )
 
+                # success_response = {
+                #     "status": "ok",
+                #     "response": {
+                #         "type": "order",
+                #         "data": {"statuses": [{"resting": {"oid": 221678311701}}]},
+                #     },
+                # }
+
                 # Parse response
                 if result.get("status") == "ok":
+                    # Check individual order statuses from response.data
+                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+
+                    for status in statuses:
+                        if "resting" in status:
+                            oid = status["resting"]["oid"]
+                            return OrderResult(
+                                success=True,
+                                order_id=oid,
+                                status=OrderStatus.OPEN,
+                                message="Limit order is resting on the book",
+                            )
+                        elif "error" in status:
+                            error = status["error"]
+                            return OrderResult(
+                                success=False,
+                                order_id=None,
+                                status=OrderStatus.REJECTED,
+                                message="Limit order failed",
+                                error=error,
+                            )
+                        elif "filled" in status:
+                            fill = status["filled"]
+                            return OrderResult(
+                                success=True,
+                                order_id=fill["oid"],
+                                status=OrderStatus.FILLED,
+                                message=f"Limit order filled {fill['totalSz']} at {fill['avgPx']}",
+                            )
+
+                    # Fallback if no statuses found
                     return OrderResult(
-                        success=True,
-                        order_id=result.get("response", {}).get("order_id"),
-                        status=OrderStatus.OPEN,
-                        message="Limit order submitted successfully",
+                        success=False,
+                        order_id=None,
+                        status=OrderStatus.REJECTED,
+                        message="Limit order submission failed - no status returned",
+                        error="Unknown response structure",
                     )
                 else:
                     return OrderResult(

@@ -289,24 +289,102 @@ def sample_limit_sell_order_reduce_only() -> LimitOrder:
 
 # Response fixtures for order submission tests
 @pytest.fixture
-def market_success_response() -> Dict[str, Any]:
-    """Successful market order response."""
-    return {"status": "ok", "response": {"order_id": 123456789}}
+def market_success_response_resting() -> Dict[str, Any]:
+    """Market order response with resting status."""
+    return {
+        "status": "ok",
+        "response": {
+            "type": "order",
+            "data": {
+                "statuses": [
+                    {
+                        "resting": {
+                            "oid": 123456789
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+@pytest.fixture
+def market_success_response_filled() -> Dict[str, Any]:
+    """Market order response with filled status."""
+    return {
+        "status": "ok",
+        "response": {
+            "type": "order",
+            "data": {
+                "statuses": [
+                    {
+                        "filled": {
+                            "totalSz": "0.003",
+                            "avgPx": "3593.5",
+                            "oid": 221679167225,
+                        }
+                    }
+                ]
+            }
+        }
+    }
 
 
 @pytest.fixture
-def market_error_response() -> Dict[str, Any]:
-    """Error market order response."""
-    return {"status": "error", "response": "Insufficient balance"}
+def limit_success_response_resting() -> Dict[str, Any]:
+    """Limit order response with resting status."""
+    return {
+        "status": "ok",
+        "response": {
+            "type": "order",
+            "data": {
+                "statuses": [
+                    {
+                        "resting": {
+                            "oid": 987654321
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
+@pytest.fixture
+def limit_success_response_filled() -> Dict[str, Any]:
+    """Limit order response with filled status."""
+    return {
+        "status": "ok",
+        "response": {
+            "type": "order",
+            "data": {
+                "statuses": [
+                    {
+                        "filled": {
+                            "totalSz": "0.05",
+                            "avgPx": "51000.0",
+                            "oid": 987654322,
+                        }
+                    }
+                ]
+            }
+        }
+    }
+
 
 
 @pytest.fixture
-def limit_success_response() -> Dict[str, Any]:
-    """Successful limit order response."""
-    return {"status": "ok", "response": {"order_id": 987654321}}
+def order_error_response() -> Dict[str, Any]:
+    """Order response with error status."""
+    return {
+        "status": "ok",
+        "response": {
+            "type": "order",
+            "data": {
+                "statuses": [
+                    {
+                        "error": "Insufficient balance"
+                    }
+                ]
+            }
+        }
+    }
 
-
-@pytest.fixture
-def limit_error_response() -> Dict[str, Any]:
-    """Error limit order response."""
-    return {"status": "error", "response": "Insufficient margin"}
