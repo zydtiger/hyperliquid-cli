@@ -18,6 +18,9 @@ from models.api import (
     ExchangeError,
     LeverageType,
     PositionInfo,
+    BalanceInfo,
+    SpotBalance,
+    StakingInfo,
 )
 from models.order import (
     MarketOrder,
@@ -124,6 +127,19 @@ def sample_asset_ctxs_response() -> List[Dict[str, Any]]:
 def sample_user_state_response() -> Dict[str, Any]:
     """Sample response from user state API."""
     return {
+        "marginSummary": {
+            "accountValue": "3451.743653",
+            "totalNtlPos": "10.8642",
+            "totalRawUsd": "3440.879453",
+            "totalMarginUsed": "5.318932",
+        },
+        "crossMarginSummary": {
+            "accountValue": "3451.324721",
+            "totalNtlPos": "0.0",
+            "totalRawUsd": "3451.324721",
+            "totalMarginUsed": "0.0",
+        },
+        "withdrawable": "3451.324721",
         "assetPositions": [
             {
                 "type": "oneWay",
@@ -295,17 +311,10 @@ def market_success_response_resting() -> Dict[str, Any]:
         "status": "ok",
         "response": {
             "type": "order",
-            "data": {
-                "statuses": [
-                    {
-                        "resting": {
-                            "oid": 123456789
-                        }
-                    }
-                ]
-            }
-        }
+            "data": {"statuses": [{"resting": {"oid": 123456789}}]},
+        },
     }
+
 
 @pytest.fixture
 def market_success_response_filled() -> Dict[str, Any]:
@@ -324,8 +333,8 @@ def market_success_response_filled() -> Dict[str, Any]:
                         }
                     }
                 ]
-            }
-        }
+            },
+        },
     }
 
 
@@ -336,17 +345,10 @@ def limit_success_response_resting() -> Dict[str, Any]:
         "status": "ok",
         "response": {
             "type": "order",
-            "data": {
-                "statuses": [
-                    {
-                        "resting": {
-                            "oid": 987654321
-                        }
-                    }
-                ]
-            }
-        }
+            "data": {"statuses": [{"resting": {"oid": 987654321}}]},
+        },
     }
+
 
 @pytest.fixture
 def limit_success_response_filled() -> Dict[str, Any]:
@@ -365,10 +367,9 @@ def limit_success_response_filled() -> Dict[str, Any]:
                         }
                     }
                 ]
-            }
-        }
+            },
+        },
     }
-
 
 
 @pytest.fixture
@@ -378,13 +379,77 @@ def order_error_response() -> Dict[str, Any]:
         "status": "ok",
         "response": {
             "type": "order",
-            "data": {
-                "statuses": [
-                    {
-                        "error": "Insufficient balance"
-                    }
-                ]
-            }
-        }
+            "data": {"statuses": [{"error": "Insufficient balance"}]},
+        },
     }
 
+
+@pytest.fixture
+def sample_spot_state() -> Dict[str, Any]:
+    """Sample spot state response with balance data."""
+    return {
+        "balances": [
+            {
+                "coin": "USDC",
+                "token": 0,
+                "total": "1000.50",
+                "hold": "50.25",
+                "entryNtl": "0.0",
+            },
+            {
+                "coin": "HYPE",
+                "token": 150,
+                "total": "500.0",
+                "hold": "0.0",
+                "entryNtl": "0.0",
+            },
+            {
+                "coin": "UETH",
+                "token": 221,
+                "total": "0.002998111",
+                "hold": "0.0",
+                "entryNtl": "10.8831",
+            },
+            {
+                "coin": "BTC",
+                "token": 1,
+                "total": "0.0",  # Zero balance should be filtered out
+                "hold": "0.0",
+                "entryNtl": "0.0",
+            },
+        ]
+    }
+
+
+@pytest.fixture
+def sample_staking_summary() -> Dict[str, Any]:
+    """Sample staking summary response."""
+    return {
+        "delegated": "100.61607572",
+        "undelegated": "25.12345678",
+        "totalPendingWithdrawal": "5.0",
+        "nPendingWithdrawals": 2,
+    }
+
+
+@pytest.fixture
+def expected_balance_info() -> BalanceInfo:
+    """Expected BalanceInfo object for testing."""
+    return BalanceInfo(
+        perps_account_value=Decimal("3451.743653"),
+        perps_total_position_value=Decimal("10.8642"),
+        perps_total_raw_usd=Decimal("3440.879453"),
+        perps_margin_used=Decimal("5.318932"),
+        perps_withdrawable=Decimal("3451.324721"),
+        spot_balances=[
+            SpotBalance(coin="USDC", total=Decimal("1000.50")),
+            SpotBalance(coin="HYPE", total=Decimal("500.0")),
+            SpotBalance(coin="UETH", total=Decimal("0.002998111")),
+        ],
+        staking_info=StakingInfo(
+            delegated_amount=Decimal("100.61607572"),
+            undelegated_amount=Decimal("25.12345678"),
+            pending_withdrawals=Decimal("5.0"),
+            pending_withdrawal_count=2,
+        ),
+    )

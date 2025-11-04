@@ -103,6 +103,51 @@ class PositionInfo(BaseModel):
     cum_funding: Decimal = Field(..., description="Cumulative funding payments")
 
 
+class SpotBalance(BaseModel):
+    """Spot balance information for a specific coin."""
+
+    coin: str = Field(..., description="Symbol of the cryptocurrency")
+    total: Decimal = Field(..., description="Total balance")
+
+
+class StakingInfo(BaseModel):
+    """Staking information including delegations and rewards."""
+
+    delegated_amount: Decimal = Field(..., description="Total delegated amount")
+    undelegated_amount: Decimal = Field(..., description="Total undelegated amount")
+    pending_withdrawals: Decimal = Field(
+        ..., description="Total pending withdrawal amount"
+    )
+    pending_withdrawal_count: int = Field(
+        ..., description="Number of pending withdrawals"
+    )
+
+
+class BalanceInfo(BaseModel):
+    """Comprehensive balance information for a Hyperliquid account."""
+
+    # Perpetuals Account (from user_state)
+    perps_account_value: Decimal = Field(..., description="Perpetuals account value")
+    perps_total_position_value: Decimal = Field(
+        ..., description="Total notional position size"
+    )
+    perps_total_raw_usd: Decimal = Field(..., description="Remaining Raw USD")
+    perps_margin_used: Decimal = Field(
+        ..., description="Total margin used by perpetual positions"
+    )
+    perps_withdrawable: Decimal = Field(..., description="Available withdrawal amount")
+
+    # Spot Balances
+    spot_balances: list[SpotBalance] = Field(
+        default_factory=list, description="Spot coin balances"
+    )
+
+    # Staking Information
+    staking_info: Optional[StakingInfo] = Field(
+        None, description="Staking delegations and rewards"
+    )
+
+
 # ============================================================================
 # EXPORTS
 # ============================================================================
@@ -120,4 +165,7 @@ __all__ = [
     "Ticker",
     "CoinMetadata",
     "PositionInfo",
+    "SpotBalance",
+    "StakingInfo",
+    "BalanceInfo",
 ]

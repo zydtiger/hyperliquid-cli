@@ -9,7 +9,15 @@ import pytest
 from decimal import Decimal
 from unittest.mock import patch
 
-from models.api import Ticker, ExchangeError, LeverageType, PositionInfo
+from models.api import (
+    Ticker,
+    ExchangeError,
+    LeverageType,
+    PositionInfo,
+    BalanceInfo,
+    SpotBalance,
+    StakingInfo,
+)
 
 
 class TestHyperliquidClientPositions:
@@ -173,3 +181,198 @@ class TestHyperliquidClientPositions:
             ExchangeError, match="Operation failed after 4 attempts: Connection lost"
         ):
             client.get_positions()
+
+
+class TestHyperliquidClientBalances:
+    """Test cases for get_balances method."""
+
+    def test_get_balances_success(
+        self,
+        client,
+        mock_connection,
+        sample_user_state_response,
+        sample_spot_state,
+        sample_staking_summary,
+        expected_balance_info,
+        mock_retry_operation,
+    ):
+        """Test successful balance retrieval with all data sources."""
+        mock_info = mock_connection.info
+        mock_info.user_state.return_value = sample_user_state_response
+        mock_info.spot_user_state.return_value = sample_spot_state
+        mock_info.user_staking_summary.return_value = sample_staking_summary
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_balances()
+
+        # Use expected_balance_info fixture for comprehensive validation
+        assert result == expected_balance_info
+
+    def test_get_balances_no_spot_balances(
+        self,
+        client,
+        mock_connection,
+        sample_user_state_response,
+        sample_staking_summary,
+        mock_retry_operation,
+    ):
+        """Test balance retrieval with no spot balances."""
+        mock_info = mock_connection.info
+        mock_info.user_state.return_value = sample_user_state_response
+        mock_info.spot_user_state.return_value = {"balances": []}
+        mock_info.user_staking_summary.return_value = sample_staking_summary
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_balances()
+
+        # Check perps data is still populated
+        assert result.perps_account_value == Decimal("3451.743653")
+        assert result.perps_margin_used == Decimal("5.318932")
+
+        # Check empty spot balances
+        assert result.spot_balances == []
+
+        # Check staking info is still populated
+        assert result.staking_info is not None
+        assert result.staking_info.delegated_amount == Decimal("100.61607572")
+
+    def test_get_balances_no_staking_info(
+        self,
+        client,
+        mock_connection,
+        sample_user_state_response,
+        sample_spot_state,
+        mock_retry_operation,
+    ):
+        """Test balance retrieval with staking data failure."""
+        mock_info = mock_connection.info
+        mock_info.user_state.return_value = sample_user_state_response
+        mock_info.spot_user_state.return_value = sample_spot_state
+        mock_info.user_staking_summary.side_effect = Exception("Staking API error")
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_balances()
+
+        # Check perps and spot data are populated
+        assert result.perps_account_value == Decimal("3451.743653")
+        assert len(result.spot_balances) == 3
+
+        # Check staking info is None due to API failure
+        assert result.staking_info is None
+
+    def test_get_balances_zero_balances_filtered(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test that zero spot balances are filtered out."""
+        mock_info = mock_connection.info
+
+        # User state with minimal data
+        user_state = {
+            "marginSummary": {
+                "accountValue": "1000.0",
+                "totalNtlPos": "0.0",
+                "totalRawUsd": "1000.0",
+                "totalMarginUsed": "0.0",
+            },
+            "withdrawable": "1000.0",
+            "assetPositions": [],
+        }
+
+        # Spot state with zero and non-zero balances
+        spot_state = {
+            "balances": [
+                {"coin": "BTC", "total": "0.0", "hold": "0.0"},  # Should be filtered
+                {"coin": "ETH", "total": "0.0", "hold": "0.0"},  # Should be filtered
+                {
+                    "coin": "USDC",
+                    "total": "100.0",
+                    "hold": "10.0",
+                },  # Should be included
+            ]
+        }
+
+        mock_info.user_state.return_value = user_state
+        mock_info.spot_user_state.return_value = spot_state
+        mock_info.user_staking_summary.side_effect = Exception("No staking")
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_balances()
+
+        # Check that only non-zero balance is included
+        assert len(result.spot_balances) == 1
+        assert result.spot_balances[0].coin == "USDC"
+        assert result.spot_balances[0].total == Decimal("100.0")
+
+    def test_get_balances_missing_user_state_keys(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test balance retrieval with missing user state keys."""
+        mock_info = mock_connection.info
+
+        # Minimal user state missing some keys
+        user_state = {
+            "marginSummary": {
+                # Missing accountValue, totalNtlPos, etc.
+                "totalMarginUsed": "0.0",
+            },
+            # Missing withdrawable key
+            "assetPositions": [],
+        }
+
+        mock_info.user_state.return_value = user_state
+        mock_info.spot_user_state.return_value = {"balances": []}
+        mock_info.user_staking_summary.side_effect = Exception("No staking")
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_balances()
+
+        # Check default values are used
+        assert result.perps_account_value == Decimal("0")
+        assert result.perps_total_position_value == Decimal("0")
+        assert result.perps_total_raw_usd == Decimal("0")
+        assert result.perps_margin_used == Decimal("0.0")
+        assert result.perps_withdrawable == Decimal("0")
+        assert result.spot_balances == []
+        assert result.staking_info is None
+
+    def test_get_balances_spot_api_failure(
+        self,
+        client,
+        mock_connection,
+        sample_user_state_response,
+        sample_staking_summary,
+        mock_retry_operation,
+    ):
+        """Test balance retrieval when spot API fails."""
+        mock_info = mock_connection.info
+        mock_info.user_state.return_value = sample_user_state_response
+        mock_info.spot_user_state.side_effect = Exception("Spot API error")
+        mock_info.user_staking_summary.return_value = sample_staking_summary
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_balances()
+
+        # Check perps and staking data are populated despite spot API failure
+        assert result.perps_account_value == Decimal("3451.743653")
+        assert result.staking_info is not None
+        assert result.staking_info.delegated_amount == Decimal("100.61607572")
+
+        # Check spot balances is empty due to API failure
+        assert result.spot_balances == []
+
+    def test_get_balances_retry_failure(self, client, mock_connection):
+        """Test retry failure when getting balances."""
+        mock_connection.retry_operation.side_effect = ExchangeError(
+            "Operation failed after 4 attempts: Connection lost"
+        )
+
+        with pytest.raises(
+            ExchangeError, match="Operation failed after 4 attempts: Connection lost"
+        ):
+            client.get_balances()

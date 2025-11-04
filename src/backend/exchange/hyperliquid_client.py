@@ -16,6 +16,9 @@ from models.api import (
     PositionInfo,
     ExchangeError,
     LeverageType,
+    BalanceInfo,
+    SpotBalance,
+    StakingInfo,
 )
 from models.order import (
     MarketOrder,
@@ -131,6 +134,173 @@ class HyperliquidClient:
             raise ExchangeError(f"Coin '{coin}' not found in available trading pairs")
 
         return self.connection.retry_operation(_get_metadata)
+
+    def get_balances(self) -> BalanceInfo:
+        """
+        Get comprehensive balance information for the account.
+
+        Returns:
+            BalanceInfo: Comprehensive balance information including perpetuals, spot, and staking
+
+        Raises:
+            ExchangeError: If balance retrieval fails
+        """
+
+        def _get_balances():
+            try:
+                # Get perpetuals account data from user_state
+                user_state = self.connection.info.user_state(
+                    self.config.hyperliquid.account_address
+                )
+
+                # sample_user_state = {
+                #     "marginSummary": {
+                #         "accountValue": "3451.743653",
+                #         "totalNtlPos": "10.8642",
+                #         "totalRawUsd": "3440.879453",
+                #         "totalMarginUsed": "0.418932",
+                #     },
+                #     "crossMarginSummary": {
+                #         "accountValue": "3451.324721",
+                #         "totalNtlPos": "0.0",
+                #         "totalRawUsd": "3451.324721",
+                #         "totalMarginUsed": "0.0",
+                #     },
+                #     "crossMaintenanceMarginUsed": "0.0",
+                #     "withdrawable": "3451.324721",
+                #     "assetPositions": [
+                #         {
+                #             "type": "oneWay",
+                #             "position": {
+                #                 "coin": "ETH",
+                #                 "szi": "0.003",
+                #                 "leverage": {
+                #                     "type": "isolated",
+                #                     "value": 25,
+                #                     "rawUsd": "-10.445268",
+                #                 },
+                #                 "entryPx": "3625.3",
+                #                 "positionValue": "10.8642",
+                #                 "unrealizedPnl": "-0.0117",
+                #                 "returnOnEquity": "-0.026894326",
+                #                 "liquidationPx": "3552.812244898",
+                #                 "marginUsed": "0.418932",
+                #                 "maxLeverage": 25,
+                #                 "cumFunding": {
+                #                     "allTime": "87.084461",
+                #                     "sinceOpen": "0.0",
+                #                     "sinceChange": "0.0",
+                #                 },
+                #             },
+                #         }
+                #     ],
+                #     "time": 1762232186476,
+                # }
+
+                # Extract perpetuals data
+                margin_summary = user_state.get("marginSummary", {})
+
+                perps_data = {
+                    "account_value": Decimal(margin_summary.get("accountValue", "0")),
+                    "total_position_value": Decimal(
+                        margin_summary.get("totalNtlPos", "0")
+                    ),
+                    "total_raw_usd": Decimal(margin_summary.get("totalRawUsd", "0")),
+                    "margin_used": Decimal(margin_summary.get("totalMarginUsed", "0")),
+                    "withdrawable": Decimal(user_state.get("withdrawable", "0")),
+                }
+
+                # Get spot balances
+                spot_balances = []
+                try:
+                    spot_state = self.connection.info.spot_user_state(
+                        self.config.hyperliquid.account_address
+                    )
+
+                    # sample_spot_state = {
+                    #     "balances": [
+                    #         {
+                    #             "coin": "USDC",
+                    #             "token": 0,
+                    #             "total": "89.12677146",
+                    #             "hold": "0.0",
+                    #             "entryNtl": "0.0",
+                    #         },
+                    #         {
+                    #             "coin": "HYPE",
+                    #             "token": 150,
+                    #             "total": "0.0",
+                    #             "hold": "0.0",
+                    #             "entryNtl": "0.0",
+                    #         },
+                    #         {
+                    #             "coin": "UETH",
+                    #             "token": 221,
+                    #             "total": "0.002998111",
+                    #             "hold": "0.0",
+                    #             "entryNtl": "10.8831",
+                    #         },
+                    #     ]
+                    # }
+
+                    holding_data = spot_state.get("balances", [])
+
+                    for holding in holding_data:
+                        if Decimal(holding.get("total", "0")) != 0:
+                            spot_balances.append(
+                                SpotBalance(
+                                    coin=holding["coin"],
+                                    total=Decimal(holding["total"]),
+                                )
+                            )
+                except Exception:
+                    # If spot data retrieval fails, continue with empty spot balances
+                    spot_balances = []
+
+                # Get staking information
+                staking_info = None
+                try:
+                    staking_summary = self.connection.info.user_staking_summary(
+                        self.config.hyperliquid.account_address
+                    )
+
+                    # sample_staking_summary = {
+                    #     "delegated": "100.61607572",
+                    #     "undelegated": "0.0",
+                    #     "totalPendingWithdrawal": "0.0",
+                    #     "nPendingWithdrawals": 0,
+                    # }
+
+                    staking_info = StakingInfo(
+                        delegated_amount=Decimal(staking_summary.get("delegated", "0")),
+                        undelegated_amount=Decimal(
+                            staking_summary.get("undelegated", "0")
+                        ),
+                        pending_withdrawals=Decimal(
+                            staking_summary.get("totalPendingWithdrawal", "0")
+                        ),
+                        pending_withdrawal_count=staking_summary.get(
+                            "nPendingWithdrawals", 0
+                        ),
+                    )
+                except Exception:
+                    # If staking data retrieval fails, continue with None
+                    staking_info = None
+
+                return BalanceInfo(
+                    perps_account_value=perps_data["account_value"],
+                    perps_total_position_value=perps_data["total_position_value"],
+                    perps_total_raw_usd=perps_data["total_raw_usd"],
+                    perps_margin_used=perps_data["margin_used"],
+                    perps_withdrawable=perps_data["withdrawable"],
+                    spot_balances=spot_balances,
+                    staking_info=staking_info,
+                )
+
+            except Exception as e:
+                raise ExchangeError(f"Failed to get balance information: {e}")
+
+        return self.connection.retry_operation(_get_balances)
 
     def get_positions(self) -> List[PositionInfo]:
         """
@@ -404,7 +574,9 @@ class HyperliquidClient:
                 # Parse response
                 if result.get("status") == "ok":
                     # Check individual order statuses from response.data
-                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+                    statuses = (
+                        result.get("response", {}).get("data", {}).get("statuses", [])
+                    )
 
                     for status in statuses:
                         if "resting" in status:
@@ -499,7 +671,9 @@ class HyperliquidClient:
                 # Parse response
                 if result.get("status") == "ok":
                     # Check individual order statuses from response.data
-                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+                    statuses = (
+                        result.get("response", {}).get("data", {}).get("statuses", [])
+                    )
 
                     for status in statuses:
                         if "resting" in status:
