@@ -251,11 +251,49 @@ class InteractiveCLI(cmd.Cmd):
         print("- Order settings (TIF, reduce-only)")
         print("- Creation timestamp")
 
+    def do_open_orders(self, args: str) -> None:
+        """
+        Get all open orders for the account.
+
+        Usage: open_orders
+        """
+        try:
+            with BackendAPI(self.config) as api:
+                orders = api.get_open_orders()
+
+                # Use the order formatter to display orders as a table
+                formatter = OrderFormatter()
+                print()
+                print(formatter._format_order_infos(orders))
+                print()
+
+        except Exception as e:
+            print(f"❌ Error fetching open orders: {e}")
+
+    def help_open_orders(self) -> None:
+        """Show help for the open_orders command."""
+        print("open_orders - Get all open orders for the account")
+        print("Usage: open_orders")
+        print()
+        print(
+            "This command displays all currently open orders in a table format including:"
+        )
+        print("- Order ID, coin, side, and type")
+        print("- Current status (open, filled, cancelled, etc.)")
+        print("- Quantity, filled amount, and remaining amount")
+        print("- Price information (limit price, average fill price)")
+        print("- Order settings (TIF, reduce-only)")
+        print("- Creation timestamp")
+        print()
+        print("The orders are displayed in a clean table format for easy scanning.")
+        print("If no open orders exist, a message indicating this will be shown.")
+
     def completenames(self, text: str, *ignored: str) -> List[str]:
         """Override to provide custom command completion."""
         commands = [
             "order",
             "order_status",
+            "open_orders",
             "status",
             "positions",
             "conditionals",

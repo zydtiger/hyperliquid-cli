@@ -5,8 +5,9 @@ This module provides formatting utilities for displaying order information
 in a user-friendly way.
 """
 
-from typing import Union
+from typing import Union, List
 from .base import Formatter
+from .table_formatter import TableFormatter
 from models import MarketOrder, LimitOrder
 from models.order import OrderInfo, OrderResult, OrderStatus
 
@@ -133,24 +134,90 @@ class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderRe
 
         return "\n".join(lines)
 
-    def _format_status(self, status: OrderStatus) -> str:
+    def _format_status(self, status: OrderStatus, monospace: bool = False) -> str:
         """
         Format order status with appropriate indicators.
 
         Args:
             status: OrderStatus enum value
+            monospace: Whether to use monospace-compatible status indicators
 
         Returns:
             str: Formatted status string
         """
-        status_map = {
-            OrderStatus.OPEN: "🟢 OPEN",
-            OrderStatus.FILLED: "✅ FILLED",
-            OrderStatus.CANCELLED: "❌ CANCELLED",
-            OrderStatus.REJECTED: "🚫 REJECTED",
-            OrderStatus.PARTIALLY_FILLED: "🟡 PARTIALLY FILLED",
-        }
+        if monospace:
+            status_map = {
+                OrderStatus.OPEN: "+ OPEN",
+                OrderStatus.FILLED: "* FILLED",
+                OrderStatus.CANCELLED: "- CANCELLED",
+                OrderStatus.REJECTED: "! REJECTED",
+                OrderStatus.PARTIALLY_FILLED: "~ PARTIAL",
+            }
+        else:
+            status_map = {
+                OrderStatus.OPEN: "🟢 OPEN",
+                OrderStatus.FILLED: "✅ FILLED",
+                OrderStatus.CANCELLED: "❌ CANCELLED",
+                OrderStatus.REJECTED: "🚫 REJECTED",
+                OrderStatus.PARTIALLY_FILLED: "🟡 PARTIALLY FILLED",
+            }
         return status_map.get(status, status.value.upper())
+
+    def _format_order_infos(self, orders: List[OrderInfo]) -> str:
+        """
+        Format a list of OrderInfo objects as a table using TableFormatter.
+
+        Args:
+            orders: List of OrderInfo objects to format
+
+        Returns:
+            str: Formatted table of orders
+        """
+        if not orders:
+            return "No open orders found."
+
+        # Define table headers
+        headers = [
+            "Order ID",
+            "Coin",
+            "Side",
+            "Type",
+            "Status",
+            "Quantity",
+            "Price",
+            "Filled",
+            "Remaining",
+            "TIF",
+        ]
+
+        # Convert OrderInfo objects to table rows
+        rows = []
+        for order in orders:
+            # Format price (handle market orders)
+            price_str = f"${order.price}" if order.price is not None else "Market"
+
+            # Format TIF (handle null values)
+            tif_str = order.time_in_force.value if order.time_in_force else "N/A"
+
+            row = [
+                str(order.order_id),
+                order.coin,
+                order.side.upper(),
+                order.order_type.upper(),
+                self._format_status(order.status, monospace=True),
+                str(order.quantity),
+                price_str,
+                str(order.filled_quantity),
+                str(order.remaining_quantity),
+                tif_str,
+            ]
+            rows.append(row)
+
+        # Use TableFormatter to create the table
+        table_formatter = TableFormatter()
+        return table_formatter.format(
+            (headers, rows), title=f"Open Orders ({len(orders)})"
+        )
 
 
 __all__ = [
