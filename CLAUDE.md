@@ -1,91 +1,57 @@
-# Hyperliquid Smart Order - Project Instructions
+# Hyperliquid CLI - Project Instructions
 
-## Project Overview
+Hyperliquid smart order trading system with structured architecture.
 
-This is a Hyperliquid smart order trading system. The codebase follows a structured architecture with clear separation of concerns.
+## Environment
 
-## Environment Setup
+- **Before any bash command**: `source ~/.zshrc`
+- **Python execution**: `conda activate finance`
+- **After file changes**: `black <file>`
+- **File length**: Source files max 300 lines (refactor if needed)
+- **Test files**: No length limit
 
-### Critical Requirements
+## Code Rules
 
-- **Before any bash command**: Load environment with `source ~/.zshrc`
-- **For Python execution**: Always use the `finance` conda environment
-- **Activation**: `conda activate finance` before running Python files
+### Models & Types
+- All models in `src/models/`
+- No local type definitions
+- Use appropriate subdirectories
 
-### Code Formatting
+### Development
+- Reuse existing code, models, functions
+- Search codebase before creating new
+- Clean up imports when removing files
+- Maintain test coverage
+- Use `pytest-suite-generator` agent for unit tests
 
-- **After any file modification**: Run `black <file>` to ensure proper formatting
-- **Documentation**: Review and update docstrings/comments for consistency with changes
-- **File length**: Source files should typically not exceed 300 lines (refactor into multiple files if needed)
-- **Test files**: Unit test files are exempt from line limit restrictions and can be arbitrarily long
+### Config Files
+- Reference: `config.example.yaml`
+- Only modify `config.example.yaml`
 
-## File Management Guidelines
+## Workflow
 
-### Creating New Files
+### Adding Features
+1. Search existing codebase
+2. Check `src/models/` for reusable types
+3. Add new models to `src/models/`
+4. Update imports, remove obsolete files
+5. Format with `black`
+6. Update tests, remove obsolete unit tests
+7. Update docs
 
-- **Check for overlaps**: Identify if new functionality overlaps with existing files
-- **Cleanup**: Remove obsolete files and update all import statements
-- **Organization**: Place files in appropriate directories based on function
-
-### Adding to Config
-
-- **Sample file**: do not read config.json, always read config.example.jsonc for reference of structure, when adding/removing config, modify config.example.jsonc only.
-
-## Code Architecture Principles
-
-### Model/Type Management
-
-- **Centralized models**: All types and models MUST be placed under `src/models/`
-- **No local types**: Never create models/types locally in other files
-- **Proper categorization**: Use appropriate subdirectories within models/
-
-### Development Approach
-
-- **Reuse existing code**: ALWAYS leverage existing types, models, classes, and functions
-- **Avoid duplication**: Never rewrite functionality from scratch if it exists
-- **Check codebase first**: Thoroughly search for existing implementations before creating new ones
-
-### Key Conventions
-
-- **Import management**: Clean up imports when removing/renaming files
-- **Documentation**: Keep docstrings and comments consistent with code changes
-- **Testing**: Ensure all changes maintain test coverage
-
-## Common Workflows
-
-### Adding New Features
-
-1. Search existing codebase for related functionality
-2. Check `src/models/` for existing types that can be reused
-3. Place new models in appropriate `src/models/` subdirectory
-4. Update imports and remove obsolete files
-5. Format code with `black`
-6. Update unit tests and remove obsolete unit tests
-7. Update documentation
-
-### Modifying Existing Code
-
-1. Read and understand the current implementation
-2. Check for dependencies and imports
-3. Make necessary changes
+### Modifying Code
+1. Read current implementation
+2. Check dependencies
+3. Make changes
 4. Format with `black`
-5. Update unit tests for modified functionality
-6. Remove obsolete unit tests if functionality changed significantly
-7. Update related documentation
+5. Update tests, remove obsolete unit tests if needed
+6. Update docs
 
-## Project-Specific Notes
+## Project Notes
+- Hyperliquid exchange trading system
+- Uses type hints extensively
+- Follows Python best practices
 
-- This is a trading system for Hyperliquid exchange
-- Maintains compatibility with specific API structures
-- Uses type hints extensively for better code reliability
-- Follows Python best practices and SOLID principles
-
-## API Documentation Maintenance
-
-- **Important**: Whenever new API endpoints are added to the backend service or existing endpoints are modified, the API documentation at `docs/api.md` must be updated accordingly
-- The API documentation should include:
-  - Complete endpoint descriptions with HTTP methods and paths
-  - Request parameters (path, query, body) with types and descriptions
-  - Response schemas with examples
-  - Error responses with status codes and descriptions
-  - Usage examples where appropriate
+## API Documentation
+- Update `docs/api.md` for any API changes
+- Include endpoints, parameters, responses, examples
