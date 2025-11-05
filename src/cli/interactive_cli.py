@@ -173,7 +173,6 @@ class InteractiveCLI(cmd.Cmd):
 
     def do_quit(self, args: str) -> bool:
         """Exit the CLI."""
-        print("👋 Goodbye!")
         return True
 
     def do_exit(self, args: str) -> bool:
@@ -182,7 +181,6 @@ class InteractiveCLI(cmd.Cmd):
 
     def do_EOF(self, args: str) -> bool:
         """Handle EOF (Ctrl+D) to exit gracefully."""
-        print("\n👋 Goodbye!")
         return True
 
     def emptyline(self) -> bool:
@@ -448,6 +446,7 @@ class InteractiveCLI(cmd.Cmd):
         while True:
             try:
                 self.cmdloop()
+                typer.echo("👋 Goodbye!")
                 return  # Quit if do_exit, do_quit
             except KeyboardInterrupt:
                 try:
