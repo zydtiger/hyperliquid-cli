@@ -6,7 +6,7 @@ handling data retrieval and portfolio management operations.
 """
 
 from decimal import Decimal
-from typing import List
+from typing import List, Optional
 from hyperliquid.utils.signing import Tif
 
 from .hyperliquid_connection import HyperliquidConnection
@@ -915,6 +915,150 @@ class HyperliquidClient:
                 else None
             ),
         )
+
+    def modify_order(
+        self,
+        order_id: int,
+        price: Optional[Decimal] = None,
+        quantity: Optional[Decimal] = None,
+    ) -> OrderResult:
+        """
+        Modify price and/or quantity of an existing open limit order.
+
+        Args:
+            order_id: Order ID to modify
+            price: New price (None to keep current price)
+            quantity: New quantity (None to keep current quantity)
+
+        Returns:
+            OrderResult: Result of the modification operation
+
+        Raises:
+            ExchangeError: If order modification fails
+            ValueError: If order is not an open limit order
+        """
+
+        # Early exit if no changes requested
+        if price is None and quantity is None:
+            return OrderResult(
+                success=False,
+                order_id=order_id,
+                status=OrderStatus.REJECTED,
+                message="Order modification failed",
+                error="No changes requested - both price and quantity are None",
+            )
+
+        def _modify_order():
+            try:
+                # Get current order info to validate and extract current values
+                current_order = self.get_order_status(order_id)
+
+                # Validate order is open limit order
+                if current_order.status != OrderStatus.OPEN:
+                    if current_order.status == OrderStatus.CANCELLED:
+                        raise ValueError(
+                            f"Order {order_id} is already cancelled and cannot be modified"
+                        )
+                    elif current_order.status == OrderStatus.FILLED:
+                        raise ValueError(
+                            f"Order {order_id} is already filled and cannot be modified"
+                        )
+                    elif current_order.status == OrderStatus.REJECTED:
+                        raise ValueError(
+                            f"Order {order_id} was rejected and cannot be modified"
+                        )
+                    else:
+                        raise ValueError(
+                            f"Order {order_id} is {current_order.status.value} and cannot be modified"
+                        )
+
+                if current_order.order_type != OrderType.LIMIT:
+                    raise ValueError(
+                        f"Order {order_id} is a {current_order.order_type.value} order and cannot be modified (only limit orders can be modified)"
+                    )
+
+                # Use current values if None provided
+                new_price = price if price is not None else current_order.price
+                new_quantity = (
+                    quantity
+                    if quantity is not None
+                    else current_order.remaining_quantity
+                )
+
+                # Validate that we have both price and quantity for limit order
+                if new_price is None:
+                    raise ValueError("Price is required for limit order modification")
+                if new_quantity <= 0:
+                    raise ValueError("Quantity must be greater than 0")
+
+                # Submit modification using the exchange API
+                result = self.connection.exchange.modify_order(
+                    oid=order_id,
+                    name=current_order.coin,
+                    is_buy=current_order.side == OrderSide.BUY,
+                    sz=float(new_quantity),
+                    limit_px=float(new_price),
+                    order_type={
+                        "limit": {
+                            "tif": self._convert_tif_value(
+                                current_order.time_in_force or OrderTif.GTC
+                            )
+                        }
+                    },
+                )
+
+                # Parse the response
+                if result.get("status") == "ok":
+                    # Check individual order statuses from response.data
+                    statuses = (
+                        result.get("response", {}).get("data", {}).get("statuses", [])
+                    )
+
+                    for status in statuses:
+                        if "resting" in status:
+                            # Order was successfully modified and is resting on the book
+                            return OrderResult(
+                                success=True,
+                                order_id=order_id,
+                                status=OrderStatus.OPEN,
+                                message=f"Order {order_id} modified successfully - price: {new_price}, quantity: {new_quantity}",
+                            )
+                        elif "error" in status:
+                            error = status["error"]
+                            return OrderResult(
+                                success=False,
+                                order_id=order_id,
+                                status=OrderStatus.REJECTED,
+                                message="Order modification failed",
+                                error=error,
+                            )
+
+                    # Fallback if no statuses found but status was ok
+                    return OrderResult(
+                        success=True,
+                        order_id=order_id,
+                        status=OrderStatus.OPEN,
+                        message=f"Order {order_id} modified successfully - price: {new_price}, quantity: {new_quantity}",
+                    )
+                else:
+                    return OrderResult(
+                        success=False,
+                        order_id=order_id,
+                        status=OrderStatus.REJECTED,
+                        message="Order modification failed",
+                        error=result.get("response", "Unknown error"),
+                    )
+
+            except Exception as e:
+                return OrderResult(
+                    success=False,
+                    order_id=order_id,
+                    status=OrderStatus.REJECTED,
+                    message="Order modification failed",
+                    error=str(e),
+                )
+
+        return self.connection.retry_operation(_modify_order)
 
     def _convert_tif_value(self, tif: OrderTif) -> Tif:
         if tif == OrderTif.GTC:
