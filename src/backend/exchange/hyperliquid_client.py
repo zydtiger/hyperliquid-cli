@@ -1036,6 +1036,14 @@ class HyperliquidClient:
                     },
                 )
 
+                # sample_result = {
+                #     "status": "ok",
+                #     "response": {
+                #         "type": "order",
+                #         "data": {"statuses": [{"resting": {"oid": 224350915859}}]},
+                #     },
+                # }
+
                 # Parse the response
                 if result.get("status") == "ok":
                     # Check individual order statuses from response.data
@@ -1046,9 +1054,11 @@ class HyperliquidClient:
                     for status in statuses:
                         if "resting" in status:
                             # Order was successfully modified and is resting on the book
+                            # Extract the new order ID from the response, fallback to original if not provided
+                            new_order_id = status["resting"].get("oid", order_id)
                             return OrderResult(
                                 success=True,
-                                order_id=order_id,
+                                order_id=new_order_id,
                                 status=OrderStatus.OPEN,
                                 message=f"Order {order_id} modified successfully - price: {new_price}, quantity: {new_quantity}",
                             )
