@@ -53,9 +53,6 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
         output = []
 
         # Perpetuals Account
-        output.append("📈 Perpetuals Account")
-        output.append("=" * 50)
-
         perps_data = [
             ["Account Value", f"${balance_info.perps_account_value:,.2f}"],
             ["Total Position Size", f"${balance_info.perps_total_position_value:,.2f}"],
@@ -64,29 +61,25 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
             ["Withdrawable", f"${balance_info.perps_withdrawable:,.2f}"],
         ]
 
-        perps_table = self.table_formatter.format((["Metric", "Value"], perps_data))
+        perps_table = self.table_formatter.format(
+            (["Metric", "Value"], perps_data), title="📈 Perpetuals Account"
+        )
         output.append(perps_table)
-        output.append("")
 
         # Spot Balances
         if balance_info.spot_balances:
-            output.append("💰 Spot Balances")
-            output.append("=" * 50)
-
             spot_data = [["Coin", "Total Balance"]]
             for spot_balance in balance_info.spot_balances:
                 spot_data.append([spot_balance.coin, f"{spot_balance.total:,.6f}"])
 
-            spot_table = self.table_formatter.format((spot_data[0], spot_data[1:]))
+            spot_table = self.table_formatter.format(
+                (spot_data[0], spot_data[1:]), title="💰 Spot Balances"
+            )
             output.append(spot_table)
-            output.append("")
 
         # Staking Information
         if balance_info.staking_info:
             staking = balance_info.staking_info
-            output.append("🔒 Staking Information")
-            output.append("=" * 50)
-
             staking_data = [
                 ["Delegated Amount", f"{staking.delegated_amount:,.8f}"],
                 ["Undelegated Amount", f"{staking.undelegated_amount:,.8f}"],
@@ -95,7 +88,7 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
             ]
 
             staking_table = self.table_formatter.format(
-                (["Metric", "Value"], staking_data)
+                (["Metric", "Value"], staking_data), title="🔒 Staking Information"
             )
             output.append(staking_table)
 
