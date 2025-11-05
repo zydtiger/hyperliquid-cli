@@ -19,7 +19,13 @@ from models.api import (
     PositionInfo,
     BalanceInfo,
 )
-from models.order import OrderInfo, OrderResult, MarketOrder, LimitOrder
+from models.order import (
+    OrderInfo,
+    OrderResult,
+    MarketOrder,
+    LimitOrder,
+    CancelOrderRequest,
+)
 from models.config import Config
 
 
@@ -316,6 +322,35 @@ class BackendAPI:
             return OrderResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to submit limit order: {e}")
+            raise APIError(f"Connection error: {str(e)}")
+
+    def cancel_order(self, order_id: int | str) -> OrderResult:
+        """
+        Cancel a specific order or all open orders.
+
+        Args:
+            order_id: Order ID (int) to cancel, or "all" to cancel all open orders
+
+        Returns:
+            OrderResult: Result of the cancellation operation
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            # Create CancelOrderRequest model
+            request = CancelOrderRequest(order_id=order_id)
+
+            # Send the request as JSON
+            response = self.client.post(
+                "/cancel_order",
+                content=request.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+            )
+            self._handle_response_error(response)
+            return OrderResult(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to cancel order {order_id}: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
     def close(self) -> None:

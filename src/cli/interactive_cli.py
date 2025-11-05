@@ -263,7 +263,6 @@ class InteractiveCLI(cmd.Cmd):
 
                 # Use the order formatter to display orders as a table
                 formatter = OrderFormatter()
-                print()
                 print(formatter._format_order_infos(orders))
                 print()
 
@@ -288,12 +287,81 @@ class InteractiveCLI(cmd.Cmd):
         print("The orders are displayed in a clean table format for easy scanning.")
         print("If no open orders exist, a message indicating this will be shown.")
 
+    def do_cancel_order(self, args: str) -> None:
+        """
+        Cancel a specific order or all open orders.
+
+        Usage: cancel_order <order_id|all>
+
+        Examples:
+            cancel_order 12345        # Cancel specific order
+            cancel_order all          # Cancel all open orders
+        """
+        if not args.strip():
+            print("❌ Error: Order ID or 'all' is required")
+            print("Usage: cancel_order <order_id|all>")
+            print("Examples:")
+            print("  cancel_order 12345    # Cancel specific order")
+            print("  cancel_order all      # Cancel all open orders")
+            return
+
+        arg = args.strip().lower()
+
+        # Validate argument
+        try:
+            if arg == "all":
+                print("⏳ Cancelling all open orders...")
+                with BackendAPI(self.config) as api:
+                    result = api.cancel_order("all")
+            else:
+                try:
+                    order_id = int(arg)
+                    if order_id <= 0:
+                        print("❌ Order ID must be a positive integer")
+                        return
+                except ValueError:
+                    print(f"❌ Invalid argument: {arg}")
+                    print("Must be a positive integer order ID or 'all'")
+                    return
+
+                print(f"⏳ Cancelling order {order_id}...")
+                with BackendAPI(self.config) as api:
+                    result = api.cancel_order(order_id)
+
+            if result.success:
+                print(f"✅ {result.message}")
+            else:
+                print(f"❌ Error: {result.error or result.message}")
+
+        except Exception as e:
+            print(f"❌ Failed to cancel order: {e}")
+
+    def help_cancel_order(self) -> None:
+        """Show help for the cancel_order command."""
+        print("cancel_order - Cancel a specific order or all open orders")
+        print("Usage: cancel_order <order_id|all>")
+        print()
+        print("Arguments:")
+        print("  order_id    Positive integer ID of the order to cancel")
+        print("  all         Cancel all open orders")
+        print()
+        print("Examples:")
+        print("  cancel_order 12345    # Cancel specific order")
+        print("  cancel_order all      # Cancel all open orders")
+        print()
+        print("Notes:")
+        print("  - Use 'order_status' to check individual order details")
+        print("  - Use 'open_orders' to list all open orders")
+        print("  - Only open orders can be cancelled")
+        print("  - Batch cancellation shows success/failure counts")
+
     def completenames(self, text: str, *ignored: str) -> List[str]:
         """Override to provide custom command completion."""
         commands = [
             "order",
             "order_status",
             "open_orders",
+            "cancel_order",
             "status",
             "positions",
             "conditionals",
