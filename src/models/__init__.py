@@ -14,14 +14,36 @@ from .config import (
     Config,
 )
 
+from .api import (
+    APIError,
+    ExchangeError,
+    HealthStatus,
+    LeverageType,
+    HealthResponse,
+    RootResponse,
+    Ticker,
+    CoinMetadata,
+    PositionInfo,
+    SpotBalance,
+    StakingInfo,
+    BalanceInfo,
+)
+
 from .order import (
     OrderSide,
     OrderTif,
+    OrderStatus,
+    OrderType,
     MarketOrder,
     LimitOrder,
+    OrderResult,
+    OrderInfo,
+    CancelOrderRequest,
+    ModifyOrderRequest,
 )
 
 __all__ = [
+    # Config models
     "ConfigurationError",
     "NetworkType",
     "HyperliquidConfig",
@@ -29,8 +51,28 @@ __all__ = [
     "LoggingConfig",
     "BackendConfig",
     "Config",
+    # API models
+    "APIError",
+    "ExchangeError",
+    "HealthStatus",
+    "LeverageType",
+    "HealthResponse",
+    "RootResponse",
+    "Ticker",
+    "CoinMetadata",
+    "PositionInfo",
+    "SpotBalance",
+    "StakingInfo",
+    "BalanceInfo",
+    # Order models
     "OrderSide",
     "OrderTif",
+    "OrderStatus",
+    "OrderType",
     "MarketOrder",
     "LimitOrder",
+    "OrderResult",
+    "OrderInfo",
+    "CancelOrderRequest",
+    "ModifyOrderRequest",
 ]
