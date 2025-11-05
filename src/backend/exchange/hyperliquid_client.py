@@ -846,8 +846,37 @@ class HyperliquidClient:
         # Cancel the order using the exchange API
         result = self.connection.exchange.cancel(order_info.coin, order_id)
 
+        # sample_result = {
+        #     "status": "ok",
+        #     "response": {"type": "cancel", "data": {"statuses": ["success"]}},
+        # }
+
         # Parse the response
         if result.get("status") == "ok":
+            # Check individual order statuses from response.data
+            statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+
+            for status in statuses:
+                if status == "success":
+                    # Order was successfully cancelled
+                    return OrderResult(
+                        success=True,
+                        order_id=order_id,
+                        status=OrderStatus.CANCELLED,
+                        message=f"Order {order_id} cancelled successfully",
+                    )
+                elif isinstance(status, dict) and "error" in status:
+                    # Order cancellation failed
+                    error = status["error"]
+                    return OrderResult(
+                        success=False,
+                        order_id=order_id,
+                        status=OrderStatus.REJECTED,
+                        message="Order cancellation failed",
+                        error=error,
+                    )
+
+            # Fallback if no statuses found but status was ok
             return OrderResult(
                 success=True,
                 order_id=order_id,

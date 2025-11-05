@@ -883,6 +883,7 @@ class TestHyperliquidClientCancelOrder:
         client,
         mock_connection,
         mock_retry_operation,
+        cancel_success_response,
     ):
         """Test successful cancellation of a specific order."""
         # Mock order status for open order
@@ -905,18 +906,9 @@ class TestHyperliquidClientCancelOrder:
             }
         }
 
-        # Mock successful cancel response
-        cancel_response = {
-            "status": "ok",
-            "response": {
-                "type": "order",
-                "data": {"statuses": [{"resting": {"oid": 123456}}]},
-            },
-        }
-
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.query_order_by_oid.return_value = open_order_response
-        mock_connection.exchange.cancel.return_value = cancel_response
+        mock_connection.exchange.cancel.return_value = cancel_success_response
 
         result = client.cancel_order(123456)
 
@@ -1071,7 +1063,7 @@ class TestHyperliquidClientCancelOrder:
         client,
         mock_connection,
         mock_retry_operation,
-        order_error_response,
+        cancel_error_response,
     ):
         """Test cancellation when API returns error."""
         # Mock order status for open order
@@ -1092,12 +1084,6 @@ class TestHyperliquidClientCancelOrder:
                 "status": "open",
                 "statusTimestamp": 1762271506632,
             }
-        }
-
-        # Mock failed cancel response using existing fixture
-        cancel_error_response = {
-            "status": "error",
-            "response": "Insufficient balance",
         }
 
         mock_connection.retry_operation.side_effect = mock_retry_operation
@@ -1140,7 +1126,7 @@ class TestHyperliquidClientCancelOrder:
         mock_retry_operation,
         sample_open_orders_response,
         sample_order_status_responses,
-        limit_success_response_resting,
+        cancel_success_response,
     ):
         """Test successful cancellation of all open orders."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
@@ -1151,7 +1137,7 @@ class TestHyperliquidClientCancelOrder:
             return sample_order_status_responses[order_id]
 
         mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid
-        mock_connection.exchange.cancel.return_value = limit_success_response_resting
+        mock_connection.exchange.cancel.return_value = cancel_success_response
 
         result = client.cancel_order("all")
 
@@ -1199,8 +1185,8 @@ class TestHyperliquidClientCancelOrder:
         mock_retry_operation,
         sample_open_orders_response,
         sample_order_status_responses,
-        limit_success_response_resting,
-        order_error_response,
+        cancel_success_response,
+        cancel_error_response,
     ):
         """Test cancel_all with some order cancellation failures."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
@@ -1213,9 +1199,9 @@ class TestHyperliquidClientCancelOrder:
         # Mock cancel responses - success for first, error for others
         def mock_cancel_with_errors(coin, order_id):
             if order_id == 222605232959:
-                return limit_success_response_resting
+                return cancel_success_response
             else:
-                return order_error_response
+                return cancel_error_response
 
         mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid
         mock_connection.exchange.cancel.side_effect = mock_cancel_with_errors
@@ -1262,6 +1248,52 @@ class TestHyperliquidClientCancelOrder:
 
         # Verify cancel was not called for any invalid input
         mock_connection.exchange.cancel.assert_not_called()
+
+    def test_cancel_specific_order_with_error_in_statuses(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        cancel_error_response,
+    ):
+        """Test cancellation when API returns ok status but error in statuses array."""
+        # Mock order status for open order
+        open_order_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3000.0",
+                    "sz": "0.003",
+                    "oid": 123456,
+                    "timestamp": 1762271506632,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271506632,
+            }
+        }
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = open_order_response
+        mock_connection.exchange.cancel.return_value = cancel_error_response
+
+        result = client.cancel_order(123456)
+
+        expected_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.REJECTED,
+            message="Order cancellation failed",
+            error="Insufficient balance",
+        )
+        assert result == expected_result
+
+        # Verify cancel was called
+        mock_connection.exchange.cancel.assert_called_once_with("ETH", 123456)
 
     def test_cancel_order_retry_logic(
         self,

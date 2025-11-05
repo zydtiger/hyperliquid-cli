@@ -385,6 +385,30 @@ def order_error_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
+def cancel_success_response() -> Dict[str, Any]:
+    """Cancel order response with success status."""
+    return {
+        "status": "ok",
+        "response": {
+            "type": "cancel",
+            "data": {"statuses": ["success"]},
+        },
+    }
+
+
+@pytest.fixture
+def cancel_error_response() -> Dict[str, Any]:
+    """Cancel order response with error status."""
+    return {
+        "status": "ok",
+        "response": {
+            "type": "cancel",
+            "data": {"statuses": [{"error": "Insufficient balance"}]},
+        },
+    }
+
+
+@pytest.fixture
 def sample_spot_state() -> Dict[str, Any]:
     """Sample spot state response with balance data."""
     return {
