@@ -23,6 +23,8 @@ from models.config import Config
 # Configure logging
 logger = logging.getLogger(__name__)
 
+default_config_path = Path.home() / ".hyperliquid-cli" / "config.yaml"
+
 
 def setup_logging(level: str) -> None:
     """Configure logging with the specified level."""
@@ -109,10 +111,10 @@ def create_app(config: Config) -> FastAPI:
 
 def entry_func(
     config: Path = typer.Option(
-        "config.yaml",
+        default_config_path,
         "--config",
         "-c",
-        help="Path to configuration file (default: config.yaml)",
+        help=f"Path to configuration file (default: {default_config_path})",
         exists=True,
         file_okay=True,
         dir_okay=False,

@@ -5,6 +5,7 @@ A command-line interface for the modular order system with support for
 market orders, limit orders, stop orders, and intelligent TP/SL management.
 """
 
+import os
 import shutil
 import typer
 from pathlib import Path
@@ -20,14 +21,16 @@ app = typer.Typer(
     help="Hyperliquid CLI - Simple order management system",
 )
 
+default_config_path = Path.home() / ".hyperliquid-cli" / "config.yaml"
+
 
 @app.command()
 def run(
     config_path: Path = typer.Option(
-        "config.yaml",
+        default_config_path,
         "--config",
         "-c",
-        help="Path to configuration file (default: config.yaml)",
+        help=f"Path to configuration file (default: {default_config_path})",
         exists=True,
         file_okay=True,
         dir_okay=False,
@@ -72,7 +75,16 @@ def run(
 def create_config():
     """Create a default configuration file."""
     try:
-        shutil.copyfile("config.example.yaml", "config.yaml")
+        example_config = Path(__file__).parent.parent.parent / "config.example.yaml"
+
+        os.makedirs(default_config_path.parent, exist_ok=True)
+
+        if os.path.exists(default_config_path):
+            if not typer.confirm("⚠️  Configuration file already exists. Overwrite?"):
+                typer.echo("❌ Configuration file creation cancelled.")
+                return
+
+        shutil.copyfile(example_config, default_config_path)
         typer.echo("✅ Default configuration file created successfully!")
     except Exception as e:
         typer.echo(f"❌ Failed to create configuration file: {e}", err=True)
