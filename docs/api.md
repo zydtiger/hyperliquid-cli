@@ -506,6 +506,143 @@ curl -X POST http://localhost:8080/cancel_order \
 }
 ```
 
+#### POST /modify_order
+Modify price and/or quantity of an existing open limit order.
+
+**Request Body:**
+```json
+{
+  "order_id": 123456,
+  "price": "3100.0",
+  "quantity": "0.05"
+}
+```
+
+or to keep current price:
+
+```json
+{
+  "order_id": 123456,
+  "price": null,
+  "quantity": "0.05"
+}
+```
+
+or to keep current quantity:
+
+```json
+{
+  "order_id": 123456,
+  "price": "3100.0",
+  "quantity": null
+}
+```
+
+**Field Descriptions:**
+- `order_id` (int): Order ID to modify (must be an open limit order)
+- `price` (decimal|null): New price (null to keep current price)
+- `quantity` (decimal|null): New quantity (null to keep current quantity)
+
+**Response (Successful Modification):**
+```json
+{
+  "success": true,
+  "order_id": 123456,
+  "status": "open",
+  "message": "Order 123456 modified successfully - price: 3100, quantity: 0.05"
+}
+```
+
+**Response (Order Not Found):**
+```json
+{
+  "success": false,
+  "order_id": 123456,
+  "status": "rejected",
+  "message": "Order modification failed",
+  "error": "Order 123456 not found"
+}
+```
+
+**Response (Invalid Order Status):**
+```json
+{
+  "success": false,
+  "order_id": 123456,
+  "status": "rejected",
+  "message": "Order modification failed",
+  "error": "Order 123456 is already filled and cannot be modified"
+}
+```
+
+**Field Descriptions:**
+- `success`: Whether the modification was successful
+- `order_id`: Order identifier that was attempted to be modified
+- `status`: Order status after modification attempt
+- `message`: Success/error message with details
+- `error`: Error details (null on success)
+
+**Error Responses:**
+- `400 Bad Request`: Invalid order ID, order not open limit order, or exchange error
+- `422 Unprocessable Entity`: Request validation failure
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Examples:**
+```bash
+# Modify both price and quantity
+curl -X POST http://localhost:8080/modify_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "order_id": 123456,
+    "price": "3100.0",
+    "quantity": "0.05"
+  }'
+
+# Response
+{
+  "success": true,
+  "order_id": 123456,
+  "status": "open",
+  "message": "Order 123456 modified successfully - price: 3100, quantity: 0.05"
+}
+
+# Modify only price (keep current quantity)
+curl -X POST http://localhost:8080/modify_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "order_id": 123456,
+    "price": "3200.0",
+    "quantity": null
+  }'
+
+# Modify only quantity (keep current price)
+curl -X POST http://localhost:8080/modify_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "order_id": 123456,
+    "price": null,
+    "quantity": "0.1"
+  }'
+
+# Response for non-existent order
+{
+  "success": false,
+  "order_id": 999999,
+  "status": "rejected",
+  "message": "Order modification failed",
+  "error": "Order 999999 not found"
+}
+
+# Response for filled order
+{
+  "success": false,
+  "order_id": 123457,
+  "status": "rejected",
+  "message": "Order modification failed",
+  "error": "Order 123457 is already filled and cannot be modified"
+}
+```
+
 ### Portfolio Endpoints
 
 #### GET /positions
@@ -674,6 +811,24 @@ curl -X POST http://localhost:8080/cancel_order \
 curl -X POST http://localhost:8080/cancel_order \
   -H "Content-Type: application/json" \
   -d '{"order_id": "all"}'
+
+# Modify order (both price and quantity)
+curl -X POST http://localhost:8080/modify_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "order_id": 123456,
+    "price": "3100.0",
+    "quantity": "0.05"
+  }'
+
+# Modify order (only price)
+curl -X POST http://localhost:8080/modify_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "order_id": 123456,
+    "price": "3200.0",
+    "quantity": null
+  }'
 
 # Get all positions
 curl http://localhost:8080/positions

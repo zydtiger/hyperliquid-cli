@@ -127,6 +127,18 @@ class CancelOrderRequest(BaseModel):
     )
 
 
+class ModifyOrderRequest(BaseModel):
+    """Request model for modify order endpoint."""
+
+    order_id: int = Field(..., description="Order ID to modify")
+    price: Optional[Decimal] = Field(
+        None, description="New price (None to keep current price)"
+    )
+    quantity: Optional[Decimal] = Field(
+        None, description="New quantity (None to keep current quantity)"
+    )
+
+
 __all__ = [
     "OrderSide",
     "OrderTif",
@@ -137,4 +149,5 @@ __all__ = [
     "OrderResult",
     "OrderInfo",
     "CancelOrderRequest",
+    "ModifyOrderRequest",
 ]

@@ -18,6 +18,7 @@ from models.order import (
     LimitOrder,
     OrderResult,
     CancelOrderRequest,
+    ModifyOrderRequest,
 )
 
 
@@ -304,6 +305,36 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         except Exception as e:
             logger.error(f"Unexpected error cancelling order {request.order_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.post("/modify_order", response_model=OrderResult)
+    async def modify_order(request: ModifyOrderRequest):
+        """
+        Modify price and/or quantity of an existing open limit order.
+
+        Request body:
+        {
+            "order_id": int,
+            "price": Decimal | null,  # New price (null to keep current price)
+            "quantity": Decimal | null  # New quantity (null to keep current quantity)
+        }
+
+        Returns:
+            OrderResult: Result of the modification operation with success status and details
+        """
+        try:
+            result = client.modify_order(
+                request.order_id, request.price, request.quantity
+            )
+            return result
+        except ExchangeError as e:
+            logger.error(f"Exchange error modifying order {request.order_id}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error modifying order {request.order_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
