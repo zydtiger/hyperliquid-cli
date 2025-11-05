@@ -39,7 +39,7 @@ class Prompts:
             print(f"\nℹ️ Available coins: {', '.join(coins[:10])}...")
 
             while True:
-                coin = input("\n📝 Enter coin symbol: ").strip().upper()
+                coin = input("📝 Enter coin symbol: ").strip().upper()
                 if not coin:
                     print("❌ Coin symbol is required")
                     continue
@@ -100,16 +100,19 @@ class Prompts:
             else:
                 print("❌ Please enter 1 (Market) or 2 (Limit)")
 
-    def get_price_input(self, coin: str, side: OrderSide) -> Decimal:
+    def get_price_input(
+        self, coin: str, side: OrderSide, current_order_price: Optional[Decimal] = None
+    ) -> Decimal:
         """
-        Prompt user to input limit order price.
+        Prompt user to input limit order price with optional current value display.
 
         Args:
             coin: Trading pair symbol
             side: Order side (buy/sell)
+            current_order_price: Current order price to display (optional, allows skipping)
 
         Returns:
-            Decimal: Order price
+            Decimal: Order price (current price if user skips when current_order_price provided)
         """
         # Try to get current market price for reference
         try:
@@ -123,11 +126,22 @@ class Prompts:
                 suggestion = f"Suggested sell price: ${current_price * 1.001:.4f} (slightly above market)"
             print(f"ℹ️ {suggestion}")
         except Exception:
-            print(f"\n📝 Enter {coin} price:")
+            print(f"\n❌ Cannot fetch current {coin} price")
 
         while True:
             try:
-                price_input = input(f"📝 Enter limit price for {coin}: ").strip()
+                current_order_prompt = (
+                    f" [current: {current_order_price}] (press Enter to skip)"
+                    if current_order_price
+                    else ""
+                )
+                price_input = input(
+                    f"📝 Enter limit price for {coin}{current_order_prompt}: "
+                ).strip()
+
+                if current_order_price and not price_input:
+                    return current_order_price
+
                 price = Decimal(price_input)
                 if price <= 0:
                     print("❌ Price must be greater than 0")
@@ -136,15 +150,18 @@ class Prompts:
             except (InvalidOperation, ValueError):
                 print("❌ Please enter a valid number (e.g., 45000.50)")
 
-    def get_quantity_input(self, coin: str) -> Decimal:
+    def get_quantity_input(
+        self, coin: str, current_order_quantity: Optional[Decimal] = None
+    ) -> Decimal:
         """
-        Prompt user to input order quantity.
+        Prompt user to input order quantity with optional current value display.
 
         Args:
             coin: Trading pair symbol
+            current_order_quantity: Current order quantity to display (optional, allows skipping)
 
         Returns:
-            Decimal: Order quantity
+            Decimal: Order quantity (current quantity if user skips when current_order_quantity provided)
         """
         # Try to get coin metadata for quantity precision
         try:
@@ -158,7 +175,18 @@ class Prompts:
 
         while True:
             try:
-                quantity_input = input(f"📝 Enter quantity for {coin}: ").strip()
+                current_order_prompt = (
+                    f" [current: {current_order_quantity}] (press Enter to skip)"
+                    if current_order_quantity
+                    else ""
+                )
+                quantity_input = input(
+                    f"📝 Enter quantity for {coin}{current_order_prompt}: "
+                ).strip()
+
+                if current_order_quantity and not quantity_input:
+                    return current_order_quantity
+
                 quantity = Decimal(quantity_input)
                 if quantity <= 0:
                     print("❌ Quantity must be greater than 0")

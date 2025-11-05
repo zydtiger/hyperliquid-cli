@@ -6,5 +6,6 @@ with tab completion support and command handling.
 """
 
 from .order_wizard import OrderWizard
+from .modify_wizard import ModifyWizard
 
-__all__ = ["OrderWizard"]
+__all__ = ["OrderWizard", "ModifyWizard"]

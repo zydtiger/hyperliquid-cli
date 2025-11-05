@@ -355,19 +355,12 @@ class BackendAPI:
             logger.error(f"Failed to cancel order {order_id}: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
-    def modify_order(
-        self,
-        order_id: int,
-        price: Optional[Decimal] = None,
-        quantity: Optional[Decimal] = None,
-    ) -> OrderResult:
+    def modify_order(self, request: ModifyOrderRequest) -> OrderResult:
         """
         Modify price and/or quantity of an existing open limit order.
 
         Args:
-            order_id: Order ID to modify
-            price: New price (None to keep current price)
-            quantity: New quantity (None to keep current quantity)
+            request: ModifyOrderRequest model containing order_id, price, and quantity
 
         Returns:
             OrderResult: Result of the modification operation
@@ -376,11 +369,6 @@ class BackendAPI:
             APIError: If the request fails
         """
         try:
-            # Create ModifyOrderRequest model
-            request = ModifyOrderRequest(
-                order_id=order_id, price=price, quantity=quantity
-            )
-
             # Send the request as JSON
             response = self.client.post(
                 "/modify_order",
@@ -390,7 +378,7 @@ class BackendAPI:
             self._handle_response_error(response)
             return OrderResult(**response.json())
         except httpx.RequestError as e:
-            logger.error(f"Failed to modify order {order_id}: {e}")
+            logger.error(f"Failed to modify order {request.order_id}: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
     def close(self) -> None:

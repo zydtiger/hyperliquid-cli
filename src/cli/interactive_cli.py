@@ -13,7 +13,7 @@ from models.config import Config
 from models.order import LimitOrder
 from .api import BackendAPI
 from .formatters import TableFormatter, OrderFormatter, AccountFormatter
-from .interactive import OrderWizard
+from .interactive import OrderWizard, ModifyWizard
 
 
 class InteractiveCLI(cmd.Cmd):
@@ -355,6 +355,73 @@ class InteractiveCLI(cmd.Cmd):
         print("  - Only open orders can be cancelled")
         print("  - Batch cancellation shows success/failure counts")
 
+    def do_modify_order(self, args: str) -> None:
+        """
+        Modify an existing order using interactive wizard.
+
+        Usage: modify_order <order_id>
+
+        Example: modify_order 12345
+        """
+        if not args.strip():
+            print("❌ Error: Order ID is required")
+            print("Usage: modify_order <order_id>")
+            print("Example: modify_order 12345")
+            return
+
+        try:
+            order_id = int(args.strip())
+            if order_id <= 0:
+                raise ValueError("Order ID must be a positive integer")
+        except ValueError as e:
+            print(f"❌ Invalid order ID: {e}")
+            print("Order ID must be a positive integer")
+            return
+
+        try:
+            with BackendAPI(self.config) as api:
+                wizard = ModifyWizard(self.config, api)
+                modify_request = wizard.run(order_id)
+
+                print("⏳ Modifying order...")
+
+                # Submit modification request
+                result = api.modify_order(modify_request)
+
+                # Display result using formatter
+                formatter = OrderFormatter()
+                print(formatter.format(result))
+
+        except KeyboardInterrupt:
+            print("❌ Order modification cancelled")
+        except Exception as e:
+            print(f"❌ Failed to modify order: {e}")
+        finally:
+            print()
+
+    def help_modify_order(self) -> None:
+        """Show help for the modify_order command."""
+        print("modify_order - Modify an existing order using interactive wizard")
+        print("Usage: modify_order <order_id>")
+        print()
+        print("Arguments:")
+        print("  order_id    Positive integer ID of the order to modify")
+        print()
+        print("Example:")
+        print("  modify_order 12345")
+        print()
+        print("This command starts an interactive wizard that guides you through:")
+        print("- Viewing current order details")
+        print("- Modifying price (optional)")
+        print("- Modifying quantity (optional)")
+        print("- Confirming changes before submission")
+        print()
+        print("Notes:")
+        print("  - Only open limit orders can be modified")
+        print("  - Press Enter to skip any parameter you don't want to change")
+        print("  - The wizard shows current values for reference")
+        print("  - Changes are applied immediately upon confirmation")
+
     def completenames(self, text: str, *ignored: str) -> List[str]:
         """Override to provide custom command completion."""
         commands = [
@@ -362,6 +429,7 @@ class InteractiveCLI(cmd.Cmd):
             "order_status",
             "open_orders",
             "cancel_order",
+            "modify_order",
             "status",
             "positions",
             "conditionals",
