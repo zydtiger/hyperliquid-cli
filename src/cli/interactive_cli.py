@@ -448,14 +448,15 @@ class InteractiveCLI(cmd.Cmd):
         while True:
             try:
                 self.cmdloop()
+                return  # Quit if do_exit, do_quit
             except KeyboardInterrupt:
                 try:
                     if typer.confirm("\nQuit?", default=False):
                         typer.echo("👋 Goodbye!")
-                        return
+                        return  # Quit if CTRL+C and then select quit
                     else:
                         self.intro = None
                         continue
                 except typer.Abort:
                     typer.echo("\n👋 Goodbye!")
-                    return
+                    return  # Quit if CTRL+C and then CTRL+C again
