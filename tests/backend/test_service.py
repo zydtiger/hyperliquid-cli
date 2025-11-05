@@ -40,6 +40,7 @@ from models.order import (
     LimitOrder,
     OrderResult,
     CancelOrderRequest,
+    ModifyOrderRequest,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
 
@@ -128,6 +129,42 @@ class TestBackendService:
             order_id=123456789,
             status=OrderStatus.OPEN,
             message="Order submitted successfully",
+        )
+
+    @pytest.fixture
+    def sample_modify_order_request(self) -> ModifyOrderRequest:
+        """Sample modify order request for testing."""
+        return ModifyOrderRequest(
+            order_id=123456789,
+            price=Decimal("3100.0"),
+            quantity=Decimal("0.15"),
+        )
+
+    @pytest.fixture
+    def sample_modify_order_request_price_only(self) -> ModifyOrderRequest:
+        """Sample modify order request with only price change for testing."""
+        return ModifyOrderRequest(
+            order_id=123456789,
+            price=Decimal("3100.0"),
+            quantity=None,
+        )
+
+    @pytest.fixture
+    def sample_modify_order_request_quantity_only(self) -> ModifyOrderRequest:
+        """Sample modify order request with only quantity change for testing."""
+        return ModifyOrderRequest(
+            order_id=123456789,
+            price=None,
+            quantity=Decimal("0.15"),
+        )
+
+    @pytest.fixture
+    def sample_modify_order_request_no_changes(self) -> ModifyOrderRequest:
+        """Sample modify order request with no changes for testing."""
+        return ModifyOrderRequest(
+            order_id=123456789,
+            price=None,
+            quantity=None,
         )
 
     @pytest.fixture
@@ -351,6 +388,7 @@ class TestRequestHandlers(TestBackendService):
             "/market_order",
             "/limit_order",
             "/cancel_order",
+            "/modify_order",
         ]
 
         for route in expected_routes:
@@ -1339,6 +1377,339 @@ class TestRequestHandlers(TestBackendService):
         assert "Insufficient permissions" in response.json()["detail"]
         mock_client.cancel_order.assert_called_once_with("all")
 
+    def test_modify_order_endpoint_success_price_and_quantity(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_modify_order_request: ModifyOrderRequest,
+        sample_order_result: OrderResult,
+    ):
+        """Test successful /modify_order endpoint with both price and quantity changes."""
+        mock_client.modify_order.return_value = sample_order_result
+
+        response = test_app.post(
+            "/modify_order",
+            content=sample_modify_order_request.model_dump_json(),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        expected = {
+            "success": True,
+            "order_id": 123456789,
+            "status": "open",
+            "message": "Order submitted successfully",
+            "error": None,
+        }
+        assert response.json() == expected
+        mock_client.modify_order.assert_called_once_with(
+            sample_modify_order_request.order_id,
+            sample_modify_order_request.price,
+            sample_modify_order_request.quantity,
+        )
+
+    def test_modify_order_endpoint_success_price_only(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_modify_order_request_price_only: ModifyOrderRequest,
+        sample_order_result: OrderResult,
+    ):
+        """Test successful /modify_order endpoint with only price change."""
+        mock_client.modify_order.return_value = sample_order_result
+
+        response = test_app.post(
+            "/modify_order",
+            content=sample_modify_order_request_price_only.model_dump_json(),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert response.json()["order_id"] == 123456789
+        mock_client.modify_order.assert_called_once_with(
+            sample_modify_order_request_price_only.order_id,
+            sample_modify_order_request_price_only.price,
+            sample_modify_order_request_price_only.quantity,
+        )
+
+    def test_modify_order_endpoint_success_quantity_only(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_modify_order_request_quantity_only: ModifyOrderRequest,
+        sample_order_result: OrderResult,
+    ):
+        """Test successful /modify_order endpoint with only quantity change."""
+        mock_client.modify_order.return_value = sample_order_result
+
+        response = test_app.post(
+            "/modify_order",
+            content=sample_modify_order_request_quantity_only.model_dump_json(),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert response.json()["order_id"] == 123456789
+        mock_client.modify_order.assert_called_once_with(
+            sample_modify_order_request_quantity_only.order_id,
+            sample_modify_order_request_quantity_only.price,
+            sample_modify_order_request_quantity_only.quantity,
+        )
+
+    def test_modify_order_endpoint_success_no_changes(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_modify_order_request_no_changes: ModifyOrderRequest,
+    ):
+        """Test /modify_order endpoint with no changes requested."""
+        order_result = OrderResult(
+            success=False,
+            order_id=123456789,
+            status=OrderStatus.REJECTED,
+            message="Order modification failed",
+            error="No changes requested - both price and quantity are None",
+        )
+        mock_client.modify_order.return_value = order_result
+
+        response = test_app.post(
+            "/modify_order",
+            content=sample_modify_order_request_no_changes.model_dump_json(),
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        assert response.json()["status"] == "rejected"
+        assert "No changes requested" in response.json()["error"]
+        mock_client.modify_order.assert_called_once_with(
+            sample_modify_order_request_no_changes.order_id,
+            sample_modify_order_request_no_changes.price,
+            sample_modify_order_request_no_changes.quantity,
+        )
+
+    def test_modify_order_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /modify_order endpoint with exchange error."""
+        mock_client.modify_order.side_effect = ExchangeError(
+            "Order not found or not open"
+        )
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 999999,
+                "price": "3000.0",
+                "quantity": "0.1",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Order not found or not open" in response.json()["detail"]
+        mock_client.modify_order.assert_called_once_with(
+            999999, Decimal("3000.0"), Decimal("0.1")
+        )
+
+    def test_modify_order_endpoint_unexpected_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /modify_order endpoint with unexpected error."""
+        mock_client.modify_order.side_effect = Exception("Network timeout")
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 123456,
+                "price": "3000.0",
+                "quantity": "0.1",
+            },
+        )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+        mock_client.modify_order.assert_called_once_with(
+            123456, Decimal("3000.0"), Decimal("0.1")
+        )
+
+    def test_modify_order_endpoint_missing_order_id(self, test_app: TestClient):
+        """Test /modify_order endpoint with missing order_id field."""
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "price": "3000.0",
+                "quantity": "0.1",
+            },
+        )
+
+        assert response.status_code == 422  # FastAPI validation error
+        assert "order_id" in str(response.json()["detail"])
+
+    def test_modify_order_endpoint_invalid_order_id(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /modify_order endpoint with invalid order_id (negative)."""
+        # Setup mock to return proper error response
+        order_result = OrderResult(
+            success=False,
+            order_id=-1,
+            status=OrderStatus.REJECTED,
+            message="Invalid order ID",
+            error="Order ID must be positive",
+        )
+        mock_client.modify_order.return_value = order_result
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": -1,
+                "price": "3000.0",
+                "quantity": "0.1",
+            },
+        )
+
+        # Should either get FastAPI validation error (422) or backend rejection (200)
+        if response.status_code == 200:
+            assert response.json()["success"] is False
+            assert "Order ID must be positive" in response.json()["error"]
+        else:
+            assert response.status_code == 422  # FastAPI validation error
+
+    def test_modify_order_endpoint_invalid_price(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /modify_order endpoint with invalid price (negative)."""
+        # Setup mock to return proper error response
+        order_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.REJECTED,
+            message="Invalid price",
+            error="Price must be positive",
+        )
+        mock_client.modify_order.return_value = order_result
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 123456,
+                "price": "-1000.0",  # Negative price should be rejected
+                "quantity": "0.1",
+            },
+        )
+
+        # Should either get FastAPI validation error (422) or backend rejection (200)
+        if response.status_code == 200:
+            assert response.json()["success"] is False
+            assert "Price must be positive" in response.json()["error"]
+        else:
+            assert response.status_code == 422  # FastAPI validation error
+
+    def test_modify_order_endpoint_invalid_quantity(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /modify_order endpoint with invalid quantity (negative)."""
+        # Setup mock to return proper error response
+        order_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.REJECTED,
+            message="Invalid quantity",
+            error="Quantity must be positive",
+        )
+        mock_client.modify_order.return_value = order_result
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 123456,
+                "price": "3000.0",
+                "quantity": "-0.1",  # Negative quantity should be rejected
+            },
+        )
+
+        # Should either get FastAPI validation error (422) or backend rejection (200)
+        if response.status_code == 200:
+            assert response.json()["success"] is False
+            assert "Quantity must be positive" in response.json()["error"]
+        else:
+            assert response.status_code == 422  # FastAPI validation error
+
+    def test_modify_order_endpoint_early_exit_no_changes(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test modify_order early exit when no changes are requested."""
+        order_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.REJECTED,
+            message="Order modification failed",
+            error="No changes requested - both price and quantity are None",
+        )
+        mock_client.modify_order.return_value = order_result
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 123456,
+                "price": None,
+                "quantity": None,
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        assert "No changes requested" in response.json()["error"]
+        mock_client.modify_order.assert_called_once_with(123456, None, None)
+
+    def test_modify_order_endpoint_invalid_order_type(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test modifying a market order (should fail)."""
+        mock_client.modify_order.side_effect = ExchangeError(
+            "Only limit orders can be modified"
+        )
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 555666777,
+                "price": "3000.0",
+                "quantity": "0.1",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Only limit orders can be modified" in response.json()["detail"]
+        mock_client.modify_order.assert_called_once_with(
+            555666777, Decimal("3000.0"), Decimal("0.1")
+        )
+
+    def test_modify_order_endpoint_filled_order(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test modifying a filled order (should fail)."""
+        mock_client.modify_order.side_effect = ExchangeError(
+            "Order is filled, only open orders can be modified"
+        )
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 987654321,
+                "price": "3000.0",
+                "quantity": "0.1",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "Order is filled" in response.json()["detail"]
+        mock_client.modify_order.assert_called_once_with(
+            987654321, Decimal("3000.0"), Decimal("0.1")
+        )
+
 
 class TestIntegration(TestBackendService):
     """Integration tests combining service and request handlers."""
@@ -1428,11 +1799,35 @@ class TestIntegration(TestBackendService):
         assert response.json()["perps_account_value"] == "3451.743653"
         assert len(response.json()["spot_balances"]) == 2
 
+        # Test modify_order endpoint
+        order_result = OrderResult(
+            success=True,
+            order_id=123456789,
+            status=OrderStatus.OPEN,
+            message="Order modified successfully",
+        )
+        mock_client.modify_order.return_value = order_result
+
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 123456789,
+                "price": "3100.0",
+                "quantity": "0.15",
+            },
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert response.json()["order_id"] == 123456789
+        assert response.json()["status"] == "open"
+
         # Verify all client methods were called
         assert mock_client.get_available_coins.called
         assert mock_client.get_ticker.called
         assert mock_client.get_metadata.called
         assert mock_client.get_balances.called
+        assert mock_client.modify_order.called
         assert (
             mock_client.get_positions.call_count == 2
         )  # Once for all positions, once for specific
@@ -1448,6 +1843,7 @@ class TestIntegration(TestBackendService):
         mock_client.get_metadata.side_effect = ExchangeError("Metadata not found")
         mock_client.get_positions.side_effect = ExchangeError("Authentication failed")
         mock_client.get_balances.side_effect = ExchangeError("Balance access denied")
+        mock_client.modify_order.side_effect = ExchangeError("Order not found")
 
         # Test all endpoints return 400 for exchange errors
         endpoints = [
@@ -1458,6 +1854,18 @@ class TestIntegration(TestBackendService):
             "/positions/BTC",
             "/balances",
         ]
+
+        # Test modify_order endpoint error
+        response = test_app.post(
+            "/modify_order",
+            json={
+                "order_id": 123456,
+                "price": "3000.0",
+                "quantity": "0.1",
+            },
+        )
+        assert response.status_code == 400
+        assert "detail" in response.json()
 
         for endpoint in endpoints:
             response = test_app.get(endpoint)
