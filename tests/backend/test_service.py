@@ -39,6 +39,7 @@ from models.order import (
     MarketOrder,
     LimitOrder,
     OrderResult,
+    CancelOrderRequest,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
 
@@ -349,6 +350,7 @@ class TestRequestHandlers(TestBackendService):
             "/open_orders",
             "/market_order",
             "/limit_order",
+            "/cancel_order",
         ]
 
         for route in expected_routes:
@@ -1122,6 +1124,220 @@ class TestRequestHandlers(TestBackendService):
         )
 
         assert response.status_code == 422  # FastAPI validation error
+
+    def test_cancel_order_endpoint_success_specific_order(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test successful cancellation of a specific order."""
+        order_result = OrderResult(
+            success=True,
+            order_id=123456789,
+            status=OrderStatus.CANCELLED,
+            message="Order cancelled successfully",
+        )
+        mock_client.cancel_order.return_value = order_result
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": 123456789},
+        )
+
+        assert response.status_code == 200
+        expected = {
+            "success": True,
+            "order_id": 123456789,
+            "status": "cancelled",
+            "message": "Order cancelled successfully",
+            "error": None,
+        }
+        assert response.json() == expected
+        mock_client.cancel_order.assert_called_once_with(123456789)
+
+    def test_cancel_order_endpoint_success_all_orders(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test successful cancellation of all open orders."""
+        order_result = OrderResult(
+            success=True,
+            order_id=None,
+            status=OrderStatus.CANCELLED,
+            message="All open orders cancelled successfully",
+        )
+        mock_client.cancel_order.return_value = order_result
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": "all"},
+        )
+
+        assert response.status_code == 200
+        expected = {
+            "success": True,
+            "order_id": None,
+            "status": "cancelled",
+            "message": "All open orders cancelled successfully",
+            "error": None,
+        }
+        assert response.json() == expected
+        mock_client.cancel_order.assert_called_once_with("all")
+
+    def test_cancel_order_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /cancel_order endpoint with exchange error."""
+        mock_client.cancel_order.side_effect = ExchangeError("Order already filled")
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": 999999},
+        )
+
+        assert response.status_code == 400
+        assert "Order already filled" in response.json()["detail"]
+        mock_client.cancel_order.assert_called_once_with(999999)
+
+    def test_cancel_order_endpoint_unexpected_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /cancel_order endpoint with unexpected error."""
+        mock_client.cancel_order.side_effect = Exception("Network timeout")
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": 123456},
+        )
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+        mock_client.cancel_order.assert_called_once_with(123456)
+
+    def test_cancel_order_endpoint_invalid_order_id(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /cancel_order endpoint with invalid order_id (negative)."""
+        order_result = OrderResult(
+            success=False,
+            order_id=-1,
+            status=OrderStatus.REJECTED,
+            message="Invalid order ID",
+            error="Order ID must be positive",
+        )
+        mock_client.cancel_order.return_value = order_result
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": -1},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        assert response.json()["order_id"] == -1
+        assert response.json()["status"] == "rejected"
+        mock_client.cancel_order.assert_called_once_with(-1)
+
+    def test_cancel_order_endpoint_zero_order_id(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /cancel_order endpoint with zero order_id."""
+        order_result = OrderResult(
+            success=False,
+            order_id=0,
+            status=OrderStatus.REJECTED,
+            message="Invalid order ID",
+            error="Order ID must be positive",
+        )
+        mock_client.cancel_order.return_value = order_result
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": 0},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        assert response.json()["order_id"] == 0
+        assert response.json()["status"] == "rejected"
+        mock_client.cancel_order.assert_called_once_with(0)
+
+    def test_cancel_order_endpoint_missing_order_id(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /cancel_order endpoint with missing order_id field."""
+        response = test_app.post(
+            "/cancel_order",
+            json={},  # Missing order_id
+        )
+
+        assert response.status_code == 422  # FastAPI validation error
+        assert "order_id" in str(response.json()["detail"])
+
+    def test_cancel_order_endpoint_invalid_string_value(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /cancel_order endpoint with invalid string value (not 'all')."""
+        mock_client.cancel_order.side_effect = ExchangeError("Invalid order identifier")
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": "invalid"},
+        )
+
+        assert response.status_code == 400
+        assert "Invalid order identifier" in response.json()["detail"]
+        mock_client.cancel_order.assert_called_once_with("invalid")
+
+    def test_cancel_order_endpoint_partially_filled_order(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test cancelling a partially filled order."""
+        order_result = OrderResult(
+            success=True,
+            order_id=555666777,
+            status=OrderStatus.CANCELLED,
+            message="Partially filled order cancelled successfully",
+        )
+        mock_client.cancel_order.return_value = order_result
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": 555666777},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        assert response.json()["order_id"] == 555666777
+        assert response.json()["status"] == "cancelled"
+        assert "partially filled" in response.json()["message"].lower()
+
+    def test_cancel_order_endpoint_order_not_found(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test cancelling an order that doesn't exist."""
+        mock_client.cancel_order.side_effect = ExchangeError("Order not found")
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": 888888888},
+        )
+
+        assert response.status_code == 400
+        assert "Order not found" in response.json()["detail"]
+        mock_client.cancel_order.assert_called_once_with(888888888)
+
+    def test_cancel_order_endpoint_insufficient_permissions(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test cancelling order with insufficient permissions."""
+        mock_client.cancel_order.side_effect = ExchangeError("Insufficient permissions")
+
+        response = test_app.post(
+            "/cancel_order",
+            json={"order_id": "all"},
+        )
+
+        assert response.status_code == 400
+        assert "Insufficient permissions" in response.json()["detail"]
+        mock_client.cancel_order.assert_called_once_with("all")
 
 
 class TestIntegration(TestBackendService):
