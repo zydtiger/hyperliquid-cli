@@ -770,6 +770,152 @@ class HyperliquidClient:
 
         return self.connection.retry_operation(_submit_limit_order)
 
+    def cancel_order(self, order_id: int | str) -> OrderResult:
+        """
+        Cancel a specific order or all open orders.
+
+        Args:
+            order_id: Order ID (int) to cancel, or "all" to cancel all open orders
+
+        Returns:
+            OrderResult: Result of the cancellation operation
+
+        Raises:
+            ValueError: If order_id is invalid
+            ExchangeError: If cancellation fails
+        """
+
+        def _cancel_order():
+            if order_id == "all":
+                return self._cancel_all_orders()
+            elif isinstance(order_id, int) and order_id > 0:
+                return self._cancel_specific_order(order_id)
+            else:
+                raise ValueError("order_id must be positive integer or 'all'")
+
+        return self.connection.retry_operation(_cancel_order)
+
+    def _cancel_specific_order(self, order_id: int) -> OrderResult:
+        """
+        Cancel a specific order by ID.
+
+        Args:
+            order_id: Order ID to cancel
+
+        Returns:
+            OrderResult: Result of the cancellation
+        """
+        # First get order details to check status and find the coin
+        order_info = self.get_order_status(order_id)
+
+        # Check if order is open - only open orders can be cancelled
+        if order_info.status != OrderStatus.OPEN:
+            if order_info.status == OrderStatus.CANCELLED:
+                return OrderResult(
+                    success=False,
+                    order_id=order_id,
+                    status=order_info.status,
+                    message=f"Order {order_id} cancellation failed",
+                    error=f"Order {order_id} is already cancelled",
+                )
+            elif order_info.status == OrderStatus.FILLED:
+                return OrderResult(
+                    success=False,
+                    order_id=order_id,
+                    status=order_info.status,
+                    message=f"Order {order_id} cancellation failed",
+                    error=f"Order {order_id} is already filled",
+                )
+            elif order_info.status == OrderStatus.REJECTED:
+                return OrderResult(
+                    success=False,
+                    order_id=order_id,
+                    status=order_info.status,
+                    message=f"Order {order_id} cancellation failed",
+                    error=f"Order {order_id} was already rejected",
+                )
+            else:
+                return OrderResult(
+                    success=False,
+                    order_id=order_id,
+                    status=order_info.status,
+                    message=f"Order {order_id} cancellation failed",
+                    error=f"Order {order_id} is {order_info.status.value} and cannot be cancelled",
+                )
+
+        # Cancel the order using the exchange API
+        result = self.connection.exchange.cancel(order_info.coin, order_id)
+
+        # Parse the response
+        if result.get("status") == "ok":
+            return OrderResult(
+                success=True,
+                order_id=order_id,
+                status=OrderStatus.CANCELLED,
+                message=f"Order {order_id} cancelled successfully",
+            )
+        else:
+            return OrderResult(
+                success=False,
+                order_id=order_id,
+                status=OrderStatus.REJECTED,
+                message="Order cancellation failed",
+                error=result.get("response", "Unknown error"),
+            )
+
+    def _cancel_all_orders(self) -> OrderResult:
+        """
+        Cancel all open orders.
+
+        Returns:
+            OrderResult: Result of the batch cancellation
+        """
+        # Get all open orders
+        open_orders = self.get_open_orders()
+
+        cancelled_orders = []
+        failed_orders = []
+
+        for order_info in open_orders:
+            try:
+                # Reuse _cancel_specific_order for each open order
+                result = self._cancel_specific_order(order_info.order_id)
+                if result.success:
+                    cancelled_orders.append(
+                        {
+                            "order_id": order_info.order_id,
+                            "coin": order_info.coin,
+                            "status": "cancelled",
+                        }
+                    )
+                else:
+                    failed_orders.append(
+                        {
+                            "order_id": order_info.order_id,
+                            "coin": order_info.coin,
+                            "error": result.error or "Unknown error",
+                        }
+                    )
+            except Exception as e:
+                failed_orders.append(
+                    {
+                        "order_id": order_info.order_id,
+                        "coin": order_info.coin,
+                        "error": str(e),
+                    }
+                )
+
+        return OrderResult(
+            success=len(failed_orders) == 0,
+            status=OrderStatus.CANCELLED,
+            message=f"Cancelled {len(cancelled_orders)} orders, {len(failed_orders)} failed",
+            error=(
+                f"{len(failed_orders)} orders failed to cancel"
+                if failed_orders
+                else None
+            ),
+        )
+
     def _convert_tif_value(self, tif: OrderTif) -> Tif:
         if tif == OrderTif.GTC:
             return "Gtc"

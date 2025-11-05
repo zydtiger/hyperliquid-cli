@@ -873,3 +873,409 @@ class TestHyperliquidClientGetOpenOrders:
 
         assert len(result) == 1
         assert result == [expected_single_order]
+
+
+class TestHyperliquidClientCancelOrder:
+    """Test cases for the cancel_order method."""
+
+    def test_cancel_specific_order_success(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test successful cancellation of a specific order."""
+        # Mock order status for open order
+        open_order_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3000.0",
+                    "sz": "0.003",
+                    "oid": 123456,
+                    "timestamp": 1762271506632,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271506632,
+            }
+        }
+
+        # Mock successful cancel response
+        cancel_response = {
+            "status": "ok",
+            "response": {
+                "type": "order",
+                "data": {"statuses": [{"resting": {"oid": 123456}}]},
+            },
+        }
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = open_order_response
+        mock_connection.exchange.cancel.return_value = cancel_response
+
+        result = client.cancel_order(123456)
+
+        expected_result = OrderResult(
+            success=True,
+            order_id=123456,
+            status=OrderStatus.CANCELLED,
+            message="Order 123456 cancelled successfully",
+        )
+        assert result == expected_result
+
+        # Verify the order status was checked first
+        mock_connection.info.query_order_by_oid.assert_called_once_with(
+            "0x1234567890123456789012345678901234567890", 123456
+        )
+        # Verify cancel was called with correct parameters
+        mock_connection.exchange.cancel.assert_called_once_with("ETH", 123456)
+
+    def test_cancel_specific_order_already_cancelled(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test cancellation attempt on already cancelled order."""
+        # Mock order status for cancelled order
+        cancelled_order_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3000.0",
+                    "sz": "0.0",
+                    "oid": 123456,
+                    "timestamp": 1762271506632,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "canceled",
+                "statusTimestamp": 1762271506632,
+            }
+        }
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = cancelled_order_response
+
+        result = client.cancel_order(123456)
+
+        expected_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.CANCELLED,
+            message=f"Order 123456 cancellation failed",
+            error=f"Order 123456 is already cancelled",
+        )
+        assert result == expected_result
+
+        # Verify cancel was not called since order is already cancelled
+        mock_connection.exchange.cancel.assert_not_called()
+
+    def test_cancel_specific_order_already_filled(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test cancellation attempt on already filled order."""
+        # Mock order status for filled order
+        filled_order_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "sz": "0.0",
+                    "oid": 123456,
+                    "timestamp": 1762271506632,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "averageFillPx": "3050.0",
+                },
+                "status": "filled",
+                "statusTimestamp": 1762271506632,
+            }
+        }
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = filled_order_response
+
+        result = client.cancel_order(123456)
+
+        expected_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.FILLED,
+            message=f"Order 123456 cancellation failed",
+            error=f"Order 123456 is already filled",
+        )
+        assert result == expected_result
+
+        # Verify cancel was not called since order is already filled
+        mock_connection.exchange.cancel.assert_not_called()
+
+    def test_cancel_specific_order_already_rejected(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test cancellation attempt on already rejected order."""
+        # Mock order status for rejected order
+        rejected_order_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3000.0",
+                    "sz": "0.003",
+                    "oid": 123456,
+                    "timestamp": 1762271506632,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "rejected",
+                "statusTimestamp": 1762271506632,
+            }
+        }
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = rejected_order_response
+
+        result = client.cancel_order(123456)
+
+        expected_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.REJECTED,
+            message=f"Order 123456 cancellation failed",
+            error=f"Order 123456 was already rejected",
+        )
+        assert result == expected_result
+
+        # Verify cancel was not called since order is already rejected
+        mock_connection.exchange.cancel.assert_not_called()
+
+    def test_cancel_specific_order_api_error(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        order_error_response,
+    ):
+        """Test cancellation when API returns error."""
+        # Mock order status for open order
+        open_order_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "3000.0",
+                    "sz": "0.003",
+                    "oid": 123456,
+                    "timestamp": 1762271506632,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.003",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271506632,
+            }
+        }
+
+        # Mock failed cancel response using existing fixture
+        cancel_error_response = {
+            "status": "error",
+            "response": "Insufficient balance",
+        }
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = open_order_response
+        mock_connection.exchange.cancel.return_value = cancel_error_response
+
+        result = client.cancel_order(123456)
+
+        expected_result = OrderResult(
+            success=False,
+            order_id=123456,
+            status=OrderStatus.REJECTED,
+            message="Order cancellation failed",
+            error="Insufficient balance",
+        )
+        assert result == expected_result
+
+    def test_cancel_specific_order_not_found(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test cancellation when order is not found."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = None
+
+        with pytest.raises(ExchangeError) as exc_info:
+            client.cancel_order(999999)
+
+        assert "Order 999999 not found" in str(exc_info.value)
+
+        # Verify cancel was not called since order doesn't exist
+        mock_connection.exchange.cancel.assert_not_called()
+
+    def test_cancel_all_orders_success(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_open_orders_response,
+        sample_order_status_responses,
+        limit_success_response_resting,
+    ):
+        """Test successful cancellation of all open orders."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.open_orders.return_value = sample_open_orders_response
+
+        # Mock the get_order_status calls
+        def mock_query_order_by_oid(user_address, order_id):
+            return sample_order_status_responses[order_id]
+
+        mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid
+        mock_connection.exchange.cancel.return_value = limit_success_response_resting
+
+        result = client.cancel_order("all")
+
+        expected_result = OrderResult(
+            success=True,
+            status=OrderStatus.CANCELLED,
+            message="Cancelled 3 orders, 0 failed",
+            error=None,
+        )
+        assert result == expected_result
+
+        # Verify cancel was called for each order
+        assert mock_connection.exchange.cancel.call_count == 3
+
+    def test_cancel_all_orders_no_orders(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_open_orders_empty_response,
+    ):
+        """Test cancel_all when no open orders exist."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.open_orders.return_value = sample_open_orders_empty_response
+
+        result = client.cancel_order("all")
+
+        expected_result = OrderResult(
+            success=True,
+            status=OrderStatus.CANCELLED,
+            message="Cancelled 0 orders, 0 failed",
+            error=None,
+        )
+        assert result == expected_result
+
+        # Verify cancel was not called since there are no orders
+        mock_connection.exchange.cancel.assert_not_called()
+
+    def test_cancel_all_orders_partial_failure(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_open_orders_response,
+        sample_order_status_responses,
+        limit_success_response_resting,
+        order_error_response,
+    ):
+        """Test cancel_all with some order cancellation failures."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.open_orders.return_value = sample_open_orders_response
+
+        # Mock the get_order_status calls
+        def mock_query_order_by_oid(user_address, order_id):
+            return sample_order_status_responses[order_id]
+
+        # Mock cancel responses - success for first, error for others
+        def mock_cancel_with_errors(coin, order_id):
+            if order_id == 222605232959:
+                return limit_success_response_resting
+            else:
+                return order_error_response
+
+        mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid
+        mock_connection.exchange.cancel.side_effect = mock_cancel_with_errors
+
+        result = client.cancel_order("all")
+
+        expected_result = OrderResult(
+            success=False,
+            status=OrderStatus.CANCELLED,
+            message="Cancelled 1 orders, 2 failed",
+            error="2 orders failed to cancel",
+        )
+        assert result == expected_result
+
+        # Verify cancel was called for all orders
+        assert mock_connection.exchange.cancel.call_count == 3
+
+    def test_cancel_order_invalid_input(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test cancel_order with invalid input."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        # Test negative order ID
+        with pytest.raises(ValueError) as exc_info:
+            client.cancel_order(-123)
+
+        assert "order_id must be positive integer or 'all'" in str(exc_info.value)
+
+        # Test zero order ID
+        with pytest.raises(ValueError) as exc_info:
+            client.cancel_order(0)
+
+        assert "order_id must be positive integer or 'all'" in str(exc_info.value)
+
+        # Test invalid string (not "all")
+        with pytest.raises(ValueError) as exc_info:
+            client.cancel_order("invalid")
+
+        assert "order_id must be positive integer or 'all'" in str(exc_info.value)
+
+        # Verify cancel was not called for any invalid input
+        mock_connection.exchange.cancel.assert_not_called()
+
+    def test_cancel_order_retry_logic(
+        self,
+        client,
+        mock_connection,
+    ):
+        """Test that retry logic works for network failures."""
+        # This tests the retry_operation wrapper by verifying it's called
+        mock_connection.retry_operation.return_value = OrderResult(
+            success=True,
+            order_id=123456,
+            status=OrderStatus.CANCELLED,
+            message="Order 123456 cancelled successfully",
+        )
+
+        result = client.cancel_order(123456)
+
+        assert result.success is True
+        mock_connection.retry_operation.assert_called_once()
