@@ -6,13 +6,19 @@ through HTTP requests with proper error handling and response formatting.
 """
 
 import logging
-from typing import List
+from typing import List, TypedDict
 
 from fastapi import FastAPI, HTTPException, Path, status
 
 from .exchange.hyperliquid_client import HyperliquidClient
 from models.api import Ticker, CoinMetadata, PositionInfo, BalanceInfo, ExchangeError
-from models.order import OrderInfo, MarketOrder, LimitOrder, OrderResult
+from models.order import (
+    OrderInfo,
+    MarketOrder,
+    LimitOrder,
+    OrderResult,
+    CancelOrderRequest,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -272,6 +278,32 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         except Exception as e:
             logger.error(f"Unexpected error submitting limit order: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.post("/cancel_order", response_model=OrderResult)
+    async def cancel_order(request: CancelOrderRequest):
+        """
+        Cancel a specific order or all open orders.
+
+        Request body:
+        {
+            "order_id": int | str  # int for specific order, "all" for all orders
+        }
+
+        Returns:
+            OrderResult: Result of the cancellation operation with success status and details
+        """
+        try:
+            result = client.cancel_order(request.order_id)
+            return result
+        except ExchangeError as e:
+            logger.error(f"Exchange error cancelling order {request.order_id}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error cancelling order {request.order_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",

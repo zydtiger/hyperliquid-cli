@@ -8,7 +8,7 @@ order-related configurations used in the Hyperliquid trading system.
 from enum import Enum
 from pydantic import BaseModel, Field
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Union
 
 
 # ============================================================================
@@ -119,6 +119,14 @@ class OrderInfo(BaseModel):
     time_in_force: Optional[OrderTif] = Field(None, description="Time-in-force policy")
 
 
+class CancelOrderRequest(BaseModel):
+    """Request model for cancel order endpoint."""
+
+    order_id: Union[int, str] = Field(
+        ..., description="Order ID (int) to cancel, or 'all' to cancel all open orders"
+    )
+
+
 __all__ = [
     "OrderSide",
     "OrderTif",
@@ -128,4 +136,5 @@ __all__ = [
     "LimitOrder",
     "OrderResult",
     "OrderInfo",
+    "CancelOrderRequest",
 ]

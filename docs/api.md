@@ -407,6 +407,105 @@ curl -X POST http://localhost:8080/limit_order \
   }'
 ```
 
+#### POST /cancel_order
+Cancel a specific order or all open orders.
+
+**Request Body:**
+```json
+{
+  "order_id": 123456
+}
+```
+
+or
+
+```json
+{
+  "order_id": "all"
+}
+```
+
+**Field Descriptions:**
+- `order_id` (int|string): Order ID to cancel (integer), or "all" to cancel all open orders
+
+**Response (Successful Cancellation):**
+```json
+{
+  "success": true,
+  "order_id": 123456,
+  "status": "cancelled",
+  "message": "Order 123456 cancelled successfully"
+}
+```
+
+**Response (Batch Cancellation):**
+```json
+{
+  "success": true,
+  "status": "cancelled",
+  "message": "Cancelled 3 orders, 0 failed"
+}
+```
+
+**Response (Already Cancelled Order):**
+```json
+{
+  "success": false,
+  "order_id": 123456,
+  "status": "cancelled",
+  "message": "Order 123456 cancellation failed",
+  "error": "Order 123456 is already cancelled"
+}
+```
+
+**Field Descriptions:**
+- `success`: Whether the cancellation was successful
+- `order_id`: Order identifier (null for batch cancellation)
+- `status`: Order status after cancellation attempt
+- `message`: Success/error message with details
+- `error`: Error details (null on success)
+
+**Error Responses:**
+- `400 Bad Request`: Invalid order ID, order not found, or exchange error
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Examples:**
+```bash
+# Cancel specific order
+curl -X POST http://localhost:8080/cancel_order \
+  -H "Content-Type: application/json" \
+  -d '{"order_id": 123456}'
+
+# Response
+{
+  "success": true,
+  "order_id": 123456,
+  "status": "cancelled",
+  "message": "Order 123456 cancelled successfully"
+}
+
+# Cancel all open orders
+curl -X POST http://localhost:8080/cancel_order \
+  -H "Content-Type: application/json" \
+  -d '{"order_id": "all"}'
+
+# Response for batch cancellation
+{
+  "success": true,
+  "status": "cancelled",
+  "message": "Cancelled 3 orders, 0 failed"
+}
+
+# Response for order already cancelled
+{
+  "success": false,
+  "order_id": 123456,
+  "status": "cancelled",
+  "message": "Order 123456 cancellation failed",
+  "error": "Order 123456 is already cancelled"
+}
+```
+
 ### Portfolio Endpoints
 
 #### GET /positions
@@ -565,6 +664,16 @@ curl -X POST http://localhost:8080/limit_order \
     "reduce_only": false,
     "time_in_force": "GTC"
   }'
+
+# Cancel specific order
+curl -X POST http://localhost:8080/cancel_order \
+  -H "Content-Type: application/json" \
+  -d '{"order_id": 123456}'
+
+# Cancel all open orders
+curl -X POST http://localhost:8080/cancel_order \
+  -H "Content-Type: application/json" \
+  -d '{"order_id": "all"}'
 
 # Get all positions
 curl http://localhost:8080/positions
