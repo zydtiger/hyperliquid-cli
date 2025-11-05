@@ -64,8 +64,6 @@ def run(
         print()
         cli = InteractiveCLI(config)
         cli.run()
-    except KeyboardInterrupt:
-        typer.echo("\n👋 Goodbye!")
     except Exception as e:
         typer.echo(f"❌ Fatal error: {e}", err=True)
         raise typer.Exit(1)

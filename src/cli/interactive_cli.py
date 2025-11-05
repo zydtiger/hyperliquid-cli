@@ -7,6 +7,7 @@ for managing orders, positions, and account status.
 
 import cmd
 import sys
+import typer
 from typing import List
 
 from models.config import Config
@@ -31,7 +32,6 @@ class InteractiveCLI(cmd.Cmd):
         """Initialize the CLI with configuration."""
         super().__init__()
         self.config = config
-        self.running = True
 
     def do_order(self, args: str) -> None:
         """
@@ -174,7 +174,6 @@ class InteractiveCLI(cmd.Cmd):
     def do_quit(self, args: str) -> bool:
         """Exit the CLI."""
         print("👋 Goodbye!")
-        self.running = False
         return True
 
     def do_exit(self, args: str) -> bool:
@@ -184,7 +183,6 @@ class InteractiveCLI(cmd.Cmd):
     def do_EOF(self, args: str) -> bool:
         """Handle EOF (Ctrl+D) to exit gracefully."""
         print("\n👋 Goodbye!")
-        self.running = False
         return True
 
     def emptyline(self) -> bool:
@@ -447,19 +445,17 @@ class InteractiveCLI(cmd.Cmd):
         This method starts the main command loop and handles
         keyboard interrupts gracefully.
         """
-        ctrl_c_count = 0
-        try:
-            while self.running:
+        while True:
+            try:
+                self.cmdloop()
+            except KeyboardInterrupt:
                 try:
-                    self.cmdloop()
-                    break
-                except KeyboardInterrupt:
-                    ctrl_c_count += 1
-                    if ctrl_c_count >= 2:
-                        print("\n👋 Goodbye!")
-                        self.running = False
-                        break
-                    print("\nUse 'quit' or 'exit' to exit, or press Ctrl+C again")
-        except Exception as e:
-            print(f"❌ Fatal error: {e}", file=sys.stderr)
-            raise
+                    if typer.confirm("\nQuit?", default=False):
+                        typer.echo("👋 Goodbye!")
+                        return
+                    else:
+                        self.intro = None
+                        continue
+                except typer.Abort:
+                    typer.echo("\n👋 Goodbye!")
+                    return
