@@ -124,4 +124,6 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
                 ]
             )
 
-        return self.table_formatter.format((data[0], data[1:]))
+        return self.table_formatter.format(
+            (data[0], data[1:]), title=f"Current Positions ({len(positions)})"
+        )
