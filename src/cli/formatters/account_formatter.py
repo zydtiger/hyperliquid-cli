@@ -33,11 +33,7 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
         """
         if isinstance(data, BalanceInfo):
             return self._format_balances(data)
-        elif (
-            isinstance(data, list)
-            and data
-            and all(isinstance(p, PositionInfo) for p in data)
-        ):
+        elif isinstance(data, list) and all(isinstance(p, PositionInfo) for p in data):
             return self._format_positions(data)
         else:
             return "Invalid account data type"
@@ -107,7 +103,7 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
             str: Formatted positions table
         """
         if not positions:
-            return "No open positions"
+            return "\nNo open positions"
 
         data = [["Coin", "Size", "Entry", "Mark", "PnL", "Leverage", "Margin"]]
 
