@@ -1,26 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="99" height="20" role="img" aria-label="coverage: 40%">
   <title>coverage: 40%</title>
   <defs>
+    <!-- Subtle vertical gloss gradient applied over entire badge -->
     <linearGradient id="b" x2="0" y2="100%">
       <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
       <stop offset="1" stop-opacity=".1"/>
     </linearGradient>
-    <clipPath id="r"><rect width="99" height="20" rx="3" ry="3"/></clipPath>
+    <clipPath id="r">
+      <rect width="99" height="20" rx="3" ry="3"/>
+    </clipPath>
   </defs>
 
   <g clip-path="url(#r)">
+    <!-- Left label background -->
     <rect width="62" height="20" fill="#555"/>
+    <!-- Right value background -->
     <rect x="62" width="37" height="20" fill="#e05d44"/>
+    <!-- Gloss overlay across full width so it covers BOTH sides -->
     <rect width="99" height="20" fill="url(#b)"/>
   </g>
 
-  <!-- Text with faux shadow like shields.io -->
+  <!-- Text with shields-like faux shadow -->
   <g font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11" text-anchor="start">
-    <!-- Left label -->
+    <!-- Label shadow + text -->
     <text x="7" y="15" fill="#010101" fill-opacity=".3">coverage</text>
     <text x="7" y="14" fill="#fff">coverage</text>
-
-    <!-- Right value -->
+    <!-- Value shadow + text -->
     <text x="67" y="15" fill="#010101" fill-opacity=".3">40%</text>
     <text x="67" y="14" fill="#fff">40%</text>
   </g>

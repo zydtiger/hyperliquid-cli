@@ -50,18 +50,17 @@ def get_color(coverage):
 
 
 def generate_badge_svg(coverage, color):
-    # Shields canonical look
+    # Shields canonical look (flat with subtle gloss)
     height = 20
     radius = 3
     label = "coverage"
     value = f"{coverage:.0f}%"
 
-    # Estimate text widths for DejaVu Sans 11px
-    # Using ~6.5 px per character gives a good approximation for shields-like content
+    # Estimate text widths for DejaVu Sans 11px (approx)
     def text_len_px(s: str) -> int:
         return int(round(len(s) * 6.5))
 
-    # Padding similar to shields
+    # Padding roughly matching shields
     label_pad_left, label_pad_right = 6, 4
     value_pad_left, value_pad_right = 5, 12
 
@@ -72,32 +71,34 @@ def generate_badge_svg(coverage, color):
     right_w = value_pad_left + value_text_w + value_pad_right
     total_w = left_w + right_w
 
-    # Optional subtle top-to-bottom gloss
-    gradient = """<linearGradient id="b" x2="0" y2="100%">
-      <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
-      <stop offset="1" stop-opacity=".1"/>
-    </linearGradient>"""
-
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_w}" height="{height}" role="img" aria-label="{label}: {value}">
   <title>{label}: {value}</title>
   <defs>
-    {gradient}
-    <clipPath id="r"><rect width="{total_w}" height="{height}" rx="{radius}" ry="{radius}"/></clipPath>
+    <!-- Subtle vertical gloss gradient applied over entire badge -->
+    <linearGradient id="b" x2="0" y2="100%">
+      <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+      <stop offset="1" stop-opacity=".1"/>
+    </linearGradient>
+    <clipPath id="r">
+      <rect width="{total_w}" height="{height}" rx="{radius}" ry="{radius}"/>
+    </clipPath>
   </defs>
 
   <g clip-path="url(#r)">
+    <!-- Left label background -->
     <rect width="{left_w}" height="{height}" fill="#555"/>
+    <!-- Right value background -->
     <rect x="{left_w}" width="{right_w}" height="{height}" fill="{color}"/>
+    <!-- Gloss overlay across full width so it covers BOTH sides -->
     <rect width="{total_w}" height="{height}" fill="url(#b)"/>
   </g>
 
-  <!-- Text with faux shadow like shields.io -->
+  <!-- Text with shields-like faux shadow -->
   <g font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11" text-anchor="start">
-    <!-- Left label -->
+    <!-- Label shadow + text -->
     <text x="{label_pad_left + 1}" y="15" fill="#010101" fill-opacity=".3">{label}</text>
     <text x="{label_pad_left + 1}" y="14" fill="#fff">{label}</text>
-
-    <!-- Right value -->
+    <!-- Value shadow + text -->
     <text x="{left_w + value_pad_left}" y="15" fill="#010101" fill-opacity=".3">{value}</text>
     <text x="{left_w + value_pad_left}" y="14" fill="#fff">{value}</text>
   </g>
