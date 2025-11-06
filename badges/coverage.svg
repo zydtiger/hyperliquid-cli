@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="98" height="20" role="img" aria-label="coverage: 40%">
+  <title>coverage: 40%</title>
+  <defs>
+    <clipPath id="r">
+      <rect width="98" height="20" rx="3" ry="3"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="64" height="20" fill="#555"/>
+    <rect x="64" width="34" height="20" fill="#e05d44"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
+    <text x="32.0" y="14">coverage</text>
+    <text x="81.0" y="14">40%</text>
+  </g>
+</svg>
