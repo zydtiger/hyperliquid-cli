@@ -52,41 +52,40 @@ def get_color(coverage):
 def generate_badge_svg(coverage, color):
     coverage_text = f"{coverage:.0f}%"
 
-    # Text widths (approx) and padding for nicer spacing
+    # Labels and dynamic widths
     left_label = "coverage"
-    font_w = 6  # rough per-character width at 11px Verdana
-    pad = 16
-    left_width = min(70, len(left_label) * font_w + pad)
-    right_width = min(38, len(coverage_text) * font_w + pad)
+    font_w = 6
+    pad = 10
+    left_width = max(70, len(left_label) * font_w + pad)
+    right_width = max(38, len(coverage_text) * font_w + pad)
 
     total_width = left_width + right_width
+
+    height = 22
     radius = 3
 
-    # Build a single background path (left dark + right color) under one rounded clip
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="20" role="img" aria-label="coverage: {coverage_text}">
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="{height}" role="img" aria-label="coverage: {coverage_text}">
   <title>coverage: {coverage_text}</title>
   <defs>
     <clipPath id="r">
-      <rect width="{total_width}" height="20" rx="{radius}" ry="{radius}"/>
+      <rect width="{total_width}" height="{height}" rx="{radius}" ry="{radius}"/>
     </clipPath>
   </defs>
   <g clip-path="url(#r)">
-    <rect width="{left_width}" height="20" fill="#555"/>
-    <rect x="{left_width}" width="{right_width}" height="20" fill="{color}"/>
+    <rect width="{left_width}" height="{height}" fill="#555"/>
+    <rect x="{left_width}" width="{right_width}" height="{height}" fill="{color}"/>
   </g>
 
-  <!-- Text group with faux shadow like shields.io -->
-  <g font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11" text-anchor="middle">
-    <!-- Left label shadow -->
-    <text x="{left_width/2:.1f}" y="14" fill="#010101" fill-opacity=".3">{left_label}</text>
-    <text x="{left_width/2:.1f}" y="13" fill="#fff">{left_label}</text>
-
-    <!-- Right value shadow -->
-    <text x="{left_width + right_width/2:.1f}" y="14" fill="#010101" fill-opacity=".3">{coverage_text}</text>
-    <text x="{left_width + right_width/2:.1f}" y="13" fill="#fff">{coverage_text}</text>
+  <!-- Faux text shadow like shields.io -->
+  <g font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="12" text-anchor="middle">
+    <!-- Left label -->
+    <text x="{left_width/2:.1f}" y="16" fill="#010101" fill-opacity=".3">{left_label}</text>
+    <text x="{left_width/2:.1f}" y="15" fill="#fff">{left_label}</text>
+    <!-- Right value -->
+    <text x="{left_width + right_width/2:.1f}" y="16" fill="#010101" fill-opacity=".3">{coverage_text}</text>
+    <text x="{left_width + right_width/2:.1f}" y="15" fill="#fff">{coverage_text}</text>
   </g>
 </svg>"""
-
     return svg
 
 
