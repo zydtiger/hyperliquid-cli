@@ -6,7 +6,6 @@ for managing orders, positions, and account status.
 """
 
 import cmd
-import sys
 import typer
 from typing import List
 
