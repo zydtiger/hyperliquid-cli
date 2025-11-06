@@ -125,10 +125,12 @@ class HyperliquidClient:
 
             for asset in meta["universe"]:
                 if asset["name"] == coin:
+                    max_leverage = asset.get("maxLeverage")
+                    assert max_leverage is not None
                     return CoinMetadata(
                         coin=asset["name"],
                         size_decimals=asset["szDecimals"],
-                        max_leverage=asset["maxLeverage"],  # type: ignore
+                        max_leverage=max_leverage,
                     )
 
             raise ExchangeError(f"Coin '{coin}' not found in available trading pairs")
