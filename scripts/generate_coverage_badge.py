@@ -74,11 +74,19 @@ def generate_badge_svg(coverage, color):
     <rect width="{left_width}" height="20" fill="#555"/>
     <rect x="{left_width}" width="{right_width}" height="20" fill="{color}"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-    <text x="{left_width/2:.1f}" y="14">{left_label}</text>
-    <text x="{left_width + right_width/2:.1f}" y="14">{coverage_text}</text>
+
+  <!-- Text group with faux shadow like shields.io -->
+  <g font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11" text-anchor="middle">
+    <!-- Left label shadow -->
+    <text x="{left_width/2:.1f}" y="14" fill="#010101" fill-opacity=".3">{left_label}</text>
+    <text x="{left_width/2:.1f}" y="13" fill="#fff">{left_label}</text>
+
+    <!-- Right value shadow -->
+    <text x="{left_width + right_width/2:.1f}" y="14" fill="#010101" fill-opacity=".3">{coverage_text}</text>
+    <text x="{left_width + right_width/2:.1f}" y="13" fill="#fff">{coverage_text}</text>
   </g>
 </svg>"""
+
     return svg
 
 

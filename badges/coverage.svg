@@ -9,8 +9,15 @@
     <rect width="64" height="20" fill="#555"/>
     <rect x="64" width="34" height="20" fill="#e05d44"/>
   </g>
-  <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
-    <text x="32.0" y="14">coverage</text>
-    <text x="81.0" y="14">40%</text>
+
+  <!-- Text group with faux shadow like shields.io -->
+  <g font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11" text-anchor="middle">
+    <!-- Left label shadow -->
+    <text x="32.0" y="14" fill="#010101" fill-opacity=".3">coverage</text>
+    <text x="32.0" y="13" fill="#fff">coverage</text>
+
+    <!-- Right value shadow -->
+    <text x="81.0" y="14" fill="#010101" fill-opacity=".3">40%</text>
+    <text x="81.0" y="13" fill="#fff">40%</text>
   </g>
 </svg>

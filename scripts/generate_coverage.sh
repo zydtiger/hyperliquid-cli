@@ -13,6 +13,10 @@ uv run coverage json
 echo "🏷️  Generating coverage badge..."
 uv run python scripts/generate_coverage_badge.py
 
+echo "🧹 Cleaning up temporary coverage files..."
+rm .coverage
+rm coverage.json
+
 echo "✅ Coverage generation complete!"
 echo "📈 HTML report: htmlcov/index.html"
 echo "🏷️  Coverage badge: badges/coverage.svg"
