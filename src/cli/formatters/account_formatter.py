@@ -31,12 +31,17 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
         Returns:
             str: Formatted account information
         """
+        # Handle BalanceInfo objects
         if isinstance(data, BalanceInfo):
             return self._format_balances(data)
-        elif isinstance(data, list) and all(isinstance(p, PositionInfo) for p in data):
+
+        # Handle List[PositionInfo] objects
+        if isinstance(data, list) and all(isinstance(p, PositionInfo) for p in data):
             return self._format_positions(data)
-        else:
-            return "Invalid account data type"
+
+        raise ValueError(
+            f"Unsupported data type: {type(data)}. Expected BalanceInfo or List[PositionInfo]."
+        )
 
     def _format_balances(self, balance_info: BalanceInfo) -> str:
         """

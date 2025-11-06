@@ -58,7 +58,10 @@ class InteractiveCLI(cmd.Cmd):
 
                     # Display result using formatter
                     formatter = OrderFormatter()
-                    print(formatter.format(result))
+                    try:
+                        print(formatter.format(result))
+                    except ValueError as format_err:
+                        print(format_err)
 
                 except Exception as submission_err:
                     print(f"❌ Failed to submit order: {submission_err}")
@@ -132,7 +135,10 @@ class InteractiveCLI(cmd.Cmd):
                 positions = api.get_positions()
 
                 formatter = AccountFormatter()
-                print(formatter.format(positions))
+                try:
+                    print(formatter.format(positions))
+                except ValueError as format_err:
+                    print(format_err)
                 print()
 
         except Exception as e:
@@ -150,7 +156,10 @@ class InteractiveCLI(cmd.Cmd):
             with BackendAPI(self.config) as api:
                 balances = api.get_balances()
                 formatter = AccountFormatter()
-                print(formatter.format(balances))
+                try:
+                    print(formatter.format(balances))
+                except ValueError as format_err:
+                    print(format_err)
                 print()
         except Exception as e:
             print(f"❌ Error fetching balances: {e}")
@@ -222,7 +231,10 @@ class InteractiveCLI(cmd.Cmd):
                 # Use the order formatter to display OrderInfo
                 formatter = OrderFormatter()
                 print()
-                print(formatter.format(order_info))
+                try:
+                    print(formatter.format(order_info))
+                except ValueError as format_err:
+                    print(format_err)
                 print()
 
         except Exception as e:
@@ -259,7 +271,10 @@ class InteractiveCLI(cmd.Cmd):
 
                 # Use the order formatter to display orders as a table
                 formatter = OrderFormatter()
-                print(formatter.format(orders))
+                try:
+                    print(formatter.format(orders))
+                except ValueError as format_err:
+                    print(format_err)
                 print()
 
         except Exception as e:
@@ -386,7 +401,10 @@ class InteractiveCLI(cmd.Cmd):
 
                 # Display result using formatter
                 formatter = OrderFormatter()
-                print(formatter.format(result))
+                try:
+                    print(formatter.format(result))
+                except ValueError as format_err:
+                    print(format_err)
 
         except KeyboardInterrupt:
             print("❌ Order modification cancelled")
