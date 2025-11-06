@@ -50,40 +50,56 @@ def get_color(coverage):
 
 
 def generate_badge_svg(coverage, color):
-    coverage_text = f"{coverage:.0f}%"
-
-    # Labels and dynamic widths
-    left_label = "coverage"
-    font_w = 6
-    pad = 10
-    left_width = max(70, len(left_label) * font_w + pad)
-    right_width = max(38, len(coverage_text) * font_w + pad)
-
-    total_width = left_width + right_width
-
-    height = 20.5
+    # Shields canonical look
+    height = 20
     radius = 3
+    label = "coverage"
+    value = f"{coverage:.0f}%"
 
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="{height}" role="img" aria-label="coverage: {coverage_text}">
-  <title>coverage: {coverage_text}</title>
+    # Estimate text widths for DejaVu Sans 11px
+    # Using ~6.5 px per character gives a good approximation for shields-like content
+    def text_len_px(s: str) -> int:
+        return int(round(len(s) * 6.5))
+
+    # Padding similar to shields
+    label_pad_left, label_pad_right = 6, 4
+    value_pad_left, value_pad_right = 5, 12
+
+    label_text_w = text_len_px(label)
+    value_text_w = text_len_px(value)
+
+    left_w = label_pad_left + label_text_w + label_pad_right
+    right_w = value_pad_left + value_text_w + value_pad_right
+    total_w = left_w + right_w
+
+    # Optional subtle top-to-bottom gloss
+    gradient = """<linearGradient id="b" x2="0" y2="100%">
+      <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+      <stop offset="1" stop-opacity=".1"/>
+    </linearGradient>"""
+
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_w}" height="{height}" role="img" aria-label="{label}: {value}">
+  <title>{label}: {value}</title>
   <defs>
-    <clipPath id="r">
-      <rect width="{total_width}" height="{height}" rx="{radius}" ry="{radius}"/>
-    </clipPath>
+    {gradient}
+    <clipPath id="r"><rect width="{total_w}" height="{height}" rx="{radius}" ry="{radius}"/></clipPath>
   </defs>
+
   <g clip-path="url(#r)">
-    <rect width="{left_width}" height="{height}" fill="#555"/>
-    <rect x="{left_width}" width="{right_width}" height="{height}" fill="{color}"/>
+    <rect width="{left_w}" height="{height}" fill="#555"/>
+    <rect x="{left_w}" width="{right_w}" height="{height}" fill="{color}"/>
+    <rect width="{total_w}" height="{height}" fill="url(#b)"/>
   </g>
 
-  <!-- Faux text shadow like shields.io -->
-  <g font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="12" text-anchor="middle">
+  <!-- Text with faux shadow like shields.io -->
+  <g font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11" text-anchor="start">
     <!-- Left label -->
-    <text x="{left_width/2:.1f}" y="15" fill="#010101" fill-opacity=".3">{left_label}</text>
-    <text x="{left_width/2:.1f}" y="14" fill="#fff">{left_label}</text>
+    <text x="{label_pad_left + 1}" y="15" fill="#010101" fill-opacity=".3">{label}</text>
+    <text x="{label_pad_left + 1}" y="14" fill="#fff">{label}</text>
+
     <!-- Right value -->
-    <text x="{left_width + right_width/2:.1f}" y="15" fill="#010101" fill-opacity=".3">{coverage_text}</text>
-    <text x="{left_width + right_width/2:.1f}" y="14" fill="#fff">{coverage_text}</text>
+    <text x="{left_w + value_pad_left}" y="15" fill="#010101" fill-opacity=".3">{value}</text>
+    <text x="{left_w + value_pad_left}" y="14" fill="#fff">{value}</text>
   </g>
 </svg>"""
     return svg
