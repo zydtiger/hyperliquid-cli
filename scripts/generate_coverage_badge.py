@@ -61,7 +61,7 @@ def generate_badge_svg(coverage, color):
 
     total_width = left_width + right_width
 
-    height = 22
+    height = 20.5
     radius = 3
 
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="{height}" role="img" aria-label="coverage: {coverage_text}">
@@ -79,11 +79,11 @@ def generate_badge_svg(coverage, color):
   <!-- Faux text shadow like shields.io -->
   <g font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="12" text-anchor="middle">
     <!-- Left label -->
-    <text x="{left_width/2:.1f}" y="16" fill="#010101" fill-opacity=".3">{left_label}</text>
-    <text x="{left_width/2:.1f}" y="15" fill="#fff">{left_label}</text>
+    <text x="{left_width/2:.1f}" y="15" fill="#010101" fill-opacity=".3">{left_label}</text>
+    <text x="{left_width/2:.1f}" y="14" fill="#fff">{left_label}</text>
     <!-- Right value -->
-    <text x="{left_width + right_width/2:.1f}" y="16" fill="#010101" fill-opacity=".3">{coverage_text}</text>
-    <text x="{left_width + right_width/2:.1f}" y="15" fill="#fff">{coverage_text}</text>
+    <text x="{left_width + right_width/2:.1f}" y="15" fill="#010101" fill-opacity=".3">{coverage_text}</text>
+    <text x="{left_width + right_width/2:.1f}" y="14" fill="#fff">{coverage_text}</text>
   </g>
 </svg>"""
     return svg

@@ -1,22 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="108" height="22" role="img" aria-label="coverage: 40%">
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="20.5" role="img" aria-label="coverage: 40%">
   <title>coverage: 40%</title>
   <defs>
     <clipPath id="r">
-      <rect width="108" height="22" rx="3" ry="3"/>
+      <rect width="108" height="20.5" rx="3" ry="3"/>
     </clipPath>
   </defs>
   <g clip-path="url(#r)">
-    <rect width="70" height="22" fill="#555"/>
-    <rect x="70" width="38" height="22" fill="#e05d44"/>
+    <rect width="70" height="20.5" fill="#555"/>
+    <rect x="70" width="38" height="20.5" fill="#e05d44"/>
   </g>
 
   <!-- Faux text shadow like shields.io -->
   <g font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="12" text-anchor="middle">
     <!-- Left label -->
-    <text x="35.0" y="16" fill="#010101" fill-opacity=".3">coverage</text>
-    <text x="35.0" y="15" fill="#fff">coverage</text>
+    <text x="35.0" y="15" fill="#010101" fill-opacity=".3">coverage</text>
+    <text x="35.0" y="14" fill="#fff">coverage</text>
     <!-- Right value -->
-    <text x="89.0" y="16" fill="#010101" fill-opacity=".3">40%</text>
-    <text x="89.0" y="15" fill="#fff">40%</text>
+    <text x="89.0" y="15" fill="#010101" fill-opacity=".3">40%</text>
+    <text x="89.0" y="14" fill="#fff">40%</text>
   </g>
 </svg>
