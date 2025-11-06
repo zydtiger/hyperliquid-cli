@@ -6,7 +6,7 @@ authentication, retry logic, and connection testing.
 """
 
 import time
-from typing import Any, Callable
+from typing import Callable, TypeVar
 
 from hyperliquid.info import Info
 from hyperliquid.exchange import Exchange
@@ -15,6 +15,8 @@ import eth_account
 
 from models.api import ExchangeError
 from models.config import Config, NetworkType
+
+T = TypeVar("T")
 
 
 class HyperliquidConnection:
@@ -58,23 +60,21 @@ class HyperliquidConnection:
     def _get_base_url(self) -> str:
         """Get the appropriate API URL based on network configuration."""
 
-        return (
+        return str(
             constants.MAINNET_API_URL
             if self.config.hyperliquid.network == NetworkType.MAINNET
             else constants.TESTNET_API_URL
         )
 
-    def retry_operation(self, operation: Callable, *args, **kwargs) -> Any:
+    def retry_operation(self, operation: Callable[[], T]) -> T:
         """
         Execute an operation with retry logic.
 
         Args:
-            operation: The operation to execute (callable)
-            *args: Arguments to pass to the operation
-            **kwargs: Keyword arguments to pass to the operation
+            operation: The operation to execute (callable that returns T)
 
         Returns:
-            Result of the operation
+            Result of the operation (type T)
 
         Raises:
             ExchangeError: If all retry attempts fail
@@ -83,7 +83,7 @@ class HyperliquidConnection:
 
         for attempt in range(self.max_retries + 1):
             try:
-                return operation(*args, **kwargs)
+                return operation()
             except Exception as e:
                 last_exception = e
 

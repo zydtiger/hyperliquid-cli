@@ -5,6 +5,7 @@ This module provides step-by-step wizards for creating orders and
 configuring trading parameters.
 """
 
+from typing import Union
 from models import MarketOrder, LimitOrder, Config
 from ..api import BackendAPI
 from ..formatters.order_formatter import OrderFormatter
@@ -31,7 +32,7 @@ class OrderWizard:
         self.prompts = Prompts(config, api)
         self.formatter = OrderFormatter()
 
-    def run(self) -> MarketOrder | LimitOrder:
+    def run(self) -> Union[MarketOrder, LimitOrder]:
         """
         Run the complete order creation wizard.
 
@@ -55,6 +56,8 @@ class OrderWizard:
 
         # Step 3: Select order type and configure specific parameters
         order_type = self.prompts.get_order_type_selection()
+
+        order: Union[MarketOrder, LimitOrder]
 
         if order_type == "limit":
             # Get price for limit orders

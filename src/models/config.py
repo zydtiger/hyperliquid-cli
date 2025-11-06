@@ -35,7 +35,7 @@ class HyperliquidConfig(BaseModel, extra="forbid", validate_assignment=True):
     network: NetworkType = NetworkType.MAINNET
 
     @field_validator("account_address")
-    def validate_account_address(cls, v):
+    def validate_account_address(cls, v: str) -> str:
         if not v or not isinstance(v, str):
             raise ValueError("account_address is required and must be a string")
         if not v.startswith("0x"):
@@ -43,7 +43,7 @@ class HyperliquidConfig(BaseModel, extra="forbid", validate_assignment=True):
         return v
 
     @field_validator("private_key")
-    def validate_private_key(cls, v):
+    def validate_private_key(cls, v: str) -> str:
         if not v or not isinstance(v, str):
             raise ValueError("private_key is required and must be a string")
         if not (v.startswith("0x") and len(v) == 66):
@@ -66,7 +66,7 @@ class LoggingConfig(BaseModel, extra="forbid", validate_assignment=True):
     level: str = Field(default="INFO")
 
     @field_validator("level")
-    def validate_level(cls, v):
+    def validate_level(cls, v: str) -> str:
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v not in valid_levels:
             raise ValueError(f"logging.level must be one of {valid_levels}")

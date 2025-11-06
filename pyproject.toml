@@ -42,11 +42,12 @@ dev = [
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",
+    "types-PyYAML>=6.0.0",
 ]
 
 [project.scripts]
-hyperliquid-cli = "cli.app:main"
-hyperliquid-backend = "backend.service:main"
+hyperliquid-cli = "cli:main"
+hyperliquid-backend = "backend:main"
 
 [project.urls]
 Homepage = "https://github.com/zydtiger/hyperliquid-cli"

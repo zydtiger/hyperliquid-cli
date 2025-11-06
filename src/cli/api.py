@@ -6,8 +6,7 @@ Hyperliquid backend FastAPI service, with proper error handling and type safety.
 """
 
 import logging
-from decimal import Decimal
-from typing import List, Optional
+from typing import Any, List
 
 import httpx
 
@@ -57,11 +56,11 @@ class BackendAPI:
         )
         logger.debug(f"Initialized BackendAPI with base URL: {self.base_url}")
 
-    def __enter__(self):
+    def __enter__(self) -> "BackendAPI":
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Context manager exit."""
         self.client.close()
 
@@ -133,7 +132,8 @@ class BackendAPI:
         try:
             response = self.client.get("/available_coins")
             self._handle_response_error(response)
-            return response.json()
+            data = response.json()
+            return list(data) if isinstance(data, (list, tuple)) else []
         except httpx.RequestError as e:
             logger.error(f"Failed to get available coins: {e}")
             raise APIError(f"Connection error: {str(e)}")

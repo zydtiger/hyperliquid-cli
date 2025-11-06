@@ -6,7 +6,7 @@ through HTTP requests with proper error handling and response formatting.
 """
 
 import logging
-from typing import List, TypedDict
+from typing import List
 
 from fastapi import FastAPI, HTTPException, Path, status
 
@@ -34,8 +34,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
         client: Shared Hyperliquid client instance
     """
 
-    @app.get("/available_coins", response_model=List[str])
-    async def get_available_coins():
+    @app.get("/available_coins")
+    async def get_available_coins() -> List[str]:
         """
         Get list of available trading coins.
 
@@ -55,10 +55,10 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.get("/ticker/{coin}", response_model=Ticker)
+    @app.get("/ticker/{coin}")
     async def get_ticker(
         coin: str = Path(..., description="Symbol of the cryptocurrency")
-    ):
+    ) -> Ticker:
         """
         Get ticker information for a specific coin.
 
@@ -81,10 +81,10 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.get("/metadata/{coin}", response_model=CoinMetadata)
+    @app.get("/metadata/{coin}")
     async def get_metadata(
         coin: str = Path(..., description="Symbol of the cryptocurrency")
-    ):
+    ) -> CoinMetadata:
         """
         Get metadata for a specific coin.
 
@@ -107,8 +107,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.get("/positions", response_model=List[PositionInfo])
-    async def get_positions():
+    @app.get("/positions")
+    async def get_positions() -> List[PositionInfo]:
         """
         Get current open positions.
 
@@ -128,10 +128,10 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.get("/positions/{coin}", response_model=PositionInfo)
+    @app.get("/positions/{coin}")
     async def get_position(
         coin: str = Path(..., description="Symbol of the cryptocurrency")
-    ):
+    ) -> PositionInfo:
         """
         Get position information for a specific coin.
 
@@ -168,8 +168,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.get("/balances", response_model=BalanceInfo)
-    async def get_balances():
+    @app.get("/balances")
+    async def get_balances() -> BalanceInfo:
         """
         Get comprehensive balance information for the account.
 
@@ -189,10 +189,10 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.get("/order_status/{order_id}", response_model=OrderInfo)
+    @app.get("/order_status/{order_id}")
     async def get_order_status(
         order_id: int = Path(..., description="Order ID (integer OID)", ge=1)
-    ):
+    ) -> OrderInfo:
         """
         Get status and details of a specific order by its ID.
 
@@ -215,8 +215,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.get("/open_orders", response_model=List[OrderInfo])
-    async def get_open_orders():
+    @app.get("/open_orders")
+    async def get_open_orders() -> List[OrderInfo]:
         """
         Get all open orders for the account.
 
@@ -236,8 +236,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.post("/market_order", response_model=OrderResult)
-    async def submit_market_order(order: MarketOrder):
+    @app.post("/market_order")
+    async def submit_market_order(order: MarketOrder) -> OrderResult:
         """
         Submit a market order for immediate execution.
 
@@ -260,8 +260,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.post("/limit_order", response_model=OrderResult)
-    async def submit_limit_order(order: LimitOrder):
+    @app.post("/limit_order")
+    async def submit_limit_order(order: LimitOrder) -> OrderResult:
         """
         Submit a limit order with specified price and time-in-force.
 
@@ -284,8 +284,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.post("/cancel_order", response_model=OrderResult)
-    async def cancel_order(request: CancelOrderRequest):
+    @app.post("/cancel_order")
+    async def cancel_order(request: CancelOrderRequest) -> OrderResult:
         """
         Cancel a specific order or all open orders.
 
@@ -310,8 +310,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                 detail="Internal server error",
             )
 
-    @app.post("/modify_order", response_model=OrderResult)
-    async def modify_order(request: ModifyOrderRequest):
+    @app.post("/modify_order")
+    async def modify_order(request: ModifyOrderRequest) -> OrderResult:
         """
         Modify price and/or quantity of an existing open limit order.
 

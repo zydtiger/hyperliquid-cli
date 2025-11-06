@@ -75,8 +75,8 @@ def create_app(config: Config) -> FastAPI:
     setup_request_handlers(app, client)
 
     # Add health check endpoint
-    @app.get("/health", response_model=HealthResponse)
-    async def health_check():
+    @app.get("/health")
+    async def health_check() -> HealthResponse:
         """Health check endpoint."""
         try:
             is_healthy = client.test_connection()
@@ -90,8 +90,8 @@ def create_app(config: Config) -> FastAPI:
             )
 
     # Add root endpoint
-    @app.get("/", response_model=RootResponse)
-    async def root():
+    @app.get("/")
+    async def root() -> RootResponse:
         """Root endpoint with API information."""
         try:
             is_healthy = client.test_connection()

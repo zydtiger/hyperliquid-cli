@@ -68,7 +68,7 @@ class HyperliquidClient:
             List[str]: List of available coin symbols
         """
 
-        def _get_available_coins():
+        def _get_available_coins() -> List[str]:
             meta = self.connection.info.meta()
             return [asset["name"] for asset in meta["universe"]]
 
@@ -85,7 +85,7 @@ class HyperliquidClient:
             Ticker: Ticker data
         """
 
-        def _get_ticker():
+        def _get_ticker() -> Ticker:
             meta, asset_ctxs = self.connection.info.meta_and_asset_ctxs()
             if not meta or "universe" not in meta:
                 raise ExchangeError("Failed to retrieve market metadata from exchange")
@@ -118,7 +118,7 @@ class HyperliquidClient:
             CoinMetadata: Coin metadata
         """
 
-        def _get_metadata():
+        def _get_metadata() -> CoinMetadata:
             meta = self.connection.info.meta()
             if not meta or "universe" not in meta:
                 raise ExchangeError("Failed to retrieve market metadata from exchange")
@@ -146,7 +146,7 @@ class HyperliquidClient:
             ExchangeError: If balance retrieval fails
         """
 
-        def _get_balances():
+        def _get_balances() -> BalanceInfo:
             try:
                 # Get perpetuals account data from user_state
                 user_state = self.connection.info.user_state(
@@ -310,7 +310,7 @@ class HyperliquidClient:
             List[PositionInfo]: List of open positions
         """
 
-        def _get_positions():
+        def _get_positions() -> List[PositionInfo]:
             user_state = self.connection.info.user_state(
                 self.config.hyperliquid.account_address
             )
@@ -390,7 +390,7 @@ class HyperliquidClient:
             ExchangeError: If order status query fails
         """
 
-        def _get_order_status():
+        def _get_order_status() -> OrderInfo:
             try:
                 user_address = self.config.hyperliquid.account_address
                 result = self.connection.info.query_order_by_oid(user_address, order_id)
@@ -528,7 +528,7 @@ class HyperliquidClient:
             ExchangeError: If open orders retrieval fails
         """
 
-        def _get_open_orders():
+        def _get_open_orders() -> List[OrderInfo]:
             try:
                 # Get open orders list from the API
                 orders_data = self.connection.info.open_orders(
@@ -575,7 +575,7 @@ class HyperliquidClient:
             ExchangeError: If order submission fails
         """
 
-        def _submit_market_order():
+        def _submit_market_order() -> OrderResult:
             try:
                 # Use market_open for buying, market_close for selling
                 slippage = float(self.config.trading.default_slippage)
@@ -687,7 +687,7 @@ class HyperliquidClient:
             ExchangeError: If order submission fails
         """
 
-        def _submit_limit_order():
+        def _submit_limit_order() -> OrderResult:
             try:
                 result = self.connection.exchange.order(
                     name=order.coin,
@@ -785,7 +785,7 @@ class HyperliquidClient:
             ExchangeError: If cancellation fails
         """
 
-        def _cancel_order():
+        def _cancel_order() -> OrderResult:
             if order_id == "all":
                 return self._cancel_all_orders()
             elif isinstance(order_id, int) and order_id > 0:
@@ -977,7 +977,7 @@ class HyperliquidClient:
                 error="No changes requested - both price and quantity are None",
             )
 
-        def _modify_order():
+        def _modify_order() -> OrderResult:
             try:
                 # Get current order info to validate and extract current values
                 current_order = self.get_order_status(order_id)

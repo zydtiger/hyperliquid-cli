@@ -5,7 +5,7 @@ This module provides formatting utilities for displaying order information
 in a user-friendly way.
 """
 
-from typing import Union, List
+from typing import Any, List, Union
 from .base import Formatter
 from .table_formatter import TableFormatter
 from models import MarketOrder, LimitOrder
@@ -18,7 +18,9 @@ class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderRe
     """
 
     def format(
-        self, data: Union[MarketOrder, LimitOrder, OrderInfo, OrderResult], **kwargs
+        self,
+        data: Union[MarketOrder, LimitOrder, OrderInfo, OrderResult],
+        **kwargs: Any,
     ) -> str:
         """
         Format an order for display.

@@ -454,7 +454,7 @@ class InteractiveCLI(cmd.Cmd):
                         typer.echo("👋 Goodbye!")
                         return  # Quit if CTRL+C and then select quit
                     else:
-                        self.intro = None
+                        self.intro = ""
                         continue
                 except typer.Abort:
                     typer.echo("\n👋 Goodbye!")

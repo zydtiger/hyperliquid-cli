@@ -5,7 +5,7 @@ This module provides utilities for formatting data in a clean tabular format
 for display in the command-line interface.
 """
 
-from typing import List, Any, Tuple
+from typing import Any, List, Tuple
 from decimal import Decimal
 from .base import Formatter
 
@@ -15,7 +15,7 @@ class TableFormatter(Formatter[Tuple[List[str], List[List[Any]]]]):
     Table formatter for displaying data in a clean tabular format.
     """
 
-    def format(self, data: Tuple[List[str], List[List[Any]]], **kwargs) -> str:
+    def format(self, data: Tuple[List[str], List[List[Any]]], **kwargs: Any) -> str:
         """
         Format data as a clean table.
 

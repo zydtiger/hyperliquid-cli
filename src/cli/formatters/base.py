@@ -6,7 +6,7 @@ formatters for displaying data in the command-line interface.
 """
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
 
@@ -20,7 +20,7 @@ class Formatter(ABC, Generic[T]):
     """
 
     @abstractmethod
-    def format(self, data: T, **kwargs) -> str:
+    def format(self, data: T, **kwargs: Any) -> str:
         """
         Format the given data into a string representation.
 

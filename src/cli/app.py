@@ -36,7 +36,7 @@ def run(
         dir_okay=False,
         readable=True,
     ),
-):
+) -> None:
     # Load configuration
     config = Config.from_file(config_path)
 
@@ -70,7 +70,7 @@ def run(
 
 
 @app.command()
-def create_config():
+def create_config() -> None:
     """Create a default configuration file."""
     try:
         example_config = Path(__file__).parent.parent.parent / "config.example.yaml"
@@ -89,5 +89,5 @@ def create_config():
         raise typer.Exit(1)
 
 
-def main():
+def main() -> None:
     app()
