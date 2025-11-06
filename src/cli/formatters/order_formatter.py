@@ -12,26 +12,32 @@ from models import MarketOrder, LimitOrder
 from models.order import OrderInfo, OrderResult, OrderStatus
 
 
-class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderResult]]):
+class OrderFormatter(
+    Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderResult, List[OrderInfo]]]
+):
     """
     Formatter class for order data display.
     """
 
     def format(
         self,
-        data: Union[MarketOrder, LimitOrder, OrderInfo, OrderResult],
+        data: Union[MarketOrder, LimitOrder, OrderInfo, OrderResult, List[OrderInfo]],
         **kwargs: Any,
     ) -> str:
         """
         Format an order for display.
 
         Args:
-            data: The order to format (MarketOrder, LimitOrder, OrderInfo, or OrderResult)
+            data: The order to format (MarketOrder, LimitOrder, OrderInfo, OrderResult, or List[OrderInfo])
             **kwargs: Additional formatting options (unused for now)
 
         Returns:
             str: Formatted order summary, status, or result information
         """
+        # Handle List[OrderInfo] objects (multiple orders display)
+        if isinstance(data, list) and all(isinstance(item, OrderInfo) for item in data):
+            return self._format_order_infos(data)
+
         # Handle OrderResult objects (order submission result)
         if isinstance(data, OrderResult):
             return self._format_order_result(data)
@@ -41,26 +47,31 @@ class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderRe
             return self._format_order_info(data)
 
         # Handle MarketOrder and LimitOrder objects (order creation summary)
-        lines = []
-        lines.append("=" * 40)
-        lines.append("ORDER SUMMARY")
-        lines.append("=" * 40)
+        if isinstance(data, (MarketOrder, LimitOrder)):
+            lines = []
+            lines.append("=" * 40)
+            lines.append("ORDER SUMMARY")
+            lines.append("=" * 40)
 
-        lines.append(f"Side:        {data.side.upper()}")
-        lines.append(f"Coin:        {data.coin}")
-        lines.append(f"Quantity:    {data.quantity}")
+            lines.append(f"Side:        {data.side.upper()}")
+            lines.append(f"Coin:        {data.coin}")
+            lines.append(f"Quantity:    {data.quantity}")
 
-        if isinstance(data, LimitOrder):
-            lines.append(f"Type:        Limit Order")
-            lines.append(f"Price:       ${data.price}")
-            lines.append(f"TIF:         {data.time_in_force.value}")
-        else:
-            lines.append(f"Type:        Market Order")
+            if isinstance(data, LimitOrder):
+                lines.append(f"Type:        Limit Order")
+                lines.append(f"Price:       ${data.price}")
+                lines.append(f"TIF:         {data.time_in_force.value}")
+            else:
+                lines.append(f"Type:        Market Order")
 
-        lines.append(f"Reduce Only: {'Yes' if data.reduce_only else 'No'}")
-        lines.append("=" * 40)
+            lines.append(f"Reduce Only: {'Yes' if data.reduce_only else 'No'}")
+            lines.append("=" * 40)
 
-        return "\n".join(lines)
+            return "\n".join(lines)
+
+        raise ValueError(
+            f"Unsupported data type: {type(data)}. Expected MarketOrder, LimitOrder, OrderInfo, OrderResult, or List[OrderInfo]."
+        )
 
     def _format_order_info(self, order: OrderInfo) -> str:
         """
@@ -176,7 +187,7 @@ class OrderFormatter(Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderRe
             str: Formatted table of orders
         """
         if not orders:
-            return "No open orders found."
+            return "\nNo open orders found."
 
         # Define table headers
         headers = [

@@ -259,7 +259,7 @@ class InteractiveCLI(cmd.Cmd):
 
                 # Use the order formatter to display orders as a table
                 formatter = OrderFormatter()
-                print(formatter._format_order_infos(orders))
+                print(formatter.format(orders))
                 print()
 
         except Exception as e:
