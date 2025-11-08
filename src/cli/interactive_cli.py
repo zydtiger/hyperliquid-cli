@@ -258,6 +258,85 @@ class InteractiveCLI(cmd.Cmd):
         print("- Order settings (TIF, reduce-only)")
         print("- Creation timestamp")
 
+    def do_info(self, args: str) -> None:
+        """
+        Get comprehensive information about a specific coin.
+
+        Usage: info <coin>
+
+        Example: info BTC
+        """
+        if not args.strip():
+            print("❌ Error: Coin symbol is required")
+            print("Usage: info <coin>")
+            print("Example: info BTC")
+            return
+
+        coin = args.strip().upper()
+
+        try:
+            with BackendAPI(self.config) as api:
+                print(f"\n⏳ Fetching information for {coin}...")
+
+                # Get ticker and metadata
+                ticker = api.get_ticker(coin)
+                metadata = api.get_metadata(coin)
+
+                # Prepare ticker information
+                ticker_data = [
+                    ["Coin", ticker.coin],
+                    ["Mark Price", f"${ticker.mark_price:,.4f}"],
+                    ["Funding Rate", f"{ticker.funding_rate*100:.4f}%"],
+                    ["Open Interest", f"{ticker.open_interest:,.2f}"],
+                ]
+
+                # Prepare metadata information
+                metadata_data = [
+                    ["Coin", metadata.coin],
+                    ["Size Decimals", str(metadata.size_decimals)],
+                    ["Max Leverage", f"{metadata.max_leverage}x"],
+                ]
+
+                # Create and display tables
+                formatter = TableFormatter()
+
+                # Ticker table
+                ticker_table = formatter.format(
+                    (ticker_data[0], ticker_data[1:]),
+                    title=f"📊 {coin} Ticker Information",
+                )
+
+                # Metadata table
+                metadata_table = formatter.format(
+                    (metadata_data[0], metadata_data[1:]), title=f"ℹ️ {coin} Metadata"
+                )
+
+                print(ticker_table)
+                print(metadata_table)
+                print()
+
+        except Exception as e:
+            print(f"❌ Error fetching information for {coin}: {e}")
+
+    def help_info(self) -> None:
+        """Show help for the info command."""
+        print("info - Get comprehensive information about a specific coin")
+        print("Usage: info <coin>")
+        print()
+        print("Arguments:")
+        print("  coin        Coin symbol (e.g., BTC, ETH)")
+        print()
+        print("Example:")
+        print("  info BTC")
+        print()
+        print("This command displays comprehensive coin information including:")
+        print("- Current mark price and funding rate")
+        print("- Open interest data")
+        print("- Market metadata and trading specifications")
+        print("- Maximum leverage and size decimal precision")
+        print()
+        print("Note: Use the coin symbol as it appears on the exchange")
+
     def do_open_orders(self, args: str) -> None:
         """
         Get all open orders for the account.
@@ -443,6 +522,7 @@ class InteractiveCLI(cmd.Cmd):
             "open_orders",
             "cancel_order",
             "modify_order",
+            "info",
             "status",
             "positions",
             "conditionals",
