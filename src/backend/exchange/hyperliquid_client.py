@@ -7,30 +7,32 @@ handling data retrieval and portfolio management operations.
 
 from decimal import Decimal
 from typing import List, Optional
+
 from hyperliquid.utils.signing import Tif
 
-from .hyperliquid_connection import HyperliquidConnection
 from models.api import (
-    Ticker,
+    BalanceInfo,
     CoinMetadata,
-    PositionInfo,
     ExchangeError,
     LeverageType,
-    BalanceInfo,
+    PositionInfo,
     SpotBalance,
     StakingInfo,
+    Ticker,
 )
+from models.config import Config
 from models.order import (
-    MarketOrder,
     LimitOrder,
+    MarketOrder,
+    OrderInfo,
     OrderResult,
     OrderSide,
     OrderStatus,
     OrderTif,
     OrderType,
-    OrderInfo,
 )
-from models.config import Config
+
+from .hyperliquid_connection import HyperliquidConnection
 
 
 class HyperliquidClient:
@@ -319,7 +321,6 @@ class HyperliquidClient:
             positions = []
 
             for position in user_state.get("assetPositions", []):
-
                 # position_sample_data = {
                 #     "type": "oneWay",
                 #     "position": {
@@ -579,19 +580,19 @@ class HyperliquidClient:
 
         def _submit_market_order() -> OrderResult:
             try:
-                # Use market_open for buying, market_close for selling
+                # Use market_open for non-reduce-only orders, market_close for reduce-only orders
                 slippage = float(self.config.trading.default_slippage)
-                if order.side.value == "buy":
-                    result = self.connection.exchange.market_open(
-                        name=order.coin,
-                        is_buy=True,
+                if order.reduce_only:
+                    result = self.connection.exchange.market_close(
+                        coin=order.coin,
                         sz=float(order.quantity),
                         px=None,  # Market price
                         slippage=slippage,
                     )
-                else:  # sell
-                    result = self.connection.exchange.market_close(
-                        coin=order.coin,
+                else:
+                    result = self.connection.exchange.market_open(
+                        name=order.coin,
+                        is_buy=(order.side.value == "buy"),
                         sz=float(order.quantity),
                         px=None,  # Market price
                         slippage=slippage,
