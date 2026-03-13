@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create CLI Command"
+  short_description: "Create a new interactive CLI command"
+  default_prompt: "Use $create-interactive-cli-command to add a new interactive CLI command to this Hyperliquid project."
