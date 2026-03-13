@@ -58,11 +58,11 @@ class OrderFormatter(
             lines.append(f"Quantity:    {data.quantity}")
 
             if isinstance(data, LimitOrder):
-                lines.append(f"Type:        Limit Order")
+                lines.append("Type:        Limit Order")
                 lines.append(f"Price:       ${data.price}")
                 lines.append(f"TIF:         {data.time_in_force.value}")
             else:
-                lines.append(f"Type:        Market Order")
+                lines.append("Type:        Market Order")
 
             lines.append(f"Reduce Only: {'Yes' if data.reduce_only else 'No'}")
             lines.append("=" * 40)
@@ -104,12 +104,12 @@ class OrderFormatter(
         if order.price is not None:
             lines.append(f"Limit Price: ${order.price}")
         else:
-            lines.append(f"Limit Price: N/A (Market Order)")
+            lines.append("Limit Price: N/A (Market Order)")
 
         if order.average_fill_price is not None:
             lines.append(f"Avg Fill:    ${order.average_fill_price}")
         else:
-            lines.append(f"Avg Fill:    N/A")
+            lines.append("Avg Fill:    N/A")
 
         # Additional information
         if order.time_in_force is not None:

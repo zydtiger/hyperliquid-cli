@@ -48,7 +48,7 @@ def run(
         with BackendAPI(config) as api:
             root_data = api.get_root()
         typer.echo("✅ Successfully connected to backend API")
-    except Exception as e:
+    except Exception:
         typer.echo("❌ Failed to connect to backend API")
         raise typer.Exit(1)
 

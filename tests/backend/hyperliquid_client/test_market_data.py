@@ -7,7 +7,6 @@ ticker data, and metadata queries.
 
 import pytest
 from decimal import Decimal
-from unittest.mock import patch
 
 from models.api import Ticker, CoinMetadata, ExchangeError
 

@@ -5,7 +5,6 @@ This module provides comprehensive tests for market order submission,
 limit order submission, and other order creation operations.
 """
 
-import pytest
 from decimal import Decimal
 from unittest.mock import patch
 

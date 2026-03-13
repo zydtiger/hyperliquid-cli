@@ -9,7 +9,6 @@ import pytest
 from unittest.mock import patch
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
-from backend.exchange.hyperliquid_connection import HyperliquidConnection
 
 
 class TestHyperliquidClientInitialization:

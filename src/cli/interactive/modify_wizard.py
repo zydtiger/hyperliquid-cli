@@ -67,7 +67,7 @@ class ModifyWizard:
             )
 
         # Display current order information
-        print(f"\n📋 Current Order Information:")
+        print("\n📋 Current Order Information:")
         print(self.formatter.format(order_info))
 
         # Step 2: Get new price (optional)
@@ -89,7 +89,7 @@ class ModifyWizard:
             raise KeyboardInterrupt
 
         # Step 4: Show modification summary
-        print(f"\n📋 Modification Summary:")
+        print("\n📋 Modification Summary:")
         print(f"   Order ID: {order_id}")
         print(f"   Coin: {order_info.coin}")
 

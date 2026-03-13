@@ -130,8 +130,8 @@ def main():
     print(f"Coverage: {coverage:.0f}%")
 
     # Also generate markdown for README
-    md_badge = f"[![Coverage](https://raw.githubusercontent.com/zydtiger/hyperliquid-cli/main/badges/coverage.svg)](https://github.com/zydtiger/hyperliquid-cli/actions/workflows/ci.yml)"
-    print(f"\nMarkdown for README:")
+    md_badge = "[![Coverage](https://raw.githubusercontent.com/zydtiger/hyperliquid-cli/main/badges/coverage.svg)](https://github.com/zydtiger/hyperliquid-cli/actions/workflows/ci.yml)"
+    print("\nMarkdown for README:")
     print(md_badge)
 
 

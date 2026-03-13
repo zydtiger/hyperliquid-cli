@@ -734,8 +734,8 @@ class TestHyperliquidClientCancelOrder:
             success=False,
             order_id=123456,
             status=OrderStatus.CANCELLED,
-            message=f"Order 123456 cancellation failed",
-            error=f"Order 123456 is already cancelled",
+            message="Order 123456 cancellation failed",
+            error="Order 123456 is already cancelled",
         )
         assert result == expected_result
 
@@ -777,8 +777,8 @@ class TestHyperliquidClientCancelOrder:
             success=False,
             order_id=123456,
             status=OrderStatus.FILLED,
-            message=f"Order 123456 cancellation failed",
-            error=f"Order 123456 is already filled",
+            message="Order 123456 cancellation failed",
+            error="Order 123456 is already filled",
         )
         assert result == expected_result
 
@@ -821,8 +821,8 @@ class TestHyperliquidClientCancelOrder:
             success=False,
             order_id=123456,
             status=OrderStatus.REJECTED,
-            message=f"Order 123456 cancellation failed",
-            error=f"Order 123456 was already rejected",
+            message="Order 123456 cancellation failed",
+            error="Order 123456 was already rejected",
         )
         assert result == expected_result
 

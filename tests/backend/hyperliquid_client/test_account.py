@@ -14,9 +14,6 @@ from models.api import (
     ExchangeError,
     LeverageType,
     PositionInfo,
-    BalanceInfo,
-    SpotBalance,
-    StakingInfo,
 )
 
 
