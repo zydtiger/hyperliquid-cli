@@ -217,33 +217,25 @@ def sample_user_state_response() -> Dict[str, Any]:
 @pytest.fixture
 def sample_market_buy_order() -> MarketOrder:
     """Sample market buy order for testing."""
-    return MarketOrder(
-        coin="ETH", side=OrderSide.BUY, quantity=Decimal("0.1"), reduce_only=False
-    )
+    return MarketOrder(coin="ETH", side=OrderSide.BUY, quantity=Decimal("0.1"), reduce_only=False)
 
 
 @pytest.fixture
 def sample_market_sell_order() -> MarketOrder:
     """Sample market sell order for testing."""
-    return MarketOrder(
-        coin="BTC", side=OrderSide.SELL, quantity=Decimal("0.05"), reduce_only=False
-    )
+    return MarketOrder(coin="BTC", side=OrderSide.SELL, quantity=Decimal("0.05"), reduce_only=False)
 
 
 @pytest.fixture
 def sample_market_buy_order_reduce_only() -> MarketOrder:
     """Sample market buy order with reduce_only for testing."""
-    return MarketOrder(
-        coin="ETH", side=OrderSide.BUY, quantity=Decimal("0.1"), reduce_only=True
-    )
+    return MarketOrder(coin="ETH", side=OrderSide.BUY, quantity=Decimal("0.1"), reduce_only=True)
 
 
 @pytest.fixture
 def sample_market_sell_order_reduce_only() -> MarketOrder:
     """Sample market sell order with reduce_only for testing."""
-    return MarketOrder(
-        coin="BTC", side=OrderSide.SELL, quantity=Decimal("0.05"), reduce_only=True
-    )
+    return MarketOrder(coin="BTC", side=OrderSide.SELL, quantity=Decimal("0.05"), reduce_only=True)
 
 
 @pytest.fixture

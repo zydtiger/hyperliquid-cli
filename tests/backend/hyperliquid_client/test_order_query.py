@@ -241,9 +241,7 @@ class TestHyperliquidClientGetOpenOrders:
 
         for call in mock_connection.info.query_order_by_oid.call_args_list:
             args, kwargs = call
-            assert (
-                args[0] == "0x1234567890123456789012345678901234567890"
-            )  # user address
+            assert args[0] == "0x1234567890123456789012345678901234567890"  # user address
             assert args[1] in expected_order_ids  # order ID
 
     def test_get_open_orders_empty(
@@ -255,9 +253,7 @@ class TestHyperliquidClientGetOpenOrders:
     ):
         """Test open orders retrieval when no orders are open."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
-        mock_connection.info.open_orders.return_value = (
-            sample_open_orders_empty_response
-        )
+        mock_connection.info.open_orders.return_value = sample_open_orders_empty_response
 
         result = client.get_open_orders()
 
@@ -317,9 +313,7 @@ class TestHyperliquidClientGetOpenOrders:
                 }
             }
 
-        mock_connection.info.query_order_by_oid.side_effect = (
-            mock_query_order_by_oid_with_error
-        )
+        mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid_with_error
 
         with pytest.raises(ExchangeError) as exc_info:
             client.get_open_orders()

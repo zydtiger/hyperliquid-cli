@@ -54,9 +54,7 @@ class HyperliquidConfig(BaseModel, extra="forbid", validate_assignment=True):
 class TradingConfig(BaseModel, extra="forbid", validate_assignment=True):
     """Configuration for trading parameters."""
 
-    default_slippage: Decimal = Field(
-        default_factory=lambda: Decimal("0.01"), gt=0, lt=1
-    )
+    default_slippage: Decimal = Field(default_factory=lambda: Decimal("0.01"), gt=0, lt=1)
     default_time_in_force: OrderTif = OrderTif.GTC
 
 

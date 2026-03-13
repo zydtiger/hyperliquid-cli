@@ -308,9 +308,7 @@ class TestCreateApp(TestBackendService):
             assert cors_middleware.kwargs["allow_methods"] == ["*"]
             assert cors_middleware.kwargs["allow_headers"] == ["*"]
 
-    def test_create_app_request_handlers_setup(
-        self, mock_config: Config, mock_client: Mock
-    ):
+    def test_create_app_request_handlers_setup(self, mock_config: Config, mock_client: Mock):
         """Test that request handlers are properly set up."""
         with (
             patch("backend.service.HyperliquidClient", return_value=mock_client),
@@ -393,9 +391,7 @@ class TestRequestHandlers(TestBackendService):
         for route in expected_routes:
             assert route in routes
 
-    def test_available_coins_endpoint_success(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_available_coins_endpoint_success(self, test_app: TestClient, mock_client: Mock):
         """Test successful /available_coins endpoint."""
         mock_client.get_available_coins.return_value = ["BTC", "ETH", "SOL"]
 
@@ -405,9 +401,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json() == ["BTC", "ETH", "SOL"]
         mock_client.get_available_coins.assert_called_once()
 
-    def test_available_coins_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_available_coins_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /available_coins endpoint with exchange error."""
         mock_client.get_available_coins.side_effect = ExchangeError("API rate limited")
 
@@ -445,9 +439,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json() == expected
         mock_client.get_ticker.assert_called_once_with("BTC")
 
-    def test_ticker_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_ticker_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /ticker/{coin} endpoint with exchange error."""
         mock_client.get_ticker.side_effect = ExchangeError("Coin not found")
 
@@ -456,9 +448,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 400
         assert "Coin not found" in response.json()["detail"]
 
-    def test_ticker_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_ticker_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /ticker/{coin} endpoint with unexpected error."""
         mock_client.get_ticker.side_effect = Exception("Network error")
 
@@ -480,9 +470,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json() == expected
         mock_client.get_metadata.assert_called_once_with("BTC")
 
-    def test_metadata_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_metadata_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /metadata/{coin} endpoint with exchange error."""
         mock_client.get_metadata.side_effect = ExchangeError("Invalid coin")
 
@@ -525,9 +513,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 200
         assert response.json() == []
 
-    def test_positions_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_positions_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /positions endpoint with exchange error."""
         mock_client.get_positions.side_effect = ExchangeError("Authentication failed")
 
@@ -559,9 +545,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json() == expected
         mock_client.get_positions.assert_called_once()
 
-    def test_position_by_coin_endpoint_not_found(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_position_by_coin_endpoint_not_found(self, test_app: TestClient, mock_client: Mock):
         """Test /positions/{coin} endpoint when position not found."""
         eth_position = PositionInfo(
             coin="ETH",
@@ -625,9 +609,7 @@ class TestRequestHandlers(TestBackendService):
 
         mock_client.get_balances.assert_called_once()
 
-    def test_balances_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_balances_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /balances endpoint with exchange error."""
         mock_client.get_balances.side_effect = ExchangeError("Authentication failed")
 
@@ -636,9 +618,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 400
         assert "Authentication failed" in response.json()["detail"]
 
-    def test_balances_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_balances_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /balances endpoint with unexpected error."""
         mock_client.get_balances.side_effect = Exception("Network error")
 
@@ -647,9 +627,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 500
         assert response.json()["detail"] == "Internal server error"
 
-    def test_order_status_endpoint_success(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_order_status_endpoint_success(self, test_app: TestClient, mock_client: Mock):
         """Test successful /order_status/{order_id} endpoint."""
         sample_order = OrderInfo(
             order_id=123456,
@@ -689,9 +667,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json() == expected
         mock_client.get_order_status.assert_called_once_with(123456)
 
-    def test_order_status_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_order_status_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /order_status/{order_id} endpoint with exchange error."""
         mock_client.get_order_status.side_effect = ExchangeError("Order not found")
 
@@ -700,9 +676,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 400
         assert "Order not found" in response.json()["detail"]
 
-    def test_order_status_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_order_status_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /order_status/{order_id} endpoint with unexpected error."""
         mock_client.get_order_status.side_effect = Exception("Network error")
 
@@ -711,9 +685,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 500
         assert response.json()["detail"] == "Internal server error"
 
-    def test_order_status_endpoint_invalid_order_id(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_order_status_endpoint_invalid_order_id(self, test_app: TestClient, mock_client: Mock):
         """Test /order_status/{order_id} endpoint with invalid order_id."""
         response = test_app.get("/order_status/0")  # Invalid: less than 1
 
@@ -789,9 +761,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json() == []
         mock_client.get_open_orders.assert_called_once()
 
-    def test_open_orders_endpoint_single_order(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_open_orders_endpoint_single_order(self, test_app: TestClient, mock_client: Mock):
         """Test /open_orders endpoint with a single order."""
         single_order = [
             OrderInfo(
@@ -823,9 +793,7 @@ class TestRequestHandlers(TestBackendService):
         assert data[0]["reduce_only"] is True
         mock_client.get_open_orders.assert_called_once()
 
-    def test_open_orders_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_open_orders_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /open_orders endpoint with exchange error."""
         mock_client.get_open_orders.side_effect = ExchangeError("Authentication failed")
 
@@ -834,9 +802,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 400
         assert "Authentication failed" in response.json()["detail"]
 
-    def test_open_orders_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_open_orders_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /open_orders endpoint with unexpected error."""
         mock_client.get_open_orders.side_effect = Exception("Network error")
 
@@ -915,13 +881,9 @@ class TestRequestHandlers(TestBackendService):
         call_args = mock_client.submit_market_order.call_args[0][0]
         assert call_args.reduce_only is True
 
-    def test_market_order_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_market_order_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /market_order endpoint with exchange error."""
-        mock_client.submit_market_order.side_effect = ExchangeError(
-            "Insufficient balance"
-        )
+        mock_client.submit_market_order.side_effect = ExchangeError("Insufficient balance")
 
         response = test_app.post(
             "/market_order",
@@ -936,9 +898,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 400
         assert "Insufficient balance" in response.json()["detail"]
 
-    def test_market_order_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_market_order_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /market_order endpoint with unexpected error."""
         mock_client.submit_market_order.side_effect = Exception("Network error")
 
@@ -972,9 +932,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 422  # FastAPI validation error
         assert "quantity" in str(response.json()["detail"])
 
-    def test_market_order_endpoint_invalid_side(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_market_order_endpoint_invalid_side(self, test_app: TestClient, mock_client: Mock):
         """Test /market_order endpoint with invalid side."""
         response = test_app.post(
             "/market_order",
@@ -1030,9 +988,7 @@ class TestRequestHandlers(TestBackendService):
         assert call_args.reduce_only is False
         assert call_args.time_in_force == OrderTif.GTC
 
-    def test_limit_order_endpoint_different_tif(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_limit_order_endpoint_different_tif(self, test_app: TestClient, mock_client: Mock):
         """Test limit order with different time-in-force values."""
         order_result = OrderResult(
             success=True,
@@ -1062,13 +1018,9 @@ class TestRequestHandlers(TestBackendService):
         call_args = mock_client.submit_limit_order.call_args[0][0]
         assert call_args.time_in_force == OrderTif.IOC
 
-    def test_limit_order_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_limit_order_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /limit_order endpoint with exchange error."""
-        mock_client.submit_limit_order.side_effect = ExchangeError(
-            "Insufficient margin"
-        )
+        mock_client.submit_limit_order.side_effect = ExchangeError("Insufficient margin")
 
         response = test_app.post(
             "/limit_order",
@@ -1085,9 +1037,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 400
         assert "Insufficient margin" in response.json()["detail"]
 
-    def test_limit_order_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_limit_order_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /limit_order endpoint with unexpected error."""
         mock_client.submit_limit_order.side_effect = Exception("Connection timeout")
 
@@ -1125,9 +1075,7 @@ class TestRequestHandlers(TestBackendService):
         assert any("quantity" in str(error) for error in errors)
         assert any("price" in str(error) for error in errors)
 
-    def test_limit_order_endpoint_invalid_price(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_limit_order_endpoint_invalid_price(self, test_app: TestClient, mock_client: Mock):
         """Test /limit_order endpoint with invalid price (negative)."""
         response = test_app.post(
             "/limit_order",
@@ -1144,9 +1092,7 @@ class TestRequestHandlers(TestBackendService):
         # FastAPI should catch negative values via Pydantic validation
         assert response.status_code in [422, 400]
 
-    def test_limit_order_endpoint_invalid_tif(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_limit_order_endpoint_invalid_tif(self, test_app: TestClient, mock_client: Mock):
         """Test /limit_order endpoint with invalid time-in-force."""
         response = test_app.post(
             "/limit_order",
@@ -1218,9 +1164,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json() == expected
         mock_client.cancel_order.assert_called_once_with("all")
 
-    def test_cancel_order_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_cancel_order_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /cancel_order endpoint with exchange error."""
         mock_client.cancel_order.side_effect = ExchangeError("Order already filled")
 
@@ -1233,9 +1177,7 @@ class TestRequestHandlers(TestBackendService):
         assert "Order already filled" in response.json()["detail"]
         mock_client.cancel_order.assert_called_once_with(999999)
 
-    def test_cancel_order_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_cancel_order_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /cancel_order endpoint with unexpected error."""
         mock_client.cancel_order.side_effect = Exception("Network timeout")
 
@@ -1248,9 +1190,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json()["detail"] == "Internal server error"
         mock_client.cancel_order.assert_called_once_with(123456)
 
-    def test_cancel_order_endpoint_invalid_order_id(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_cancel_order_endpoint_invalid_order_id(self, test_app: TestClient, mock_client: Mock):
         """Test /cancel_order endpoint with invalid order_id (negative)."""
         order_result = OrderResult(
             success=False,
@@ -1272,9 +1212,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json()["status"] == "rejected"
         mock_client.cancel_order.assert_called_once_with(-1)
 
-    def test_cancel_order_endpoint_zero_order_id(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_cancel_order_endpoint_zero_order_id(self, test_app: TestClient, mock_client: Mock):
         """Test /cancel_order endpoint with zero order_id."""
         order_result = OrderResult(
             success=False,
@@ -1296,9 +1234,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json()["status"] == "rejected"
         mock_client.cancel_order.assert_called_once_with(0)
 
-    def test_cancel_order_endpoint_missing_order_id(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_cancel_order_endpoint_missing_order_id(self, test_app: TestClient, mock_client: Mock):
         """Test /cancel_order endpoint with missing order_id field."""
         response = test_app.post(
             "/cancel_order",
@@ -1346,9 +1282,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.json()["status"] == "cancelled"
         assert "partially filled" in response.json()["message"].lower()
 
-    def test_cancel_order_endpoint_order_not_found(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_cancel_order_endpoint_order_not_found(self, test_app: TestClient, mock_client: Mock):
         """Test cancelling an order that doesn't exist."""
         mock_client.cancel_order.side_effect = ExchangeError("Order not found")
 
@@ -1489,13 +1423,9 @@ class TestRequestHandlers(TestBackendService):
             sample_modify_order_request_no_changes.quantity,
         )
 
-    def test_modify_order_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_modify_order_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test /modify_order endpoint with exchange error."""
-        mock_client.modify_order.side_effect = ExchangeError(
-            "Order not found or not open"
-        )
+        mock_client.modify_order.side_effect = ExchangeError("Order not found or not open")
 
         response = test_app.post(
             "/modify_order",
@@ -1508,13 +1438,9 @@ class TestRequestHandlers(TestBackendService):
 
         assert response.status_code == 400
         assert "Order not found or not open" in response.json()["detail"]
-        mock_client.modify_order.assert_called_once_with(
-            999999, Decimal("3000.0"), Decimal("0.1")
-        )
+        mock_client.modify_order.assert_called_once_with(999999, Decimal("3000.0"), Decimal("0.1"))
 
-    def test_modify_order_endpoint_unexpected_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_modify_order_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
         """Test /modify_order endpoint with unexpected error."""
         mock_client.modify_order.side_effect = Exception("Network timeout")
 
@@ -1529,9 +1455,7 @@ class TestRequestHandlers(TestBackendService):
 
         assert response.status_code == 500
         assert response.json()["detail"] == "Internal server error"
-        mock_client.modify_order.assert_called_once_with(
-            123456, Decimal("3000.0"), Decimal("0.1")
-        )
+        mock_client.modify_order.assert_called_once_with(123456, Decimal("3000.0"), Decimal("0.1"))
 
     def test_modify_order_endpoint_missing_order_id(self, test_app: TestClient):
         """Test /modify_order endpoint with missing order_id field."""
@@ -1546,9 +1470,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 422  # FastAPI validation error
         assert "order_id" in str(response.json()["detail"])
 
-    def test_modify_order_endpoint_invalid_order_id(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_modify_order_endpoint_invalid_order_id(self, test_app: TestClient, mock_client: Mock):
         """Test /modify_order endpoint with invalid order_id (negative)."""
         # Setup mock to return proper error response
         order_result = OrderResult(
@@ -1576,9 +1498,7 @@ class TestRequestHandlers(TestBackendService):
         else:
             assert response.status_code == 422  # FastAPI validation error
 
-    def test_modify_order_endpoint_invalid_price(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_modify_order_endpoint_invalid_price(self, test_app: TestClient, mock_client: Mock):
         """Test /modify_order endpoint with invalid price (negative)."""
         # Setup mock to return proper error response
         order_result = OrderResult(
@@ -1606,9 +1526,7 @@ class TestRequestHandlers(TestBackendService):
         else:
             assert response.status_code == 422  # FastAPI validation error
 
-    def test_modify_order_endpoint_invalid_quantity(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_modify_order_endpoint_invalid_quantity(self, test_app: TestClient, mock_client: Mock):
         """Test /modify_order endpoint with invalid quantity (negative)."""
         # Setup mock to return proper error response
         order_result = OrderResult(
@@ -1667,9 +1585,7 @@ class TestRequestHandlers(TestBackendService):
         self, test_app: TestClient, mock_client: Mock
     ):
         """Test modifying a market order (should fail)."""
-        mock_client.modify_order.side_effect = ExchangeError(
-            "Only limit orders can be modified"
-        )
+        mock_client.modify_order.side_effect = ExchangeError("Only limit orders can be modified")
 
         response = test_app.post(
             "/modify_order",
@@ -1686,9 +1602,7 @@ class TestRequestHandlers(TestBackendService):
             555666777, Decimal("3000.0"), Decimal("0.1")
         )
 
-    def test_modify_order_endpoint_filled_order(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_modify_order_endpoint_filled_order(self, test_app: TestClient, mock_client: Mock):
         """Test modifying a filled order (should fail)."""
         mock_client.modify_order.side_effect = ExchangeError(
             "Order is filled, only open orders can be modified"
@@ -1831,13 +1745,9 @@ class TestIntegration(TestBackendService):
             mock_client.get_positions.call_count == 2
         )  # Once for all positions, once for specific
 
-    def test_error_propagation_through_api(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_error_propagation_through_api(self, test_app: TestClient, mock_client: Mock):
         """Test that errors are properly propagated through the API layer."""
-        mock_client.get_available_coins.side_effect = ExchangeError(
-            "Exchange API error"
-        )
+        mock_client.get_available_coins.side_effect = ExchangeError("Exchange API error")
         mock_client.get_ticker.side_effect = ExchangeError("Invalid coin")
         mock_client.get_metadata.side_effect = ExchangeError("Metadata not found")
         mock_client.get_positions.side_effect = ExchangeError("Authentication failed")
@@ -1871,9 +1781,7 @@ class TestIntegration(TestBackendService):
             assert response.status_code == 400
             assert "detail" in response.json()
 
-    def test_decimal_precision_preservation(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_decimal_precision_preservation(self, test_app: TestClient, mock_client: Mock):
         """Test that decimal precision is preserved in API responses."""
         # Use very precise decimal values
         ticker = Ticker(
@@ -1892,9 +1800,7 @@ class TestIntegration(TestBackendService):
         assert data["funding_rate"] == "0.000123456789"
         assert data["open_interest"] == "1250.987654321"
 
-    def test_concurrent_requests_handling(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_concurrent_requests_handling(self, test_app: TestClient, mock_client: Mock):
         """Test that the service handles concurrent requests properly."""
         import concurrent.futures
 
@@ -1942,9 +1848,7 @@ class TestEdgeCases(TestBackendService):
         response = test_app.get(f"/ticker/{long_symbol}")
         assert response.status_code == 400
 
-    def test_special_characters_in_coin_symbol(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_special_characters_in_coin_symbol(self, test_app: TestClient, mock_client: Mock):
         """Test API with special characters in coin symbol."""
         special_symbol = "BTC-USD@2024"
         mock_client.get_ticker.side_effect = ExchangeError("Invalid coin symbol")
@@ -1960,9 +1864,7 @@ class TestEdgeCases(TestBackendService):
         response = test_app.get(f"/ticker/{unicode_symbol}")
         assert response.status_code == 400
 
-    def test_case_sensitivity_in_coin_symbol(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_case_sensitivity_in_coin_symbol(self, test_app: TestClient, mock_client: Mock):
         """Test case sensitivity handling for coin symbols."""
         # Test lowercase
         mock_client.get_ticker.return_value = Ticker(
@@ -2029,9 +1931,7 @@ class TestChangeLeverageEndpoint(TestBackendService):
         assert "Successfully updated ETH leverage to 21x" in data["message"]
         assert data["updated_position"]["leverage"] == 21
         assert data["updated_position"]["leverage_type"] == "cross"
-        mock_client.change_leverage.assert_called_once_with(
-            leverage=21, coin="ETH", is_cross=True
-        )
+        mock_client.change_leverage.assert_called_once_with(leverage=21, coin="ETH", is_cross=True)
 
     def test_change_leverage_endpoint_success_isolated_margin(
         self, test_app: TestClient, mock_client: Mock
@@ -2069,9 +1969,7 @@ class TestChangeLeverageEndpoint(TestBackendService):
         assert "Successfully updated BTC leverage to 15x" in data["message"]
         assert data["updated_position"]["leverage"] == 15
         assert data["updated_position"]["leverage_type"] == "isolated"
-        mock_client.change_leverage.assert_called_once_with(
-            leverage=15, coin="BTC", is_cross=False
-        )
+        mock_client.change_leverage.assert_called_once_with(leverage=15, coin="BTC", is_cross=False)
 
     def test_change_leverage_endpoint_no_position_found(
         self, test_app: TestClient, mock_client: Mock
@@ -2098,9 +1996,7 @@ class TestChangeLeverageEndpoint(TestBackendService):
         assert "No open position found for ETH" in data["message"]
         assert data["updated_position"] is None
 
-    def test_change_leverage_endpoint_exchange_error(
-        self, test_app: TestClient, mock_client: Mock
-    ):
+    def test_change_leverage_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test leverage update when exchange returns an error."""
         from models.leverage import LeverageResult
 
@@ -2154,9 +2050,7 @@ class TestChangeLeverageEndpoint(TestBackendService):
             json={"leverage": 21, "coin": "ETH"},
         )
         assert response.status_code == 200
-        mock_client.change_leverage.assert_called_once_with(
-            leverage=21, coin="ETH", is_cross=True
-        )
+        mock_client.change_leverage.assert_called_once_with(leverage=21, coin="ETH", is_cross=True)
 
     def test_change_leverage_endpoint_invalid_leverage_values(
         self, test_app: TestClient, mock_client: Mock
@@ -2255,10 +2149,7 @@ class TestChangeLeverageEndpoint(TestBackendService):
         if expected_status == 200:
             data = response.json()
             assert data["success"] is True
-            assert (
-                f"Successfully updated {coin} leverage to {leverage}x"
-                in data["message"]
-            )
+            assert f"Successfully updated {coin} leverage to {leverage}x" in data["message"]
             mock_client.change_leverage.assert_called_once_with(
                 leverage=leverage, coin=coin, is_cross=is_cross
             )

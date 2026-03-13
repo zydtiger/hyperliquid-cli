@@ -68,9 +68,7 @@ class OrderWizard:
             quantity = self.prompts.get_quantity_input(coin)
 
             # Additional options
-            reduce_only = self.prompts.get_yes_no_input(
-                "\nReduce only position?", default=False
-            )
+            reduce_only = self.prompts.get_yes_no_input("\nReduce only position?", default=False)
 
             # Create limit order
             order = LimitOrder(
@@ -86,23 +84,17 @@ class OrderWizard:
             quantity = self.prompts.get_quantity_input(coin)
 
             # Additional options
-            reduce_only = self.prompts.get_yes_no_input(
-                "\nReduce only position?", default=False
-            )
+            reduce_only = self.prompts.get_yes_no_input("\nReduce only position?", default=False)
 
             # Create market order
-            order = MarketOrder(
-                coin=coin, side=side, quantity=quantity, reduce_only=reduce_only
-            )
+            order = MarketOrder(coin=coin, side=side, quantity=quantity, reduce_only=reduce_only)
 
         # Show order summary
         print()
         print(self.formatter.format(order))
 
         # Confirm order submission
-        if not self.prompts.get_yes_no_input(
-            "\n[CONFIRM] Submit this order?", default=False
-        ):
+        if not self.prompts.get_yes_no_input("\n[CONFIRM] Submit this order?", default=False):
             raise KeyboardInterrupt
 
         return order

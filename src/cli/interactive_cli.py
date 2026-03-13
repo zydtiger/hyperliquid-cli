@@ -365,9 +365,7 @@ class InteractiveCLI(cmd.Cmd):
         print("open_orders - Get all open orders for the account")
         print("Usage: open_orders")
         print()
-        print(
-            "This command displays all currently open orders in a table format including:"
-        )
+        print("This command displays all currently open orders in a table format including:")
         print("- Order ID, coin, side, and type")
         print("- Current status (open, filled, cancelled, etc.)")
         print("- Quantity, filled amount, and remaining amount")
@@ -541,9 +539,7 @@ class InteractiveCLI(cmd.Cmd):
                     print(formatter.format([current_position]))
                     print()
                 except Exception:
-                    print(
-                        f"ℹ️  No current {coin} position found or error fetching position data"
-                    )
+                    print(f"ℹ️  No current {coin} position found or error fetching position data")
                     print()
 
                 # Change leverage
@@ -578,15 +574,9 @@ class InteractiveCLI(cmd.Cmd):
         print("  --isolated  Use isolated margin (optional, default is cross margin)")
         print()
         print("Examples:")
-        print(
-            "  change_leverage ETH 21          # Set ETH leverage to 21x cross margin"
-        )
-        print(
-            "  change_leverage BTC 15 --isolated  # Set BTC leverage to 15x isolated margin"
-        )
-        print(
-            "  change_leverage SOL 10          # Set SOL leverage to 10x cross margin"
-        )
+        print("  change_leverage ETH 21          # Set ETH leverage to 21x cross margin")
+        print("  change_leverage BTC 15 --isolated  # Set BTC leverage to 15x isolated margin")
+        print("  change_leverage SOL 10          # Set SOL leverage to 10x cross margin")
         print()
         print("Notes:")
         print("  - You must have an open position for the specified coin")

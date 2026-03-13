@@ -59,9 +59,7 @@ class MarketOrder(BaseModel):
     coin: str = Field(..., description="Trading pair symbol")
     side: OrderSide = Field(..., description="Order side (buy or sell)")
     quantity: Decimal = Field(..., gt=0, description="Order quantity")
-    reduce_only: bool = Field(
-        default=False, description="Whether the order is reduce-only"
-    )
+    reduce_only: bool = Field(default=False, description="Whether the order is reduce-only")
 
 
 class LimitOrder(BaseModel):
@@ -71,28 +69,20 @@ class LimitOrder(BaseModel):
     side: OrderSide = Field(..., description="Order side (buy or sell)")
     quantity: Decimal = Field(..., gt=0, description="Order quantity")
     price: Decimal = Field(..., gt=0, description="Order price")
-    reduce_only: bool = Field(
-        default=False, description="Whether the order is reduce-only"
-    )
-    time_in_force: OrderTif = Field(
-        default=OrderTif.GTC, description="Order time-in-force policy"
-    )
+    reduce_only: bool = Field(default=False, description="Whether the order is reduce-only")
+    time_in_force: OrderTif = Field(default=OrderTif.GTC, description="Order time-in-force policy")
 
 
 class OrderResult(BaseModel):
     """Result of an order submission."""
 
-    success: bool = Field(
-        ..., description="Whether the order was successfully submitted"
-    )
+    success: bool = Field(..., description="Whether the order was successfully submitted")
     order_id: Optional[int] = Field(
         default=None, description="Order ID if submission was successful"
     )
     status: OrderStatus = Field(..., description="Order status")
     message: str = Field(..., description="Response message from exchange")
-    error: Optional[str] = Field(
-        default=None, description="Error message if submission failed"
-    )
+    error: Optional[str] = Field(default=None, description="Error message if submission failed")
 
 
 class OrderInfo(BaseModel):
@@ -103,16 +93,10 @@ class OrderInfo(BaseModel):
     side: OrderSide = Field(..., description="Order side (buy or sell)")
     order_type: OrderType = Field(..., description="Order type (limit/market)")
     quantity: Decimal = Field(..., description="Order quantity")
-    price: Optional[Decimal] = Field(
-        None, description="Order price (None for market orders)"
-    )
+    price: Optional[Decimal] = Field(None, description="Order price (None for market orders)")
     filled_quantity: Decimal = Field(..., description="Quantity already filled")
-    remaining_quantity: Decimal = Field(
-        ..., description="Quantity remaining to be filled"
-    )
-    average_fill_price: Optional[Decimal] = Field(
-        None, description="Average fill price"
-    )
+    remaining_quantity: Decimal = Field(..., description="Quantity remaining to be filled")
+    average_fill_price: Optional[Decimal] = Field(None, description="Average fill price")
     status: OrderStatus = Field(..., description="Current order status")
     timestamp: int = Field(..., description="Order creation timestamp")
     reduce_only: bool = Field(..., description="Whether the order is reduce-only")
@@ -131,9 +115,7 @@ class ModifyOrderRequest(BaseModel):
     """Request model for modify order endpoint."""
 
     order_id: int = Field(..., description="Order ID to modify")
-    price: Optional[Decimal] = Field(
-        None, description="New price (None to keep current price)"
-    )
+    price: Optional[Decimal] = Field(None, description="New price (None to keep current price)")
     quantity: Optional[Decimal] = Field(
         None, description="New quantity (None to keep current quantity)"
     )

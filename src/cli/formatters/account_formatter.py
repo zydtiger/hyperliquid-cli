@@ -19,9 +19,7 @@ class AccountFormatter(Formatter[Union[BalanceInfo, List[PositionInfo]]]):
         """Initialize the account formatter."""
         self.table_formatter = TableFormatter()
 
-    def format(
-        self, data: Union[BalanceInfo, List[PositionInfo]], **kwargs: Any
-    ) -> str:
+    def format(self, data: Union[BalanceInfo, List[PositionInfo]], **kwargs: Any) -> str:
         """
         Format account data with type routing.
 

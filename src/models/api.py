@@ -89,16 +89,12 @@ class PositionInfo(BaseModel):
     """Information about an open position."""
 
     coin: str = Field(..., description="Symbol of the cryptocurrency")
-    size: Decimal = Field(
-        ..., description="Position size (positive for long, negative for short)"
-    )
+    size: Decimal = Field(..., description="Position size (positive for long, negative for short)")
     entry_price: Decimal = Field(..., description="Average entry price")
     mark_price: Decimal = Field(..., description="Current mark price")
     unrealized_pnl: Decimal = Field(..., description="Unrealized profit and loss")
     leverage: int = Field(..., description="Position leverage")
-    leverage_type: LeverageType = Field(
-        ..., description="Type of leverage (isolated or cross)"
-    )
+    leverage_type: LeverageType = Field(..., description="Type of leverage (isolated or cross)")
     margin_used: Decimal = Field(..., description="Margin used for the position")
     cum_funding: Decimal = Field(..., description="Cumulative funding payments")
 
@@ -115,12 +111,8 @@ class StakingInfo(BaseModel):
 
     delegated_amount: Decimal = Field(..., description="Total delegated amount")
     undelegated_amount: Decimal = Field(..., description="Total undelegated amount")
-    pending_withdrawals: Decimal = Field(
-        ..., description="Total pending withdrawal amount"
-    )
-    pending_withdrawal_count: int = Field(
-        ..., description="Number of pending withdrawals"
-    )
+    pending_withdrawals: Decimal = Field(..., description="Total pending withdrawal amount")
+    pending_withdrawal_count: int = Field(..., description="Number of pending withdrawals")
 
 
 class BalanceInfo(BaseModel):
@@ -128,24 +120,16 @@ class BalanceInfo(BaseModel):
 
     # Perpetuals Account (from user_state)
     perps_account_value: Decimal = Field(..., description="Perpetuals account value")
-    perps_total_position_value: Decimal = Field(
-        ..., description="Total notional position size"
-    )
+    perps_total_position_value: Decimal = Field(..., description="Total notional position size")
     perps_total_raw_usd: Decimal = Field(..., description="Remaining Raw USD")
-    perps_margin_used: Decimal = Field(
-        ..., description="Total margin used by perpetual positions"
-    )
+    perps_margin_used: Decimal = Field(..., description="Total margin used by perpetual positions")
     perps_withdrawable: Decimal = Field(..., description="Available withdrawal amount")
 
     # Spot Balances
-    spot_balances: list[SpotBalance] = Field(
-        default_factory=list, description="Spot coin balances"
-    )
+    spot_balances: list[SpotBalance] = Field(default_factory=list, description="Spot coin balances")
 
     # Staking Information
-    staking_info: Optional[StakingInfo] = Field(
-        None, description="Staking delegations and rewards"
-    )
+    staking_info: Optional[StakingInfo] = Field(None, description="Staking delegations and rewards")
 
 
 # ============================================================================

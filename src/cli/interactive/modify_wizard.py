@@ -62,9 +62,7 @@ class ModifyWizard:
         if order_info.order_type != OrderType.LIMIT:
             raise ValueError("Only limit orders can be modified")
         if order_info.status != OrderStatus.OPEN:
-            raise ValueError(
-                f"Order is {order_info.status}, only open orders can be modified"
-            )
+            raise ValueError(f"Order is {order_info.status}, only open orders can be modified")
 
         # Display current order information
         print("\n📋 Current Order Information:")
@@ -110,9 +108,7 @@ class ModifyWizard:
             raise KeyboardInterrupt
 
         # Create modification request
-        return ModifyOrderRequest(
-            order_id=order_id, price=new_price, quantity=new_quantity
-        )
+        return ModifyOrderRequest(order_id=order_id, price=new_price, quantity=new_quantity)
 
 
 __all__ = [

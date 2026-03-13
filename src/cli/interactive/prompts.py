@@ -46,9 +46,7 @@ class Prompts:
                 if coin in coins:
                     return coin
                 else:
-                    print(
-                        f"❌ '{coin}' is not available. Choose from: {', '.join(coins[:5])}..."
-                    )
+                    print(f"❌ '{coin}' is not available. Choose from: {', '.join(coins[:5])}...")
         except Exception:
             # Fallback if API fails
             print("\n⚠️ Unable to fetch available coins, using manual input")
@@ -121,9 +119,13 @@ class Prompts:
             print(f"\nℹ️ Current {coin} price: ${current_price:.4f}")
 
             if side == OrderSide.BUY:
-                suggestion = f"Suggested buy price: ${current_price * 0.999:.4f} (slightly below market)"
+                suggestion = (
+                    f"Suggested buy price: ${current_price * 0.999:.4f} (slightly below market)"
+                )
             else:
-                suggestion = f"Suggested sell price: ${current_price * 1.001:.4f} (slightly above market)"
+                suggestion = (
+                    f"Suggested sell price: ${current_price * 1.001:.4f} (slightly above market)"
+                )
             print(f"ℹ️ {suggestion}")
         except Exception:
             print(f"\n❌ Cannot fetch current {coin} price")
@@ -216,9 +218,9 @@ class Prompts:
             default_index = tif_values.index(default_tif) + 1
 
             try:
-                choice_str = input(
-                    f"Enter choice (1-3, default={default_index}): "
-                ).strip() or str(default_index)
+                choice_str = input(f"Enter choice (1-3, default={default_index}): ").strip() or str(
+                    default_index
+                )
                 choice = int(choice_str)
                 return tif_values[choice - 1]
 

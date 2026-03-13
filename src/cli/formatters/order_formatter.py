@@ -228,9 +228,7 @@ class OrderFormatter(
 
         # Use TableFormatter to create the table
         table_formatter = TableFormatter()
-        return table_formatter.format(
-            (headers, rows), title=f"Open Orders ({len(orders)})"
-        )
+        return table_formatter.format((headers, rows), title=f"Open Orders ({len(orders)})")
 
 
 __all__ = [

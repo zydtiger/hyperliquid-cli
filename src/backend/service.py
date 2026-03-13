@@ -126,9 +126,7 @@ def entry_func(
     port: Optional[int] = typer.Option(
         None, "--port", help="Port to bind the server to (overrides config)"
     ),
-    reload: bool = typer.Option(
-        False, "--reload", help="Enable auto-reload for development"
-    ),
+    reload: bool = typer.Option(False, "--reload", help="Enable auto-reload for development"),
 ) -> None:
     """
     Start the Hyperliquid backend API service.

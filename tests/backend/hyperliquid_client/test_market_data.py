@@ -52,9 +52,7 @@ class TestHyperliquidClientAvailableCoins:
             "Operation failed after 4 attempts: API Error"
         )
 
-        with pytest.raises(
-            ExchangeError, match="Operation failed after 4 attempts: API Error"
-        ):
+        with pytest.raises(ExchangeError, match="Operation failed after 4 attempts: API Error"):
             client.get_available_coins()
 
 
@@ -105,9 +103,7 @@ class TestHyperliquidClientTicker:
         )
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
-        with pytest.raises(
-            ExchangeError, match="Coin 'DOGE' not found in available trading pairs"
-        ):
+        with pytest.raises(ExchangeError, match="Coin 'DOGE' not found in available trading pairs"):
             client.get_ticker("DOGE")
 
     def test_get_ticker_meta_failure(
@@ -121,9 +117,7 @@ class TestHyperliquidClientTicker:
         mock_info.meta_and_asset_ctxs.return_value = (None, [])
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
-        with pytest.raises(
-            ExchangeError, match="Failed to retrieve market metadata from exchange"
-        ):
+        with pytest.raises(ExchangeError, match="Failed to retrieve market metadata from exchange"):
             client.get_ticker("BTC")
 
     def test_get_ticker_with_retry_failure(self, client, mock_connection):
@@ -174,9 +168,7 @@ class TestHyperliquidClientMetadata:
         mock_info.meta.return_value = sample_meta_response
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
-        with pytest.raises(
-            ExchangeError, match="Coin 'DOGE' not found in available trading pairs"
-        ):
+        with pytest.raises(ExchangeError, match="Coin 'DOGE' not found in available trading pairs"):
             client.get_metadata("DOGE")
 
     def test_get_metadata_meta_failure(
@@ -190,9 +182,7 @@ class TestHyperliquidClientMetadata:
         mock_info.meta.return_value = None
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
-        with pytest.raises(
-            ExchangeError, match="Failed to retrieve market metadata from exchange"
-        ):
+        with pytest.raises(ExchangeError, match="Failed to retrieve market metadata from exchange"):
             client.get_metadata("BTC")
 
     def test_get_metadata_with_retry_failure(self, client, mock_connection):
@@ -201,7 +191,5 @@ class TestHyperliquidClientMetadata:
             "Operation failed after 4 attempts: API timeout"
         )
 
-        with pytest.raises(
-            ExchangeError, match="Operation failed after 4 attempts: API timeout"
-        ):
+        with pytest.raises(ExchangeError, match="Operation failed after 4 attempts: API timeout"):
             client.get_metadata("BTC")

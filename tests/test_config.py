@@ -383,10 +383,7 @@ class TestConfig:
         }
         config = Config(**config_data)
 
-        assert (
-            config.hyperliquid.account_address
-            == "0x1234567890123456789012345678901234567890"
-        )
+        assert config.hyperliquid.account_address == "0x1234567890123456789012345678901234567890"
         assert config.hyperliquid.network == NetworkType.MAINNET
         assert config.trading.default_slippage == Decimal("0.02")
         assert config.trading.default_time_in_force == OrderTif.IOC
@@ -456,10 +453,7 @@ class TestConfig:
         }
         config = Config(**config_data)
         assert isinstance(config, Config)
-        assert (
-            config.hyperliquid.account_address
-            == "0x1234567890123456789012345678901234567890"
-        )
+        assert config.hyperliquid.account_address == "0x1234567890123456789012345678901234567890"
 
     def test_from_file_method(self):
         """Test from_file class method."""
@@ -501,9 +495,7 @@ class TestConfig:
             temp_path = Path(f.name)
 
         try:
-            with pytest.raises(
-                ConfigurationError, match="Invalid YAML in configuration file"
-            ):
+            with pytest.raises(ConfigurationError, match="Invalid YAML in configuration file"):
                 Config.from_file(temp_path)
         finally:
             temp_path.unlink()
@@ -595,10 +587,7 @@ class TestConfigIntegration:
         config = Config(**config_data)
 
         # Verify all values are correctly parsed and converted
-        assert (
-            config.hyperliquid.account_address
-            == "0xabcdef123456789012345678901234567890abcdef"
-        )
+        assert config.hyperliquid.account_address == "0xabcdef123456789012345678901234567890abcdef"
         assert config.hyperliquid.network == NetworkType.TESTNET
         assert config.trading.default_slippage == Decimal("0.025")
         assert config.trading.default_time_in_force == OrderTif.ALO
@@ -643,8 +632,7 @@ class TestConfigIntegration:
         # Test copy
         copied_config = original_config.model_copy()
         assert (
-            copied_config.hyperliquid.account_address
-            == original_config.hyperliquid.account_address
+            copied_config.hyperliquid.account_address == original_config.hyperliquid.account_address
         )
 
         # Test copy with update
@@ -652,9 +640,7 @@ class TestConfigIntegration:
             update={"trading": TradingConfig(default_slippage=Decimal("0.05"))}
         )
         assert updated_config.trading.default_slippage == Decimal("0.05")
-        assert original_config.trading.default_slippage == Decimal(
-            "0.01"
-        )  # Original unchanged
+        assert original_config.trading.default_slippage == Decimal("0.01")  # Original unchanged
 
         # Validation should still work on update
         with pytest.raises(Exception) as exc_info:

@@ -932,9 +932,7 @@ class TestHyperliquidClientCancelOrder:
     ):
         """Test cancel_all when no open orders exist."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
-        mock_connection.info.open_orders.return_value = (
-            sample_open_orders_empty_response
-        )
+        mock_connection.info.open_orders.return_value = sample_open_orders_empty_response
 
         result = client.cancel_order("all")
 

@@ -95,9 +95,7 @@ class HyperliquidClient:
 
             available_coins = [asset["name"] for asset in meta["universe"]]
             if coin not in available_coins:
-                raise ExchangeError(
-                    f"Coin '{coin}' not found in available trading pairs"
-                )
+                raise ExchangeError(f"Coin '{coin}' not found in available trading pairs")
 
             asset = asset_ctxs[available_coins.index(coin)]
 
@@ -207,9 +205,7 @@ class HyperliquidClient:
 
                 perps_data = {
                     "account_value": Decimal(margin_summary.get("accountValue", "0")),
-                    "total_position_value": Decimal(
-                        margin_summary.get("totalNtlPos", "0")
-                    ),
+                    "total_position_value": Decimal(margin_summary.get("totalNtlPos", "0")),
                     "total_raw_usd": Decimal(margin_summary.get("totalRawUsd", "0")),
                     "margin_used": Decimal(margin_summary.get("totalMarginUsed", "0")),
                     "withdrawable": Decimal(user_state.get("withdrawable", "0")),
@@ -278,15 +274,11 @@ class HyperliquidClient:
 
                     staking_info = StakingInfo(
                         delegated_amount=Decimal(staking_summary.get("delegated", "0")),
-                        undelegated_amount=Decimal(
-                            staking_summary.get("undelegated", "0")
-                        ),
+                        undelegated_amount=Decimal(staking_summary.get("undelegated", "0")),
                         pending_withdrawals=Decimal(
                             staking_summary.get("totalPendingWithdrawal", "0")
                         ),
-                        pending_withdrawal_count=staking_summary.get(
-                            "nPendingWithdrawals", 0
-                        ),
+                        pending_withdrawal_count=staking_summary.get("nPendingWithdrawals", 0),
                     )
                 except Exception:
                     # If staking data retrieval fails, continue with None
@@ -316,9 +308,7 @@ class HyperliquidClient:
         """
 
         def _get_positions() -> List[PositionInfo]:
-            user_state = self.connection.info.user_state(
-                self.config.hyperliquid.account_address
-            )
+            user_state = self.connection.info.user_state(self.config.hyperliquid.account_address)
             positions = []
 
             for position in user_state.get("assetPositions", []):
@@ -354,13 +344,9 @@ class HyperliquidClient:
                     mark_price = self.get_ticker(coin).mark_price
                     unrealized_pnl = Decimal(str(position["position"]["unrealizedPnl"]))
                     leverage = position["position"]["leverage"]["value"]
-                    leverage_type = LeverageType(
-                        position["position"]["leverage"]["type"]
-                    )
+                    leverage_type = LeverageType(position["position"]["leverage"]["type"])
                     margin_used = Decimal(str(position["position"]["marginUsed"]))
-                    cum_funding = Decimal(
-                        str(position["position"]["cumFunding"]["allTime"])
-                    )
+                    cum_funding = Decimal(str(position["position"]["cumFunding"]["allTime"]))
 
                     positions.append(
                         PositionInfo(
@@ -492,18 +478,12 @@ class HyperliquidClient:
 
                 # Determine order type from API orderType field
                 order_type_str = order_data.get("orderType", "Limit").upper()
-                order_type = (
-                    OrderType.LIMIT if order_type_str == "LIMIT" else OrderType.MARKET
-                )
+                order_type = OrderType.LIMIT if order_type_str == "LIMIT" else OrderType.MARKET
 
                 return OrderInfo(
                     order_id=order_id,
                     coin=order_data.get("coin", ""),
-                    side=(
-                        OrderSide.BUY
-                        if order_data.get("side") == "B"
-                        else OrderSide.SELL
-                    ),
+                    side=(OrderSide.BUY if order_data.get("side") == "B" else OrderSide.SELL),
                     order_type=order_type,
                     quantity=original_quantity,
                     price=price,
@@ -620,9 +600,7 @@ class HyperliquidClient:
                 # Parse response
                 if result.get("status") == "ok":
                     # Check individual order statuses from response.data
-                    statuses = (
-                        result.get("response", {}).get("data", {}).get("statuses", [])
-                    )
+                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
 
                     for status in statuses:
                         if "resting" in status:
@@ -717,9 +695,7 @@ class HyperliquidClient:
                 # Parse response
                 if result.get("status") == "ok":
                     # Check individual order statuses from response.data
-                    statuses = (
-                        result.get("response", {}).get("data", {}).get("statuses", [])
-                    )
+                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
 
                     for status in statuses:
                         if "resting" in status:
@@ -942,11 +918,7 @@ class HyperliquidClient:
             success=len(failed_orders) == 0,
             status=OrderStatus.CANCELLED,
             message=f"Cancelled {len(cancelled_orders)} orders, {len(failed_orders)} failed",
-            error=(
-                f"{len(failed_orders)} orders failed to cancel"
-                if failed_orders
-                else None
-            ),
+            error=(f"{len(failed_orders)} orders failed to cancel" if failed_orders else None),
         )
 
     def modify_order(
@@ -997,9 +969,7 @@ class HyperliquidClient:
                             f"Order {order_id} is already filled and cannot be modified"
                         )
                     elif current_order.status == OrderStatus.REJECTED:
-                        raise ValueError(
-                            f"Order {order_id} was rejected and cannot be modified"
-                        )
+                        raise ValueError(f"Order {order_id} was rejected and cannot be modified")
                     else:
                         raise ValueError(
                             f"Order {order_id} is {current_order.status.value} and cannot be modified"
@@ -1013,9 +983,7 @@ class HyperliquidClient:
                 # Use current values if None provided
                 new_price = price if price is not None else current_order.price
                 new_quantity = (
-                    quantity
-                    if quantity is not None
-                    else current_order.remaining_quantity
+                    quantity if quantity is not None else current_order.remaining_quantity
                 )
 
                 # Validate that we have both price and quantity for limit order
@@ -1051,9 +1019,7 @@ class HyperliquidClient:
                 # Parse the response
                 if result.get("status") == "ok":
                     # Check individual order statuses from response.data
-                    statuses = (
-                        result.get("response", {}).get("data", {}).get("statuses", [])
-                    )
+                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
 
                     for status in statuses:
                         if "resting" in status:
@@ -1103,9 +1069,7 @@ class HyperliquidClient:
 
         return self.connection.retry_operation(_modify_order)
 
-    def change_leverage(
-        self, leverage: int, coin: str, is_cross: bool = True
-    ) -> LeverageResult:
+    def change_leverage(self, leverage: int, coin: str, is_cross: bool = True) -> LeverageResult:
         """
         Change leverage for a specific position.
 
@@ -1140,9 +1104,7 @@ class HyperliquidClient:
                     )
 
                 # Update leverage via exchange connection
-                result = self.connection.exchange.update_leverage(
-                    leverage, coin, is_cross
-                )
+                result = self.connection.exchange.update_leverage(leverage, coin, is_cross)
 
                 # success_response = {"status": "ok", "response": {"type": "default"}}
 
@@ -1179,9 +1141,7 @@ class HyperliquidClient:
                     error_response = result.get("response", "Unknown error")
 
                     # Handle specific error messages with better user feedback
-                    if "Cannot switch leverage type with open position" in str(
-                        error_response
-                    ):
+                    if "Cannot switch leverage type with open position" in str(error_response):
                         error_msg = f"Cannot switch leverage type for {coin} with open position. Close the position first or use the same margin type."
                     elif (
                         "isolated position does not have sufficient margin"
@@ -1189,9 +1149,7 @@ class HyperliquidClient:
                     ):
                         error_msg = f"Insufficient margin to decrease leverage for {coin} isolated position. Add margin to the position or use a higher leverage."
                     else:
-                        error_msg = (
-                            f"Failed to update {coin} leverage: {error_response}"
-                        )
+                        error_msg = f"Failed to update {coin} leverage: {error_response}"
 
                     return LeverageResult(
                         success=False,

@@ -58,7 +58,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
 
     @app.get("/ticker/{coin}")
     async def get_ticker(
-        coin: str = Path(..., description="Symbol of the cryptocurrency")
+        coin: str = Path(..., description="Symbol of the cryptocurrency"),
     ) -> Ticker:
         """
         Get ticker information for a specific coin.
@@ -84,7 +84,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
 
     @app.get("/metadata/{coin}")
     async def get_metadata(
-        coin: str = Path(..., description="Symbol of the cryptocurrency")
+        coin: str = Path(..., description="Symbol of the cryptocurrency"),
     ) -> CoinMetadata:
         """
         Get metadata for a specific coin.
@@ -131,7 +131,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
 
     @app.get("/positions/{coin}")
     async def get_position(
-        coin: str = Path(..., description="Symbol of the cryptocurrency")
+        coin: str = Path(..., description="Symbol of the cryptocurrency"),
     ) -> PositionInfo:
         """
         Get position information for a specific coin.
@@ -192,7 +192,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
 
     @app.get("/order_status/{order_id}")
     async def get_order_status(
-        order_id: int = Path(..., description="Order ID (integer OID)", ge=1)
+        order_id: int = Path(..., description="Order ID (integer OID)", ge=1),
     ) -> OrderInfo:
         """
         Get status and details of a specific order by its ID.
@@ -327,9 +327,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             OrderResult: Result of the modification operation with success status and details
         """
         try:
-            result = client.modify_order(
-                request.order_id, request.price, request.quantity
-            )
+            result = client.modify_order(request.order_id, request.price, request.quantity)
             return result
         except ExchangeError as e:
             logger.error(f"Exchange error modifying order {request.order_id}: {e}")

@@ -61,9 +61,7 @@ class TableFormatter(Formatter[Tuple[List[str], List[List[Any]]]]):
             lines.append("=" * len(title))
 
         # Add headers
-        header_line = " | ".join(
-            headers[i].ljust(col_widths[i]) for i in range(len(headers))
-        )
+        header_line = " | ".join(headers[i].ljust(col_widths[i]) for i in range(len(headers)))
         lines.append(header_line)
 
         # Add separator

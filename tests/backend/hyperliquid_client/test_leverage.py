@@ -51,13 +51,9 @@ class TestHyperliquidClientLeverage:
             result = client.change_leverage(21, "ETH", is_cross=True)
 
         assert result.success is True
-        assert (
-            "Successfully updated ETH leverage to 21x (cross margin)" in result.message
-        )
+        assert "Successfully updated ETH leverage to 21x (cross margin)" in result.message
         assert result.updated_position == updated_position
-        mock_connection.exchange.update_leverage.assert_called_once_with(
-            21, "ETH", True
-        )
+        mock_connection.exchange.update_leverage.assert_called_once_with(21, "ETH", True)
 
     def test_change_leverage_success_isolated_margin(
         self,
@@ -89,14 +85,9 @@ class TestHyperliquidClientLeverage:
             result = client.change_leverage(15, "BTC", is_cross=False)
 
         assert result.success is True
-        assert (
-            "Successfully updated BTC leverage to 15x (isolated margin)"
-            in result.message
-        )
+        assert "Successfully updated BTC leverage to 15x (isolated margin)" in result.message
         assert result.updated_position == updated_position
-        mock_connection.exchange.update_leverage.assert_called_once_with(
-            15, "BTC", False
-        )
+        mock_connection.exchange.update_leverage.assert_called_once_with(15, "BTC", False)
 
     def test_change_leverage_exchange_error(
         self,
@@ -128,9 +119,7 @@ class TestHyperliquidClientLeverage:
                 )
             ]
 
-            result = client.change_leverage(
-                21, "ETH", is_cross=True
-            )
+            result = client.change_leverage(21, "ETH", is_cross=True)
 
         assert result.success is False
         assert "Failed to update ETH leverage: Invalid leverage value" in result.message
@@ -145,9 +134,7 @@ class TestHyperliquidClientLeverage:
         """Test leverage update when an exception occurs."""
         # Setup mock responses
         mock_connection.info.user_state.return_value = sample_user_state_response
-        mock_connection.exchange.update_leverage.side_effect = Exception(
-            "Connection error"
-        )
+        mock_connection.exchange.update_leverage.side_effect = Exception("Connection error")
 
         # Mock get_positions to return existing position
         with patch.object(client, "get_positions") as mock_get_positions:
@@ -203,9 +190,7 @@ class TestHyperliquidClientLeverage:
                     mark_price=Decimal("110"),
                     unrealized_pnl=Decimal("1"),
                     leverage=10,
-                    leverage_type=(
-                        LeverageType.CROSS if is_cross else LeverageType.ISOLATED
-                    ),
+                    leverage_type=(LeverageType.CROSS if is_cross else LeverageType.ISOLATED),
                     margin_used=Decimal("10"),
                     cum_funding=Decimal("0.1"),
                 )
@@ -215,9 +200,7 @@ class TestHyperliquidClientLeverage:
 
         assert result.success is True
         assert f"Successfully updated {coin} leverage to {leverage}x" in result.message
-        mock_connection.exchange.update_leverage.assert_called_once_with(
-            leverage, coin, is_cross
-        )
+        mock_connection.exchange.update_leverage.assert_called_once_with(leverage, coin, is_cross)
 
     @pytest.mark.parametrize(
         "leverage,coin,is_cross,expected_error",
@@ -286,13 +269,9 @@ class TestHyperliquidClientLeverage:
         result = client.change_leverage(20, "ETH", True)
 
         assert result.success is False
-        assert (
-            "Cannot switch leverage type for ETH with open position" in result.message
-        )
+        assert "Cannot switch leverage type for ETH with open position" in result.message
         assert "Close the position first or use the same margin type" in result.message
-        mock_connection.exchange.update_leverage.assert_called_once_with(
-            20, "ETH", True
-        )
+        mock_connection.exchange.update_leverage.assert_called_once_with(20, "ETH", True)
 
         # Reset mock for next test
         mock_connection.reset_mock()
@@ -307,10 +286,7 @@ class TestHyperliquidClientLeverage:
 
         assert result.success is False
         assert (
-            "Insufficient margin to decrease leverage for BTC isolated position"
-            in result.message
+            "Insufficient margin to decrease leverage for BTC isolated position" in result.message
         )
         assert "Add margin to the position or use a higher leverage" in result.message
-        mock_connection.exchange.update_leverage.assert_called_once_with(
-            5, "BTC", False
-        )
+        mock_connection.exchange.update_leverage.assert_called_once_with(5, "BTC", False)

@@ -382,9 +382,7 @@ class BackendAPI:
             logger.error(f"Failed to modify order {request.order_id}: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
-    def change_leverage(
-        self, leverage: int, coin: str, is_cross: bool = True
-    ) -> LeverageResult:
+    def change_leverage(self, leverage: int, coin: str, is_cross: bool = True) -> LeverageResult:
         """
         Update leverage for a specific position.
 
@@ -400,9 +398,7 @@ class BackendAPI:
             APIError: If the request fails
         """
         try:
-            request = LeverageUpdateRequest(
-                leverage=leverage, coin=coin, is_cross=is_cross
-            )
+            request = LeverageUpdateRequest(leverage=leverage, coin=coin, is_cross=is_cross)
 
             # Send the request as JSON
             response = self.client.post(
