@@ -5,7 +5,7 @@ Hyperliquid smart order trading system with structured architecture.
 ## Environment
 
 - **Python execution**: `uv run <python command>`
-- **After file changes**: `uv run black <file>`
+- **After file changes**: `uv run ruff format <file>`
 - **File length**: Source files max 300 lines (refactor if needed)
 - **Test files**: No length limit
 
@@ -38,7 +38,7 @@ Hyperliquid smart order trading system with structured architecture.
 2. Check `src/models/` for reusable types
 3. Add new models to `src/models/`
 4. Update imports, remove obsolete files
-5. Format with `black`
+5. Format with `ruff format`
 6. Update tests, remove obsolete unit tests
 7. Update docs
 
@@ -47,7 +47,7 @@ Hyperliquid smart order trading system with structured architecture.
 1. Read current implementation
 2. Check dependencies
 3. Make changes
-4. Format with `black`
+4. Format with `ruff format`
 5. Update tests, remove obsolete unit tests if needed
 6. Update docs
 

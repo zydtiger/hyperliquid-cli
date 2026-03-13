@@ -115,7 +115,7 @@ Files typically modified:
 
 ### Code Quality
 
-- Run `uv run black <modified_files>` for formatting.
+- Run `uv run ruff format <modified_files>` for formatting.
 - Clean up unused imports.
 - Verify type hints are complete and accurate.
 - Keep files under 300 lines when practical; refactor if needed.
@@ -146,7 +146,7 @@ rg --files tests/backend/hyperliquid_client
 After each phase:
 
 ```bash
-uv run black <modified_files>
+uv run ruff format <modified_files>
 uv run pytest tests/backend/hyperliquid_client/
 uv run pytest tests/backend/test_service.py
 ```

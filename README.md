@@ -148,7 +148,7 @@ uv pip install -e ".[dev]"
 pytest -v .
 
 # Format code
-black .
+uv run ruff format .
 
 # Type checking
 mypy src
@@ -191,7 +191,7 @@ GNU Affero General Public License v3.0 - see [LICENSE](LICENSE) for details.
 2. Create a feature branch
 3. Make your changes
 4. Run tests: `pytest -v .`
-5. Format code: `black .`
+5. Format code: `uv run ruff format .`
 6. Submit a pull request
 
 ## Support
