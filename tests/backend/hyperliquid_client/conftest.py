@@ -5,34 +5,29 @@ This module provides comprehensive fixtures and utilities that are shared
 across all test modules in the hyperliquid_client test package.
 """
 
-import pytest
 from decimal import Decimal
+from typing import Any, Callable, Dict, List
 from unittest.mock import Mock
-from typing import List, Dict, Any, Callable
+
+import pytest
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
 from backend.exchange.hyperliquid_connection import HyperliquidConnection
 from models.api import (
-    Ticker,
-    CoinMetadata,
-    ExchangeError,
-    LeverageType,
-    PositionInfo,
     BalanceInfo,
     SpotBalance,
     StakingInfo,
 )
+from models.config import Config, HyperliquidConfig, NetworkType, TradingConfig
 from models.order import (
-    MarketOrder,
     LimitOrder,
+    MarketOrder,
     OrderInfo,
-    OrderResult,
     OrderSide,
-    OrderType,
     OrderStatus,
     OrderTif,
+    OrderType,
 )
-from models.config import Config, HyperliquidConfig, NetworkType, TradingConfig
 
 
 @pytest.fixture

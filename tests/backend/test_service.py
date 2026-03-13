@@ -14,35 +14,34 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.service import create_app
-from backend.request_handlers import setup_request_handlers
 from backend.exchange.hyperliquid_client import HyperliquidClient
+from backend.request_handlers import setup_request_handlers
+from backend.service import create_app
 from models.api import (
-    Ticker,
-    CoinMetadata,
-    PositionInfo,
     BalanceInfo,
+    CoinMetadata,
+    ExchangeError,
+    HealthResponse,
+    HealthStatus,
+    LeverageType,
+    PositionInfo,
+    RootResponse,
     SpotBalance,
     StakingInfo,
-    ExchangeError,
-    LeverageType,
-    HealthResponse,
-    RootResponse,
-    HealthStatus,
-)
-from models.order import (
-    OrderInfo,
-    OrderSide,
-    OrderType,
-    OrderStatus,
-    OrderTif,
-    MarketOrder,
-    LimitOrder,
-    OrderResult,
-    CancelOrderRequest,
-    ModifyOrderRequest,
+    Ticker,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
+from models.order import (
+    LimitOrder,
+    MarketOrder,
+    ModifyOrderRequest,
+    OrderInfo,
+    OrderResult,
+    OrderSide,
+    OrderStatus,
+    OrderTif,
+    OrderType,
+)
 
 
 class TestBackendService:
@@ -1989,3 +1988,277 @@ class TestEdgeCases(TestBackendService):
         response = test_app.get("/ticker/123")
         assert response.status_code == 200
         assert response.json()["coin"] == "123"
+
+
+class TestChangeLeverageEndpoint(TestBackendService):
+    """Test cases for the /change_leverage endpoint."""
+
+    def test_change_leverage_endpoint_success_cross_margin(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test successful leverage update with cross margin."""
+        from models.api import LeverageType, PositionInfo
+        from models.leverage import LeverageResult
+
+        # Mock successful leverage change
+        mock_result = LeverageResult(
+            success=True,
+            message="Successfully updated ETH leverage to 21x (cross margin)",
+            updated_position=PositionInfo(
+                coin="ETH",
+                size=Decimal("0.1"),
+                entry_price=Decimal("3000"),
+                mark_price=Decimal("3100"),
+                unrealized_pnl=Decimal("10"),
+                leverage=21,
+                leverage_type=LeverageType.CROSS,
+                margin_used=Decimal("14.29"),
+                cum_funding=Decimal("0.5"),
+            ),
+        )
+        mock_client.change_leverage.return_value = mock_result
+
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21, "coin": "ETH", "is_cross": True},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "Successfully updated ETH leverage to 21x" in data["message"]
+        assert data["updated_position"]["leverage"] == 21
+        assert data["updated_position"]["leverage_type"] == "cross"
+        mock_client.change_leverage.assert_called_once_with(
+            leverage=21, coin="ETH", is_cross=True
+        )
+
+    def test_change_leverage_endpoint_success_isolated_margin(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test successful leverage update with isolated margin."""
+        from models.api import LeverageType, PositionInfo
+        from models.leverage import LeverageResult
+
+        # Mock successful leverage change
+        mock_result = LeverageResult(
+            success=True,
+            message="Successfully updated BTC leverage to 15x (isolated margin)",
+            updated_position=PositionInfo(
+                coin="BTC",
+                size=Decimal("0.05"),
+                entry_price=Decimal("50000"),
+                mark_price=Decimal("51000"),
+                unrealized_pnl=Decimal("50"),
+                leverage=15,
+                leverage_type=LeverageType.ISOLATED,
+                margin_used=Decimal("166.67"),
+                cum_funding=Decimal("1.2"),
+            ),
+        )
+        mock_client.change_leverage.return_value = mock_result
+
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 15, "coin": "BTC", "is_cross": False},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "Successfully updated BTC leverage to 15x" in data["message"]
+        assert data["updated_position"]["leverage"] == 15
+        assert data["updated_position"]["leverage_type"] == "isolated"
+        mock_client.change_leverage.assert_called_once_with(
+            leverage=15, coin="BTC", is_cross=False
+        )
+
+    def test_change_leverage_endpoint_no_position_found(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test leverage update when no position exists."""
+        from models.leverage import LeverageResult
+
+        # Mock failed leverage change - no position
+        mock_result = LeverageResult(
+            success=False,
+            message="No open position found for ETH",
+            updated_position=None,
+        )
+        mock_client.change_leverage.return_value = mock_result
+
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21, "coin": "ETH", "is_cross": True},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "No open position found for ETH" in data["message"]
+        assert data["updated_position"] is None
+
+    def test_change_leverage_endpoint_exchange_error(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test leverage update when exchange returns an error."""
+        from models.leverage import LeverageResult
+
+        # Mock failed leverage change - exchange error
+        mock_result = LeverageResult(
+            success=False,
+            message="Failed to update leverage: Invalid leverage value",
+            updated_position=None,
+        )
+        mock_client.change_leverage.return_value = mock_result
+
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21, "coin": "ETH", "is_cross": True},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "Invalid leverage value" in data["message"]
+        assert data["updated_position"] is None
+
+    def test_change_leverage_endpoint_missing_required_fields(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test leverage update with missing required fields."""
+        from models.leverage import LeverageResult
+
+        # Missing leverage
+        response = test_app.post(
+            "/change_leverage",
+            json={"coin": "ETH", "is_cross": True},
+        )
+        assert response.status_code == 422  # Validation error
+
+        # Missing coin
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21, "is_cross": True},
+        )
+        assert response.status_code == 422  # Validation error
+
+        # Missing is_cross uses the request model default
+        mock_client.change_leverage.return_value = LeverageResult(
+            success=True,
+            message="Successfully updated ETH leverage to 21x (cross margin)",
+            updated_position=None,
+        )
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21, "coin": "ETH"},
+        )
+        assert response.status_code == 200
+        mock_client.change_leverage.assert_called_once_with(
+            leverage=21, coin="ETH", is_cross=True
+        )
+
+    def test_change_leverage_endpoint_invalid_leverage_values(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test leverage update with invalid leverage values."""
+        # Leverage too low
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 0, "coin": "ETH", "is_cross": True},
+        )
+        assert response.status_code == 422  # Validation error
+
+        # Leverage too high
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 300, "coin": "ETH", "is_cross": True},
+        )
+        assert response.status_code == 422  # Validation error
+
+        # Negative leverage
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": -5, "coin": "ETH", "is_cross": True},
+        )
+        assert response.status_code == 422  # Validation error
+
+        # Non-integer leverage
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21.5, "coin": "ETH", "is_cross": True},
+        )
+        assert response.status_code == 422  # Validation error
+
+    def test_change_leverage_endpoint_invalid_coin_format(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test leverage update with invalid coin formats."""
+        from models.leverage import LeverageResult
+
+        mock_client.change_leverage.return_value = LeverageResult(
+            success=False,
+            message="Invalid coin symbol: must be a non-empty string",
+            updated_position=None,
+        )
+
+        # Empty coin reaches the handler and is validated by the client layer
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21, "coin": "", "is_cross": True},
+        )
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+
+        # Non-string coin is coerced by request validation
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": 21, "coin": 123, "is_cross": True},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize(
+        "leverage,coin,is_cross,expected_status",
+        [
+            (1, "ETH", True, 200),  # Minimum leverage
+            (250, "BTC", False, 200),  # Maximum leverage, isolated
+            (50, "SOL", True, 200),  # Mid-range leverage, cross
+            (10, "DOGE", False, 200),  # Lower leverage, isolated
+        ],
+    )
+    def test_change_leverage_endpoint_valid_parameters(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        leverage,
+        coin,
+        is_cross,
+        expected_status,
+    ):
+        """Test leverage update with various valid parameter combinations."""
+        from models.leverage import LeverageResult
+
+        # Mock successful response
+        mock_result = LeverageResult(
+            success=True,
+            message=f"Successfully updated {coin} leverage to {leverage}x",
+            updated_position=None,
+        )
+        mock_client.change_leverage.return_value = mock_result
+
+        response = test_app.post(
+            "/change_leverage",
+            json={"leverage": leverage, "coin": coin, "is_cross": is_cross},
+        )
+
+        assert response.status_code == expected_status
+        if expected_status == 200:
+            data = response.json()
+            assert data["success"] is True
+            assert (
+                f"Successfully updated {coin} leverage to {leverage}x"
+                in data["message"]
+            )
+            mock_client.change_leverage.assert_called_once_with(
+                leverage=leverage, coin=coin, is_cross=is_cross
+            )

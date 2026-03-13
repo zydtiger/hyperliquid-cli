@@ -153,8 +153,8 @@ class TestHyperliquidClientSubmitMarketOrder:
         ):
             client = HyperliquidClient(mock_config_with_slippage)
 
-        # Mock the market_close method
-        client.connection.exchange.market_close.return_value = market_success_response_resting  # type: ignore[attr-defined]
+        # Mock the market_open method
+        client.connection.exchange.market_open.return_value = market_success_response_resting  # type: ignore[attr-defined]
 
         client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
 
@@ -170,8 +170,9 @@ class TestHyperliquidClientSubmitMarketOrder:
         assert result == expected_result
 
         # Verify the correct method was called with correct parameters
-        client.connection.exchange.market_close.assert_called_once_with(  # type: ignore[attr-defined]
-            coin="BTC",
+        client.connection.exchange.market_open.assert_called_once_with(  # type: ignore[attr-defined]
+            name="BTC",
+            is_buy=False,
             sz=0.05,
             px=None,
             slippage=0.01,
