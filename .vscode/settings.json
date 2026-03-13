@@ -12,6 +12,7 @@
     "**/.pytest_cache": true,
     "**/.mypy_cache": true,
     "**/__pycache__": true,
-    "**/*.egg-info": true
+    "**/*.egg-info": true,
+    "**/.ruff_cache": true
   }
 }
