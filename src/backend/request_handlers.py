@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, Path, status
 
 from .exchange.hyperliquid_client import HyperliquidClient
 from models.api import Ticker, CoinMetadata, PositionInfo, BalanceInfo, ExchangeError
+from models.leverage import LeverageUpdateRequest, LeverageResult
 from models.order import (
     OrderInfo,
     MarketOrder,
@@ -335,6 +336,39 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
         except Exception as e:
             logger.error(f"Unexpected error modifying order {request.order_id}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            )
+
+    @app.post("/change_leverage", response_model=LeverageResult)
+    async def change_leverage(request: LeverageUpdateRequest) -> LeverageResult:
+        """
+        Update leverage for a specific position.
+
+        Request body:
+        {
+            "leverage": int,        # Target leverage multiplier (1-250)
+            "coin": str,            # Symbol of the cryptocurrency
+            "is_cross": bool        # Whether to use cross margin (True) or isolated margin (False)
+        }
+
+        Returns:
+            LeverageResult: Result of the leverage modification operation with success status,
+                          message, and updated position information if successful
+        """
+        try:
+            result = client.change_leverage(
+                leverage=request.leverage,
+                coin=request.coin,
+                is_cross=request.is_cross,
+            )
+            return result
+        except ExchangeError as e:
+            logger.error(f"Exchange error changing leverage for {request.coin}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        except Exception as e:
+            logger.error(f"Unexpected error changing leverage for {request.coin}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",

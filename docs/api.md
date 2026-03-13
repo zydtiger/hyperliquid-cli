@@ -643,6 +643,94 @@ curl -X POST http://localhost:8080/modify_order \
 }
 ```
 
+#### POST /change_leverage
+Update leverage for a specific position.
+
+**Request Body:**
+```json
+{
+  "leverage": 21,
+  "coin": "ETH",
+  "is_cross": true
+}
+```
+
+**Parameters:**
+- `leverage` (int, required): Target leverage multiplier (1-250)
+- `coin` (string, required): Symbol of the cryptocurrency
+- `is_cross` (boolean, required): Whether to use cross margin (true) or isolated margin (false)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully updated ETH leverage to 21x (cross margin)",
+  "updated_position": {
+    "coin": "ETH",
+    "size": "0.1",
+    "entry_price": "3000.0",
+    "mark_price": "3100.0",
+    "unrealized_pnl": "10.0",
+    "leverage": 21,
+    "leverage_type": "cross",
+    "margin_used": "14.29",
+    "cum_funding": "0.5"
+  }
+}
+```
+
+**Usage Example:**
+```bash
+# Change ETH leverage to 21x cross margin
+curl -X POST http://localhost:8080/change_leverage \
+  -H "Content-Type: application/json" \
+  -d '{
+    "leverage": 21,
+    "coin": "ETH",
+    "is_cross": true
+  }'
+
+# Change BTC leverage to 15x isolated margin
+curl -X POST http://localhost:8080/change_leverage \
+  -H "Content-Type: application/json" \
+  -d '{
+    "leverage": 15,
+    "coin": "BTC",
+    "is_cross": false
+  }'
+
+# Response for successful update
+{
+  "success": true,
+  "message": "Successfully updated ETH leverage to 21x (cross margin)",
+  "updated_position": {
+    "coin": "ETH",
+    "size": "0.1",
+    "entry_price": "3000.0",
+    "mark_price": "3100.0",
+    "unrealized_pnl": "10.0",
+    "leverage": 21,
+    "leverage_type": "cross",
+    "margin_used": "14.29",
+    "cum_funding": "0.5"
+  }
+}
+
+# Response for non-existent position
+{
+  "success": false,
+  "message": "No open position found for ETH",
+  "updated_position": null
+}
+
+# Response for invalid leverage
+{
+  "success": false,
+  "message": "Failed to update leverage: Invalid leverage value",
+  "updated_position": null
+}
+```
+
 ### Portfolio Endpoints
 
 #### GET /positions

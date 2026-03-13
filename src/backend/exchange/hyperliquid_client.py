@@ -21,6 +21,7 @@ from models.api import (
     Ticker,
 )
 from models.config import Config
+from models.leverage import LeverageResult
 from models.order import (
     LimitOrder,
     MarketOrder,
@@ -1101,6 +1102,111 @@ class HyperliquidClient:
                 )
 
         return self.connection.retry_operation(_modify_order)
+
+    def change_leverage(
+        self, leverage: int, coin: str, is_cross: bool = True
+    ) -> LeverageResult:
+        """
+        Change leverage for a specific position.
+
+        Args:
+            leverage: Target leverage multiplier (1-250)
+            coin: Symbol of the cryptocurrency
+            is_cross: Whether to use cross margin (True) or isolated margin (False)
+
+        Returns:
+            LeverageResult: Result of the leverage modification operation
+
+        Raises:
+            ExchangeError: If leverage modification fails
+        """
+
+        def _change_leverage() -> LeverageResult:
+            try:
+                # Validate leverage value
+                if not isinstance(leverage, int) or leverage < 1 or leverage > 250:
+                    return LeverageResult(
+                        success=False,
+                        message=f"Invalid leverage value: {leverage}. Must be an integer between 1 and 250",
+                        updated_position=None,
+                    )
+
+                # Validate coin symbol
+                if not coin or not isinstance(coin, str):
+                    return LeverageResult(
+                        success=False,
+                        message="Invalid coin symbol: must be a non-empty string",
+                        updated_position=None,
+                    )
+
+                # Update leverage via exchange connection
+                result = self.connection.exchange.update_leverage(
+                    leverage, coin, is_cross
+                )
+
+                # success_response = {"status": "ok", "response": {"type": "default"}}
+
+                # error_response_1 = {
+                #     "status": "err",
+                #     "response": "Cannot switch leverage type with open position.",
+                # }
+
+                # error_response_2 = {
+                #     "status": "err",
+                #     "response": "Isolated position does not have sufficient margin available to decrease leverage. To decrease leverage, add margin to the position.",
+                # }
+
+                if result.get("status") == "ok":
+                    # Get updated position information
+                    try:
+                        updated_positions = self.get_positions()
+                        updated_position = None
+                        for position in updated_positions:
+                            if position.coin == coin:
+                                updated_position = position
+                                break
+                    except Exception:
+                        # If we can't get updated positions, that's ok - the leverage change still succeeded
+                        updated_position = None
+
+                    leverage_type = "cross" if is_cross else "isolated"
+                    return LeverageResult(
+                        success=True,
+                        message=f"Successfully updated {coin} leverage to {leverage}x ({leverage_type} margin)",
+                        updated_position=updated_position,
+                    )
+                else:
+                    error_response = result.get("response", "Unknown error")
+
+                    # Handle specific error messages with better user feedback
+                    if "Cannot switch leverage type with open position" in str(
+                        error_response
+                    ):
+                        error_msg = f"Cannot switch leverage type for {coin} with open position. Close the position first or use the same margin type."
+                    elif (
+                        "isolated position does not have sufficient margin"
+                        in str(error_response).lower()
+                    ):
+                        error_msg = f"Insufficient margin to decrease leverage for {coin} isolated position. Add margin to the position or use a higher leverage."
+                    else:
+                        error_msg = (
+                            f"Failed to update {coin} leverage: {error_response}"
+                        )
+
+                    return LeverageResult(
+                        success=False,
+                        message=error_msg,
+                        updated_position=None,
+                    )
+
+            except Exception as e:
+                return LeverageResult(
+                    success=False,
+                    message=f"Leverage update failed for {coin}: {str(e)}",
+                    updated_position=None,
+                )
+
+        return self.connection.retry_operation(_change_leverage)
 
     def _convert_tif_value(self, tif: OrderTif) -> Tif:
         if tif == OrderTif.GTC:

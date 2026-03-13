@@ -19,6 +19,7 @@ from models.api import (
     PositionInfo,
     BalanceInfo,
 )
+from models.leverage import LeverageUpdateRequest, LeverageResult
 from models.order import (
     OrderInfo,
     OrderResult,
@@ -379,6 +380,40 @@ class BackendAPI:
             return OrderResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to modify order {request.order_id}: {e}")
+            raise APIError(f"Connection error: {str(e)}")
+
+    def change_leverage(
+        self, leverage: int, coin: str, is_cross: bool = True
+    ) -> LeverageResult:
+        """
+        Update leverage for a specific position.
+
+        Args:
+            leverage: Target leverage multiplier (1-250)
+            coin: Symbol of the cryptocurrency
+            is_cross: Whether to use cross margin (True) or isolated margin (False)
+
+        Returns:
+            LeverageResult: Result of the leverage modification operation
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            request = LeverageUpdateRequest(
+                leverage=leverage, coin=coin, is_cross=is_cross
+            )
+
+            # Send the request as JSON
+            response = self.client.post(
+                "/change_leverage",
+                content=request.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+            )
+            self._handle_response_error(response)
+            return LeverageResult(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to change leverage for {coin}: {e}")
             raise APIError(f"Connection error: {str(e)}")
 
     def close(self) -> None:

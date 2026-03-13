@@ -6,14 +6,16 @@ for managing orders, positions, and account status.
 """
 
 import cmd
-import typer
 from typing import List
+
+import typer
 
 from models.config import Config
 from models.order import LimitOrder
+
 from .api import BackendAPI
-from .formatters import TableFormatter, OrderFormatter, AccountFormatter
-from .interactive import OrderWizard, ModifyWizard
+from .formatters import AccountFormatter, OrderFormatter, TableFormatter
+from .interactive import ModifyWizard, OrderWizard
 
 
 class InteractiveCLI(cmd.Cmd):
@@ -286,7 +288,7 @@ class InteractiveCLI(cmd.Cmd):
                 ticker_data = [
                     ["Coin", ticker.coin],
                     ["Mark Price", f"${ticker.mark_price:,.4f}"],
-                    ["Funding Rate", f"{ticker.funding_rate*100:.4f}%"],
+                    ["Funding Rate", f"{ticker.funding_rate * 100:.4f}%"],
                     ["Open Interest", f"{ticker.open_interest:,.2f}"],
                 ]
 
@@ -491,6 +493,107 @@ class InteractiveCLI(cmd.Cmd):
         finally:
             print()
 
+    def do_change_leverage(self, args: str) -> None:
+        """
+        Change leverage for a specific position.
+        Usage: change_leverage <coin> <leverage> [--isolated]
+        Examples:
+          change_leverage ETH 21
+          change_leverage BTC 15 --isolated
+        """
+        if not args.strip():
+            print("❌ Error: Coin and leverage are required")
+            print("Usage: change_leverage <coin> <leverage> [--isolated]")
+            print("Example: change_leverage ETH 21")
+            return
+
+        parts = args.strip().split()
+        if len(parts) < 2:
+            print("❌ Error: Leverage value is required")
+            print("Usage: change_leverage <coin> <leverage> [--isolated]")
+            print("Example: change_leverage ETH 21")
+            return
+
+        coin = parts[0].upper()
+
+        try:
+            leverage = int(parts[1])
+            if leverage < 1 or leverage > 250:
+                print("❌ Error: Leverage must be between 1 and 250")
+                return
+        except ValueError:
+            print("❌ Error: Leverage must be a valid integer")
+            return
+
+        is_cross = "--isolated" not in parts
+
+        try:
+            with BackendAPI(self.config) as api:
+                print(
+                    f"⏳ Changing {coin} leverage to {leverage}x ({'cross' if is_cross else 'isolated'} margin)..."
+                )
+
+                # Show current position if exists
+                try:
+                    current_position = api.get_position(coin)
+                    print(f"📊 Current {coin} position:")
+                    formatter = AccountFormatter()
+                    print(formatter.format([current_position]))
+                    print()
+                except Exception:
+                    print(
+                        f"ℹ️  No current {coin} position found or error fetching position data"
+                    )
+                    print()
+
+                # Change leverage
+                result = api.change_leverage(leverage, coin, is_cross)
+
+                if result.success:
+                    print("✅ Success!")
+                    print(f"📈 {result.message}")
+
+                    if result.updated_position:
+                        print()
+                        print("📊 Updated position:")
+                        formatter = AccountFormatter()
+                        print(formatter.format([result.updated_position]))
+                else:
+                    print("❌ Failed!")
+                    print(f"Error: {result.message}")
+
+        except Exception as e:
+            print(f"❌ Failed to change leverage: {e}")
+        finally:
+            print()
+
+    def help_change_leverage(self) -> None:
+        """Show help for the change_leverage command."""
+        print("change_leverage - Change leverage for a specific position")
+        print("Usage: change_leverage <coin> <leverage> [--isolated]")
+        print()
+        print("Arguments:")
+        print("  coin        Symbol of the cryptocurrency (e.g., ETH, BTC, SOL)")
+        print("  leverage    Target leverage multiplier (1-250)")
+        print("  --isolated  Use isolated margin (optional, default is cross margin)")
+        print()
+        print("Examples:")
+        print(
+            "  change_leverage ETH 21          # Set ETH leverage to 21x cross margin"
+        )
+        print(
+            "  change_leverage BTC 15 --isolated  # Set BTC leverage to 15x isolated margin"
+        )
+        print(
+            "  change_leverage SOL 10          # Set SOL leverage to 10x cross margin"
+        )
+        print()
+        print("Notes:")
+        print("  - You must have an open position for the specified coin")
+        print("  - Cross margin uses your entire account balance as collateral")
+        print("  - Isolated margin uses only the position's margin as collateral")
+        print("  - Leverage values must be between 1 and 250")
+
     def help_modify_order(self) -> None:
         """Show help for the modify_order command."""
         print("modify_order - Modify an existing order using interactive wizard")
@@ -522,6 +625,7 @@ class InteractiveCLI(cmd.Cmd):
             "open_orders",
             "cancel_order",
             "modify_order",
+            "change_leverage",
             "info",
             "status",
             "positions",
