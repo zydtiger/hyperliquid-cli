@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create Backend Feature"
+  short_description: "Create backend exchange and API functionality"
+  default_prompt: "Use $create-backend-feature to add or modify backend exchange and API functionality in this Hyperliquid project."
