@@ -26,25 +26,16 @@ jobs:
       with:
         version: "latest"
 
-    - name: Create virtual environment
-      run: uv venv
-
     - name: Install dependencies
-      run: |
-        source .venv/bin/activate
-        uv pip install -e ".[dev]"
+      run: uv sync --dev --locked
 
     - name: Run tests
-      run: |
-        source .venv/bin/activate
-        pytest -v .
+      run: uv run pytest -v .
 
-    - name: Check code formatting
+    - name: Run Ruff checks
       run: |
-        source .venv/bin/activate
-        black --check .
+        uv run ruff check .
+        uv run ruff format --check .
 
     - name: Type checking
-      run: |
-        source .venv/bin/activate
-        mypy src
+      run: uv run mypy src
