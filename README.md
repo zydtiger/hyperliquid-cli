@@ -140,18 +140,17 @@ git clone https://github.com/zydtiger/hyperliquid-cli.git
 cd hyperliquid-cli
 
 # Set up development environment
-uv venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
+uv sync --dev
+uv run pre-commit install
 
 # Run tests
-pytest -v .
+uv run pytest -v .
 
 # Format code
 uv run ruff format .
 
 # Type checking
-mypy src
+uv run mypy src
 ```
 
 ## Project Structure
@@ -191,8 +190,9 @@ GNU Affero General Public License v3.0 - see [LICENSE](LICENSE) for details.
 2. Create a feature branch
 3. Make your changes
 4. Run tests: `pytest -v .`
-5. Format code: `uv run ruff format .`
-6. Submit a pull request
+5. Install hooks once: `uv run pre-commit install`
+6. Hooks run `uv run ruff check --fix` and `uv run ruff format` on staged Python files at commit time
+7. Submit a pull request
 
 ## Support
 
