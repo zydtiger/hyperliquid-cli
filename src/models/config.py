@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from .order import OrderTif
 
+PRIVATE_KEY_LENGTH = 66
+
 
 class ConfigurationError(Exception):
     """Exception raised for configuration-related errors."""
@@ -36,6 +38,7 @@ class HyperliquidConfig(BaseModel, extra="forbid", validate_assignment=True):
     network: NetworkType = NetworkType.MAINNET
 
     @field_validator("account_address")
+    @classmethod
     def validate_account_address(cls, v: str) -> str:
         if not v or not isinstance(v, str):
             raise ValueError("account_address is required and must be a string")
@@ -44,10 +47,11 @@ class HyperliquidConfig(BaseModel, extra="forbid", validate_assignment=True):
         return v
 
     @field_validator("private_key")
+    @classmethod
     def validate_private_key(cls, v: str) -> str:
         if not v or not isinstance(v, str):
             raise ValueError("private_key is required and must be a string")
-        if not (v.startswith("0x") and len(v) == 66):
+        if not (v.startswith("0x") and len(v) == PRIVATE_KEY_LENGTH):
             raise ValueError("private_key must be a valid 32-byte hex string")
         return v
 
@@ -65,6 +69,7 @@ class LoggingConfig(BaseModel, extra="forbid", validate_assignment=True):
     level: str = Field(default="INFO")
 
     @field_validator("level")
+    @classmethod
     def validate_level(cls, v: str) -> str:
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v not in valid_levels:

@@ -34,6 +34,9 @@ from models.order import (
 
 from .hyperliquid_connection import HyperliquidConnection
 
+MIN_LEVERAGE = 1
+MAX_LEVERAGE = 250
+
 
 class HyperliquidClient:
     """
@@ -126,7 +129,8 @@ class HyperliquidClient:
             for asset in meta["universe"]:
                 if asset["name"] == coin:
                     max_leverage = asset.get("maxLeverage")
-                    assert max_leverage is not None
+                    if max_leverage is None:
+                        raise ExchangeError(f"Missing max leverage metadata for coin '{coin}'")
                     return CoinMetadata(
                         coin=asset["name"],
                         size_decimals=asset["szDecimals"],
@@ -771,7 +775,7 @@ class HyperliquidClient:
 
         return self.connection.retry_operation(_cancel_order)
 
-    def _cancel_specific_order(self, order_id: int) -> OrderResult:
+    def _cancel_specific_order(self, order_id: int) -> OrderResult:  # noqa: PLR0911
         """
         Cancel a specific order by ID.
 
@@ -970,7 +974,8 @@ class HyperliquidClient:
 
                 if current_order.order_type != OrderType.LIMIT:
                     raise ValueError(
-                        f"Order {order_id} is a {current_order.order_type.value} order and cannot be modified (only limit orders can be modified)"
+                        f"Order {order_id} is a {current_order.order_type.value} "
+                        "order and cannot be modified (only limit orders can be modified)"
                     )
 
                 # Use current values if None provided
@@ -1017,13 +1022,17 @@ class HyperliquidClient:
                     for status in statuses:
                         if "resting" in status:
                             # Order was successfully modified and is resting on the book
-                            # Extract the new order ID from the response, fallback to original if not provided
+                            # Extract the new order ID from the response.
+                            # Fall back to the original if not provided.
                             new_order_id = status["resting"].get("oid", order_id)
                             return OrderResult(
                                 success=True,
                                 order_id=new_order_id,
                                 status=OrderStatus.OPEN,
-                                message=f"Order {order_id} modified successfully - price: {new_price}, quantity: {new_quantity}",
+                                message=(
+                                    f"Order {order_id} modified successfully - "
+                                    f"price: {new_price}, quantity: {new_quantity}"
+                                ),
                             )
                         if "error" in status:
                             error = status["error"]
@@ -1040,7 +1049,10 @@ class HyperliquidClient:
                         success=True,
                         order_id=order_id,
                         status=OrderStatus.OPEN,
-                        message=f"Order {order_id} modified successfully - price: {new_price}, quantity: {new_quantity}",
+                        message=(
+                            f"Order {order_id} modified successfully - "
+                            f"price: {new_price}, quantity: {new_quantity}"
+                        ),
                     )
                 return OrderResult(
                     success=False,
@@ -1080,10 +1092,17 @@ class HyperliquidClient:
         def _change_leverage() -> LeverageResult:
             try:
                 # Validate leverage value
-                if not isinstance(leverage, int) or leverage < 1 or leverage > 250:
+                if (
+                    not isinstance(leverage, int)
+                    or leverage < MIN_LEVERAGE
+                    or leverage > MAX_LEVERAGE
+                ):
                     return LeverageResult(
                         success=False,
-                        message=f"Invalid leverage value: {leverage}. Must be an integer between 1 and 250",
+                        message=(
+                            f"Invalid leverage value: {leverage}. "
+                            f"Must be an integer between {MIN_LEVERAGE} and {MAX_LEVERAGE}"
+                        ),
                         updated_position=None,
                     )
 
@@ -1107,7 +1126,11 @@ class HyperliquidClient:
 
                 # error_response_2 = {
                 #     "status": "err",
-                #     "response": "Isolated position does not have sufficient margin available to decrease leverage. To decrease leverage, add margin to the position.",
+                #     "response": (
+                #         "Isolated position does not have sufficient margin "
+                #         "available to decrease leverage. To decrease leverage, "
+                #         "add margin to the position."
+                #     ),
                 # }
 
                 if result.get("status") == "ok":
@@ -1120,25 +1143,36 @@ class HyperliquidClient:
                                 updated_position = position
                                 break
                     except Exception:
-                        # If we can't get updated positions, that's ok - the leverage change still succeeded
+                        # If updated positions cannot be fetched, the leverage
+                        # change still succeeded and the result remains valid.
                         updated_position = None
 
                     leverage_type = "cross" if is_cross else "isolated"
                     return LeverageResult(
                         success=True,
-                        message=f"Successfully updated {coin} leverage to {leverage}x ({leverage_type} margin)",
+                        message=(
+                            f"Successfully updated {coin} leverage to "
+                            f"{leverage}x ({leverage_type} margin)"
+                        ),
                         updated_position=updated_position,
                     )
                 error_response = result.get("response", "Unknown error")
 
                 # Handle specific error messages with better user feedback
                 if "Cannot switch leverage type with open position" in str(error_response):
-                    error_msg = f"Cannot switch leverage type for {coin} with open position. Close the position first or use the same margin type."
+                    error_msg = (
+                        f"Cannot switch leverage type for {coin} with open position. "
+                        "Close the position first or use the same margin type."
+                    )
                 elif (
                     "isolated position does not have sufficient margin"
                     in str(error_response).lower()
                 ):
-                    error_msg = f"Insufficient margin to decrease leverage for {coin} isolated position. Add margin to the position or use a higher leverage."
+                    error_msg = (
+                        f"Insufficient margin to decrease leverage for {coin} "
+                        "isolated position. Add margin to the position or use "
+                        "a higher leverage."
+                    )
                 else:
                     error_msg = f"Failed to update {coin} leverage: {error_response}"
 

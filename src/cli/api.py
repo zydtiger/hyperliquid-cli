@@ -9,6 +9,7 @@ import logging
 from typing import Any
 
 import httpx
+from fastapi import status
 
 from models.api import (
     APIError,
@@ -31,7 +32,6 @@ from models.order import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class BackendAPI:
     """
@@ -74,7 +74,7 @@ class BackendAPI:
         Raises:
             APIError: If the response indicates an error
         """
-        if response.status_code >= 400:
+        if response.status_code >= status.HTTP_400_BAD_REQUEST:
             try:
                 error_data = response.json()
                 error_message = error_data.get("detail", response.text)
@@ -306,7 +306,8 @@ class BackendAPI:
         Submit a limit order with specified price and time-in-force.
 
         Args:
-            order: Limit order details including coin, side, quantity, price, reduce_only flag, and time-in-force
+            order: Limit order details including coin, side, quantity, price,
+                reduce_only flag, and time-in-force
 
         Returns:
             OrderResult: Result of the order submission with order ID and status

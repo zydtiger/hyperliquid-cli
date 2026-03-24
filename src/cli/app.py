@@ -8,6 +8,7 @@ market orders, limit orders, stop orders, and intelligent TP/SL management.
 import os
 import shutil
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -27,16 +28,18 @@ default_config_path = Path.home() / ".hyperliquid-cli" / "config.yaml"
 
 @app.command()
 def run(
-    config_path: Path = typer.Option(
-        default_config_path,
-        "--config",
-        "-c",
-        help=f"Path to configuration file (default: {default_config_path})",
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-    ),
+    config_path: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            "-c",
+            help=f"Path to configuration file (default: {default_config_path})",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = default_config_path,
 ) -> None:
     # Load configuration
     config = Config.from_file(config_path)

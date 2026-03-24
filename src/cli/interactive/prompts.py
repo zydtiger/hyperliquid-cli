@@ -11,6 +11,8 @@ from models import Config, OrderSide, OrderTif
 
 from ..api import BackendAPI
 
+DEFAULT_SIZE_DECIMALS = 2
+
 
 class Prompts:
     """
@@ -36,7 +38,7 @@ class Prompts:
         """
         try:
             coins = self.api.get_available_coins()
-            print(f"\nℹ️ Available coins: {', '.join(coins[:10])}...")
+            print(f"\n🔵 Available coins: {', '.join(coins[:10])}...")
 
             while True:
                 coin = input("📝 Enter coin symbol: ").strip().upper()
@@ -113,7 +115,7 @@ class Prompts:
         try:
             ticker = self.api.get_ticker(coin)
             current_price = float(ticker.mark_price)
-            print(f"\nℹ️ Current {coin} price: ${current_price:.4f}")
+            print(f"\n🔵 Current {coin} price: ${current_price:.4f}")
 
             if side == OrderSide.BUY:
                 suggestion = (
@@ -123,7 +125,7 @@ class Prompts:
                 suggestion = (
                     f"Suggested sell price: ${current_price * 1.001:.4f} (slightly above market)"
                 )
-            print(f"ℹ️ {suggestion}")
+            print(f"🔵 {suggestion}")
         except Exception:
             print(f"\n❌ Cannot fetch current {coin} price")
 
@@ -160,17 +162,18 @@ class Prompts:
             current_order_quantity: Current order quantity to display (optional, allows skipping)
 
         Returns:
-            Decimal: Order quantity (current quantity if user skips when current_order_quantity provided)
+            Decimal: Order quantity (current quantity if user skips when
+                current_order_quantity provided)
         """
         # Try to get coin metadata for quantity precision
         try:
             metadata = self.api.get_metadata(coin)
             decimals = metadata.size_decimals
         except Exception:
-            decimals = 2
+            decimals = DEFAULT_SIZE_DECIMALS
 
         precision = Decimal(f"1e-{decimals}")
-        print(f"\nℹ️ {coin} quantity precision: {precision}")
+        print(f"\n🔵 {coin} quantity precision: {precision}")
 
         while True:
             try:

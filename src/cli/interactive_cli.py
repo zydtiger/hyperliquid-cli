@@ -16,6 +16,10 @@ from .api import BackendAPI
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
 from .interactive import ModifyWizard, OrderWizard
 
+MIN_CHANGE_LEVERAGE_ARGS = 2
+MIN_LEVERAGE = 1
+MAX_LEVERAGE = 250
+
 
 class InteractiveCLI(cmd.Cmd):
     """
@@ -188,7 +192,7 @@ class InteractiveCLI(cmd.Cmd):
         """Exit the CLI (alias for quit)."""
         return self.do_quit(args)
 
-    def do_EOF(self, args: str) -> bool:
+    def do_EOF(self, args: str) -> bool:  # noqa: N802
         """Handle EOF (Ctrl+D) to exit gracefully."""
         return True
 
@@ -309,7 +313,7 @@ class InteractiveCLI(cmd.Cmd):
 
                 # Metadata table
                 metadata_table = formatter.format(
-                    (metadata_data[0], metadata_data[1:]), title=f"ℹ️ {coin} Metadata"
+                    (metadata_data[0], metadata_data[1:]), title=f"🔵 {coin} Metadata"
                 )
 
                 print(ticker_table)
@@ -505,7 +509,7 @@ class InteractiveCLI(cmd.Cmd):
             return
 
         parts = args.strip().split()
-        if len(parts) < 2:
+        if len(parts) < MIN_CHANGE_LEVERAGE_ARGS:
             print("❌ Error: Leverage value is required")
             print("Usage: change_leverage <coin> <leverage> [--isolated]")
             print("Example: change_leverage ETH 21")
@@ -515,8 +519,8 @@ class InteractiveCLI(cmd.Cmd):
 
         try:
             leverage = int(parts[1])
-            if leverage < 1 or leverage > 250:
-                print("❌ Error: Leverage must be between 1 and 250")
+            if leverage < MIN_LEVERAGE or leverage > MAX_LEVERAGE:
+                print(f"❌ Error: Leverage must be between {MIN_LEVERAGE} and {MAX_LEVERAGE}")
                 return
         except ValueError:
             print("❌ Error: Leverage must be a valid integer")
@@ -527,7 +531,8 @@ class InteractiveCLI(cmd.Cmd):
         try:
             with BackendAPI(self.config) as api:
                 print(
-                    f"⏳ Changing {coin} leverage to {leverage}x ({'cross' if is_cross else 'isolated'} margin)..."
+                    f"⏳ Changing {coin} leverage to {leverage}x "
+                    f"({'cross' if is_cross else 'isolated'} margin)..."
                 )
 
                 # Show current position if exists
@@ -538,7 +543,7 @@ class InteractiveCLI(cmd.Cmd):
                     print(formatter.format([current_position]))
                     print()
                 except Exception:
-                    print(f"ℹ️  No current {coin} position found or error fetching position data")
+                    print(f"🔵 No current {coin} position found or error fetching position data")
                     print()
 
                 # Change leverage

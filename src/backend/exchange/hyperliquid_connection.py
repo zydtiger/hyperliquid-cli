@@ -56,7 +56,7 @@ class HyperliquidConnection:
             self.info = Info(base_url)
 
         except Exception as e:
-            raise ExchangeError(f"Failed to initialize exchange connection: {e}")
+            raise ExchangeError(f"Failed to initialize exchange connection: {e}") from e
 
     def _get_base_url(self) -> str:
         """Get the appropriate API URL based on network configuration."""

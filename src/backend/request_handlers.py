@@ -25,7 +25,7 @@ from .exchange.hyperliquid_client import HyperliquidClient
 logger = logging.getLogger(__name__)
 
 
-def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
+def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # noqa: PLR0915
     """
     Setup FastAPI request handlers with the provided Hyperliquid client.
 
@@ -258,7 +258,8 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
         Submit a limit order with specified price and time-in-force.
 
         Args:
-            order: Limit order details including coin, side, quantity, price, reduce_only flag, and time-in-force
+            order: Limit order details including coin, side, quantity, price,
+                reduce_only flag, and time-in-force
 
         Returns:
             OrderResult: Result of the order submission with order ID and status

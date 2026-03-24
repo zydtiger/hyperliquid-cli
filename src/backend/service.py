@@ -7,6 +7,7 @@ functionality through HTTP endpoints.
 
 import logging
 from pathlib import Path
+from typing import Annotated
 
 import typer
 import uvicorn
@@ -109,23 +110,30 @@ def create_app(config: Config) -> FastAPI:
 
 
 def entry_func(
-    config: Path = typer.Option(
-        default_config_path,
-        "--config",
-        "-c",
-        help=f"Path to configuration file (default: {default_config_path})",
-        exists=True,
-        file_okay=True,
-        dir_okay=False,
-        readable=True,
-    ),
-    host: str | None = typer.Option(
-        None, "--host", help="Host to bind the server to (overrides config)"
-    ),
-    port: int | None = typer.Option(
-        None, "--port", help="Port to bind the server to (overrides config)"
-    ),
-    reload: bool = typer.Option(False, "--reload", help="Enable auto-reload for development"),
+    config: Annotated[
+        Path,
+        typer.Option(
+            "--config",
+            "-c",
+            help=f"Path to configuration file (default: {default_config_path})",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+        ),
+    ] = default_config_path,
+    host: Annotated[
+        str | None,
+        typer.Option("--host", help="Host to bind the server to (overrides config)"),
+    ] = None,
+    port: Annotated[
+        int | None,
+        typer.Option("--port", help="Port to bind the server to (overrides config)"),
+    ] = None,
+    reload: Annotated[
+        bool,
+        typer.Option("--reload", help="Enable auto-reload for development"),
+    ] = False,
 ) -> None:
     """
     Start the Hyperliquid backend API service.

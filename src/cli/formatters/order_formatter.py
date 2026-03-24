@@ -30,7 +30,8 @@ class OrderFormatter(
         Format an order for display.
 
         Args:
-            data: The order to format (MarketOrder, LimitOrder, OrderInfo, OrderResult, or List[OrderInfo])
+            data: The order to format (MarketOrder, LimitOrder, OrderInfo,
+                OrderResult, or List[OrderInfo])
             **kwargs: Additional formatting options (unused for now)
 
         Returns:
@@ -72,7 +73,8 @@ class OrderFormatter(
             return "\n".join(lines)
 
         raise ValueError(
-            f"Unsupported data type: {type(data)}. Expected MarketOrder, LimitOrder, OrderInfo, OrderResult, or List[OrderInfo]."
+            f"Unsupported data type: {type(data)}. Expected MarketOrder, "
+            "LimitOrder, OrderInfo, OrderResult, or List[OrderInfo]."
         )
 
     def _format_order_info(self, order: OrderInfo) -> str:
