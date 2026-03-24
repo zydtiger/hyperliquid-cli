@@ -5,8 +5,9 @@ This module provides comprehensive tests for order modifications,
 cancellations, and other order state change operations.
 """
 
-import pytest
 from decimal import Decimal
+
+import pytest
 
 from models.api import ExchangeError
 from models.order import (
@@ -969,8 +970,7 @@ class TestHyperliquidClientCancelOrder:
         def mock_cancel_with_errors(coin, order_id):
             if order_id == 222605232959:
                 return cancel_success_response
-            else:
-                return cancel_error_response
+            return cancel_error_response
 
         mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid
         mock_connection.exchange.cancel.side_effect = mock_cancel_with_errors

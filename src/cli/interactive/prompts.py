@@ -6,9 +6,9 @@ that can be shared across different CLI components.
 """
 
 from decimal import Decimal, InvalidOperation
-from typing import Optional
 
-from models import OrderSide, OrderTif, Config
+from models import Config, OrderSide, OrderTif
+
 from ..api import BackendAPI
 
 
@@ -45,8 +45,7 @@ class Prompts:
                     continue
                 if coin in coins:
                     return coin
-                else:
-                    print(f"❌ '{coin}' is not available. Choose from: {', '.join(coins[:5])}...")
+                print(f"❌ '{coin}' is not available. Choose from: {', '.join(coins[:5])}...")
         except Exception:
             # Fallback if API fails
             print("\n⚠️ Unable to fetch available coins, using manual input")
@@ -72,10 +71,9 @@ class Prompts:
 
             if choice == "1":
                 return OrderSide.BUY
-            elif choice == "2":
+            if choice == "2":
                 return OrderSide.SELL
-            else:
-                print("❌ Please enter 1 (Buy) or 2 (Sell)")
+            print("❌ Please enter 1 (Buy) or 2 (Sell)")
 
     def get_order_type_selection(self) -> str:
         """
@@ -93,13 +91,12 @@ class Prompts:
 
             if choice == "1":
                 return "market"
-            elif choice == "2":
+            if choice == "2":
                 return "limit"
-            else:
-                print("❌ Please enter 1 (Market) or 2 (Limit)")
+            print("❌ Please enter 1 (Market) or 2 (Limit)")
 
     def get_price_input(
-        self, coin: str, side: OrderSide, current_order_price: Optional[Decimal] = None
+        self, coin: str, side: OrderSide, current_order_price: Decimal | None = None
     ) -> Decimal:
         """
         Prompt user to input limit order price with optional current value display.
@@ -153,7 +150,7 @@ class Prompts:
                 print("❌ Please enter a valid number (e.g., 45000.50)")
 
     def get_quantity_input(
-        self, coin: str, current_order_quantity: Optional[Decimal] = None
+        self, coin: str, current_order_quantity: Decimal | None = None
     ) -> Decimal:
         """
         Prompt user to input order quantity with optional current value display.
@@ -193,7 +190,7 @@ class Prompts:
                 if quantity <= 0:
                     print("❌ Quantity must be greater than 0")
                     continue
-                elif quantity % precision != 0:
+                if quantity % precision != 0:
                     print(f"❌ Quantity must be a multiple of {precision}")
                     continue
                 return quantity
@@ -228,7 +225,7 @@ class Prompts:
                 print("❌ Please enter 1, 2, or 3")
                 continue
 
-    def get_yes_no_input(self, prompt: str, default: Optional[bool] = None) -> bool:
+    def get_yes_no_input(self, prompt: str, default: bool | None = None) -> bool:
         """
         Prompt user for yes/no input.
 
@@ -253,10 +250,9 @@ class Prompts:
 
             if response in ["y", "yes", "true", "1"]:
                 return True
-            elif response in ["n", "no", "false", "0"]:
+            if response in ["n", "no", "false", "0"]:
                 return False
-            else:
-                print("❌ Please enter 'y' (yes) or 'n' (no)")
+            print("❌ Please enter 'y' (yes) or 'n' (no)")
 
 
 __all__ = [

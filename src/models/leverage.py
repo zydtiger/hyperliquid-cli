@@ -5,7 +5,6 @@ This module provides Pydantic models for leverage modification requests
 and responses used throughout the application.
 """
 
-from typing import Optional
 from pydantic import BaseModel, Field
 
 from .api import PositionInfo
@@ -27,6 +26,6 @@ class LeverageResult(BaseModel):
 
     success: bool = Field(..., description="Whether the leverage update was successful")
     message: str = Field(..., description="Result message describing the operation outcome")
-    updated_position: Optional[PositionInfo] = Field(
+    updated_position: PositionInfo | None = Field(
         None, description="Updated position information if successful"
     )

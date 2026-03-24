@@ -6,12 +6,13 @@ authentication, retry logic, and connection testing.
 """
 
 import time
-from typing import Callable, TypeVar
+from collections.abc import Callable
+from typing import TypeVar
 
-from hyperliquid.info import Info
-from hyperliquid.exchange import Exchange
-from hyperliquid.utils import constants
 import eth_account
+from hyperliquid.exchange import Exchange
+from hyperliquid.info import Info
+from hyperliquid.utils import constants
 
 from models.api import ExchangeError
 from models.config import Config, NetworkType

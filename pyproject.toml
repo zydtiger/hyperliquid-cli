@@ -67,6 +67,31 @@ line-length = 100
 target-version = "py310"
 extend-exclude = ["build", "dist"]
 
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # Pyflakes (standard logic errors)
+    "I",    # isort (Import sorting)
+    "N",    # pep8-naming (Naming conventions)
+    "S",    # flake8-bandit (Security)
+    "RET",  # flake8-return (Return statement logic)
+    "B",    # flake8-bugbear (Common bugs/design flaws)
+    "UP",   # pyupgrade (Modernize syntax for your Python version)
+    "A",    # flake8-builtins (Shadowing built-ins)
+    "C4",   # flake8-comprehensions (Better list/set/dict usage)
+    "PL",   # Pylint (Modern implementation of Pylint rules)
+    "RUF",  # Ruff-specific rules
+]
+ignore = [
+    "PLR0913", # Allow more than 5 arguments in a function if needed
+]
+
+[tool.ruff.lint.per-file-ignores]
+# S101: allow asserts
+# PLR2004: allow magic values (e.g., status codes like 200)
+"tests/**/*.py" = ["S101", "PLR2004"]
+"test_*.py" = ["S101", "PLR2004"]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"

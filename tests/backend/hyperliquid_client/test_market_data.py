@@ -5,10 +5,11 @@ This module provides comprehensive tests for available coins retrieval,
 ticker data, and metadata queries.
 """
 
-import pytest
 from decimal import Decimal
 
-from models.api import Ticker, CoinMetadata, ExchangeError
+import pytest
+
+from models.api import CoinMetadata, ExchangeError, Ticker
 
 
 class TestHyperliquidClientAvailableCoins:

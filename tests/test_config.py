@@ -7,9 +7,9 @@ Tests all configuration classes, validators, constraints, and Pydantic V2 featur
 import tempfile
 from decimal import Decimal
 from pathlib import Path
-import yaml
 
 import pytest
+import yaml
 
 from models.config import (
     BackendConfig,

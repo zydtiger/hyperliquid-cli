@@ -5,8 +5,9 @@ This module provides comprehensive tests for client initialization
 and connection testing functionality.
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
 

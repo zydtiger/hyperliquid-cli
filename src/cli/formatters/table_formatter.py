@@ -5,17 +5,18 @@ This module provides utilities for formatting data in a clean tabular format
 for display in the command-line interface.
 """
 
-from typing import Any, List, Tuple
 from decimal import Decimal
+from typing import Any
+
 from .base import Formatter
 
 
-class TableFormatter(Formatter[Tuple[List[str], List[List[Any]]]]):
+class TableFormatter(Formatter[tuple[list[str], list[list[Any]]]]):
     """
     Table formatter for displaying data in a clean tabular format.
     """
 
-    def format(self, data: Tuple[List[str], List[List[Any]]], **kwargs: Any) -> str:
+    def format(self, data: tuple[list[str], list[list[Any]]], **kwargs: Any) -> str:
         """
         Format data as a clean table.
 
@@ -46,7 +47,7 @@ class TableFormatter(Formatter[Tuple[List[str], List[List[Any]]]]):
             str_rows.append(str_row)
 
         # Calculate column widths
-        all_rows = [headers] + str_rows
+        all_rows = [headers, *str_rows]
         col_widths = []
         for col_idx in range(len(headers)):
             max_width = max(len(row[col_idx]) for row in all_rows)

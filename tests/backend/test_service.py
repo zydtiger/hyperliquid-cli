@@ -5,13 +5,17 @@ This module provides unit tests for the FastAPI service creation, CLI functional
 and all API request handlers, including mocking of external dependencies.
 """
 
+import concurrent.futures
 import tempfile
+import time
+from collections.abc import Generator
 from decimal import Decimal
 from pathlib import Path
-from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
+import yaml
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
@@ -31,6 +35,7 @@ from models.api import (
     Ticker,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
+from models.leverage import LeverageResult
 from models.order import (
     LimitOrder,
     MarketOrder,
@@ -244,8 +249,6 @@ class TestBackendService:
         """Create a temporary configuration file."""
         config_data = mock_config.model_dump()
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            import yaml
-
             yaml.dump(config_data, f)
             temp_path = Path(f.name)
         yield temp_path
@@ -366,7 +369,6 @@ class TestRequestHandlers(TestBackendService):
 
     def test_setup_request_handlers_registers_endpoints(self, mock_client: Mock):
         """Test that setup_request_handlers properly registers all endpoints."""
-        from fastapi import FastAPI
 
         app = FastAPI()
         setup_request_handlers(app, mock_client)
@@ -1802,12 +1804,9 @@ class TestIntegration(TestBackendService):
 
     def test_concurrent_requests_handling(self, test_app: TestClient, mock_client: Mock):
         """Test that the service handles concurrent requests properly."""
-        import concurrent.futures
 
         # Setup slow mock response
         def slow_get_available_coins():
-            import time
-
             time.sleep(0.1)
             return ["BTC", "ETH"]
 
@@ -1899,8 +1898,6 @@ class TestChangeLeverageEndpoint(TestBackendService):
         self, test_app: TestClient, mock_client: Mock
     ):
         """Test successful leverage update with cross margin."""
-        from models.api import LeverageType, PositionInfo
-        from models.leverage import LeverageResult
 
         # Mock successful leverage change
         mock_result = LeverageResult(
@@ -1937,8 +1934,6 @@ class TestChangeLeverageEndpoint(TestBackendService):
         self, test_app: TestClient, mock_client: Mock
     ):
         """Test successful leverage update with isolated margin."""
-        from models.api import LeverageType, PositionInfo
-        from models.leverage import LeverageResult
 
         # Mock successful leverage change
         mock_result = LeverageResult(
@@ -1975,7 +1970,6 @@ class TestChangeLeverageEndpoint(TestBackendService):
         self, test_app: TestClient, mock_client: Mock
     ):
         """Test leverage update when no position exists."""
-        from models.leverage import LeverageResult
 
         # Mock failed leverage change - no position
         mock_result = LeverageResult(
@@ -1998,7 +1992,6 @@ class TestChangeLeverageEndpoint(TestBackendService):
 
     def test_change_leverage_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
         """Test leverage update when exchange returns an error."""
-        from models.leverage import LeverageResult
 
         # Mock failed leverage change - exchange error
         mock_result = LeverageResult(
@@ -2023,7 +2016,6 @@ class TestChangeLeverageEndpoint(TestBackendService):
         self, test_app: TestClient, mock_client: Mock
     ):
         """Test leverage update with missing required fields."""
-        from models.leverage import LeverageResult
 
         # Missing leverage
         response = test_app.post(
@@ -2088,7 +2080,6 @@ class TestChangeLeverageEndpoint(TestBackendService):
         self, test_app: TestClient, mock_client: Mock
     ):
         """Test leverage update with invalid coin formats."""
-        from models.leverage import LeverageResult
 
         mock_client.change_leverage.return_value = LeverageResult(
             success=False,
@@ -2130,7 +2121,6 @@ class TestChangeLeverageEndpoint(TestBackendService):
         expected_status,
     ):
         """Test leverage update with various valid parameter combinations."""
-        from models.leverage import LeverageResult
 
         # Mock successful response
         mock_result = LeverageResult(

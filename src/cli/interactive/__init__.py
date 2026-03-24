@@ -5,7 +5,7 @@ This module provides the main interactive command-line interface
 with tab completion support and command handling.
 """
 
-from .order_wizard import OrderWizard
 from .modify_wizard import ModifyWizard
+from .order_wizard import OrderWizard
 
-__all__ = ["OrderWizard", "ModifyWizard"]
+__all__ = ["ModifyWizard", "OrderWizard"]

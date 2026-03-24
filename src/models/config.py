@@ -8,6 +8,7 @@ with their respective validation logic.
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
+
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
@@ -104,12 +105,12 @@ class Config(BaseModel, extra="forbid", validate_assignment=True):
             raise ConfigurationError(f"Configuration file not found: {config_path}")
 
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         except yaml.YAMLError as e:
-            raise ConfigurationError(f"Invalid YAML in configuration file: {e}")
+            raise ConfigurationError(f"Invalid YAML in configuration file: {e}") from e
         except Exception as e:
-            raise ConfigurationError(f"Error reading configuration file: {e}")
+            raise ConfigurationError(f"Error reading configuration file: {e}") from e
 
         if data is None:
             raise ConfigurationError("Configuration file is empty")
@@ -118,11 +119,11 @@ class Config(BaseModel, extra="forbid", validate_assignment=True):
 
 
 __all__ = [
-    "ConfigurationError",
-    "NetworkType",
-    "Config",
-    "HyperliquidConfig",
-    "TradingConfig",
-    "LoggingConfig",
     "BackendConfig",
+    "Config",
+    "ConfigurationError",
+    "HyperliquidConfig",
+    "LoggingConfig",
+    "NetworkType",
+    "TradingConfig",
 ]

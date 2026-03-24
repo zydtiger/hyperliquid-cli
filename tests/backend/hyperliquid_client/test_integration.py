@@ -5,11 +5,12 @@ This module provides comprehensive integration tests and edge case
 scenarios for the HyperliquidClient class.
 """
 
-import pytest
 from decimal import Decimal
 from unittest.mock import patch
 
-from models.api import Ticker, CoinMetadata, ExchangeError
+import pytest
+
+from models.api import CoinMetadata, ExchangeError, Ticker
 from models.order import OrderInfo, OrderSide, OrderStatus, OrderTif, OrderType
 
 
@@ -50,11 +51,11 @@ class TestHyperliquidClientIntegration:
         def mock_retry_operation_integration(func):
             if func.__name__ == "_get_available_coins":
                 return ["BTC", "ETH", "SOL"]
-            elif func.__name__ == "_get_ticker":
+            if func.__name__ == "_get_ticker":
                 return expected_ticker
-            elif func.__name__ == "_get_metadata":
+            if func.__name__ == "_get_metadata":
                 return expected_metadata
-            elif func.__name__ == "_get_positions":
+            if func.__name__ == "_get_positions":
                 # Mock positions with expected ticker
                 with patch.object(client, "get_ticker", return_value=expected_ticker):
                     return func()

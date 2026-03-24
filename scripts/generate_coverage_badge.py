@@ -22,7 +22,7 @@ def get_coverage_percentage():
         sys.exit(1)
 
     try:
-        with open(coverage_file, "r") as f:
+        with open(coverage_file) as f:
             coverage_data = json.load(f)
 
         # Get total coverage percentage
@@ -37,16 +37,15 @@ def get_color(coverage):
     """Determine badge color based on coverage percentage."""
     if coverage >= 90:
         return "#4c1"  # bright green
-    elif coverage >= 80:
+    if coverage >= 80:
         return "#97ca00"  # green
-    elif coverage >= 70:
+    if coverage >= 70:
         return "#a4a61d"  # yellow-green
-    elif coverage >= 60:
+    if coverage >= 60:
         return "#dfb317"  # yellow
-    elif coverage >= 50:
+    if coverage >= 50:
         return "#fe7d37"  # orange
-    else:
-        return "#e05d44"  # red
+    return "#e05d44"  # red
 
 
 def generate_badge_svg(coverage, color):
@@ -58,7 +57,7 @@ def generate_badge_svg(coverage, color):
 
     # Estimate text widths for DejaVu Sans 11px (approx)
     def text_len_px(s: str) -> int:
-        return int(round(len(s) * 6.5))
+        return round(len(s) * 6.5)
 
     # Padding roughly matching shields
     label_pad_left, label_pad_right = 6, 4
@@ -71,7 +70,7 @@ def generate_badge_svg(coverage, color):
     right_w = value_pad_left + value_text_w + value_pad_right
     total_w = left_w + right_w
 
-    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_w}" height="{height}" role="img" aria-label="{label}: {value}">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_w}" height="{height}" role="img" aria-label="{label}: {value}">
   <title>{label}: {value}</title>
   <defs>
     <!-- Subtle vertical gloss gradient applied over entire badge -->
@@ -103,7 +102,6 @@ def generate_badge_svg(coverage, color):
     <text x="{left_w + value_pad_left}" y="14" fill="#fff">{value}</text>
   </g>
 </svg>"""
-    return svg
 
 
 def main():

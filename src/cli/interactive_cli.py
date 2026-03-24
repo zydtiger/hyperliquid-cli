@@ -6,7 +6,6 @@ for managing orders, positions, and account status.
 """
 
 import cmd
-from typing import List
 
 import typer
 
@@ -607,7 +606,7 @@ class InteractiveCLI(cmd.Cmd):
         print("  - The wizard shows current values for reference")
         print("  - Changes are applied immediately upon confirmation")
 
-    def completenames(self, text: str, *ignored: str) -> List[str]:
+    def completenames(self, text: str, *ignored: str) -> list[str]:
         """Override to provide custom command completion."""
         commands = [
             "order",
@@ -644,9 +643,8 @@ class InteractiveCLI(cmd.Cmd):
                     if typer.confirm("\nQuit?", default=False):
                         typer.echo("👋 Goodbye!")
                         return  # Quit if CTRL+C and then select quit
-                    else:
-                        self.intro = ""
-                        continue
+                    self.intro = ""
+                    continue
                 except typer.Abort:
                     typer.echo("\n👋 Goodbye!")
                     return  # Quit if CTRL+C and then CTRL+C again

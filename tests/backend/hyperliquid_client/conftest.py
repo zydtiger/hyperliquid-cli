@@ -5,9 +5,10 @@ This module provides comprehensive fixtures and utilities that are shared
 across all test modules in the hyperliquid_client test package.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
-from typing import Any, Callable, Dict, List
-from unittest.mock import Mock
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -75,8 +76,6 @@ def mock_retry_operation() -> Callable:
 @pytest.fixture
 def client(mock_config: Config, mock_connection: Mock) -> HyperliquidClient:
     """Create a HyperliquidClient instance with mocked dependencies."""
-    from unittest.mock import patch
-
     with patch(
         "backend.exchange.hyperliquid_client.HyperliquidConnection",
         return_value=mock_connection,
@@ -85,7 +84,7 @@ def client(mock_config: Config, mock_connection: Mock) -> HyperliquidClient:
 
 
 @pytest.fixture
-def sample_meta_response() -> Dict[str, Any]:
+def sample_meta_response() -> dict[str, Any]:
     """Sample response from meta API."""
     return {
         "universe": [
@@ -97,7 +96,7 @@ def sample_meta_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_asset_ctxs_response() -> List[Dict[str, Any]]:
+def sample_asset_ctxs_response() -> list[dict[str, Any]]:
     """Sample response from asset contexts API."""
     return [
         {
@@ -119,7 +118,7 @@ def sample_asset_ctxs_response() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_user_state_response() -> Dict[str, Any]:
+def sample_user_state_response() -> dict[str, Any]:
     """Sample response from user state API."""
     return {
         "marginSummary": {
@@ -292,7 +291,7 @@ def sample_limit_sell_order_reduce_only() -> LimitOrder:
 
 # Response fixtures for order submission tests
 @pytest.fixture
-def market_success_response_resting() -> Dict[str, Any]:
+def market_success_response_resting() -> dict[str, Any]:
     """Market order response with resting status."""
     return {
         "status": "ok",
@@ -304,7 +303,7 @@ def market_success_response_resting() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def market_success_response_filled() -> Dict[str, Any]:
+def market_success_response_filled() -> dict[str, Any]:
     """Market order response with filled status."""
     return {
         "status": "ok",
@@ -326,7 +325,7 @@ def market_success_response_filled() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def limit_success_response_resting() -> Dict[str, Any]:
+def limit_success_response_resting() -> dict[str, Any]:
     """Limit order response with resting status."""
     return {
         "status": "ok",
@@ -338,7 +337,7 @@ def limit_success_response_resting() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def limit_success_response_filled() -> Dict[str, Any]:
+def limit_success_response_filled() -> dict[str, Any]:
     """Limit order response with filled status."""
     return {
         "status": "ok",
@@ -360,7 +359,7 @@ def limit_success_response_filled() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def order_error_response() -> Dict[str, Any]:
+def order_error_response() -> dict[str, Any]:
     """Order response with error status."""
     return {
         "status": "ok",
@@ -372,7 +371,7 @@ def order_error_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def cancel_success_response() -> Dict[str, Any]:
+def cancel_success_response() -> dict[str, Any]:
     """Cancel order response with success status."""
     return {
         "status": "ok",
@@ -384,7 +383,7 @@ def cancel_success_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def cancel_error_response() -> Dict[str, Any]:
+def cancel_error_response() -> dict[str, Any]:
     """Cancel order response with error status."""
     return {
         "status": "ok",
@@ -396,7 +395,7 @@ def cancel_error_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_spot_state() -> Dict[str, Any]:
+def sample_spot_state() -> dict[str, Any]:
     """Sample spot state response with balance data."""
     return {
         "balances": [
@@ -433,7 +432,7 @@ def sample_spot_state() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_staking_summary() -> Dict[str, Any]:
+def sample_staking_summary() -> dict[str, Any]:
     """Sample staking summary response."""
     return {
         "delegated": "100.61607572",
@@ -468,7 +467,7 @@ def expected_balance_info() -> BalanceInfo:
 
 # Open orders fixtures for get_open_orders tests
 @pytest.fixture
-def sample_open_orders_response() -> List[Dict[str, Any]]:
+def sample_open_orders_response() -> list[dict[str, Any]]:
     """Sample response from open_orders API."""
     return [
         {
@@ -502,13 +501,13 @@ def sample_open_orders_response() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_open_orders_empty_response() -> List[Dict[str, Any]]:
+def sample_open_orders_empty_response() -> list[dict[str, Any]]:
     """Sample empty response from open_orders API."""
     return []
 
 
 @pytest.fixture
-def sample_order_status_responses() -> Dict[int, Dict[str, Any]]:
+def sample_order_status_responses() -> dict[int, dict[str, Any]]:
     """Sample order status responses for the open orders."""
     return {
         222605232959: {
@@ -569,7 +568,7 @@ def sample_order_status_responses() -> Dict[int, Dict[str, Any]]:
 
 
 @pytest.fixture
-def expected_open_orders() -> List[OrderInfo]:
+def expected_open_orders() -> list[OrderInfo]:
     """Expected OrderInfo objects for open orders testing."""
     return [
         OrderInfo(

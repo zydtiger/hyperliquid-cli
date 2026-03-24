@@ -5,15 +5,16 @@ This module provides comprehensive tests for position management
 and account-related queries.
 """
 
-import pytest
 from decimal import Decimal
 from unittest.mock import patch
 
+import pytest
+
 from models.api import (
-    Ticker,
     ExchangeError,
     LeverageType,
     PositionInfo,
+    Ticker,
 )
 
 
@@ -54,10 +55,9 @@ class TestHyperliquidClientPositions:
         def mock_get_ticker(coin: str) -> Ticker:
             if coin == "ETH":
                 return eth_ticker
-            elif coin == "BTC":
+            if coin == "BTC":
                 return btc_ticker
-            else:
-                raise ExchangeError(f"Coin '{coin}' not found")
+            raise ExchangeError(f"Coin '{coin}' not found")
 
         # Use the fixture for retry operation and patch get_ticker for positions call
         with patch.object(client, "get_ticker", side_effect=mock_get_ticker):

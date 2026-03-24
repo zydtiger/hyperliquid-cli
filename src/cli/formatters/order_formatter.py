@@ -5,15 +5,17 @@ This module provides formatting utilities for displaying order information
 in a user-friendly way.
 """
 
-from typing import Any, List, Union
+from typing import Any
+
+from models import LimitOrder, MarketOrder
+from models.order import OrderInfo, OrderResult, OrderStatus
+
 from .base import Formatter
 from .table_formatter import TableFormatter
-from models import MarketOrder, LimitOrder
-from models.order import OrderInfo, OrderResult, OrderStatus
 
 
 class OrderFormatter(
-    Formatter[Union[MarketOrder, LimitOrder, OrderInfo, OrderResult, List[OrderInfo]]]
+    Formatter[MarketOrder | LimitOrder | OrderInfo | OrderResult | list[OrderInfo]]
 ):
     """
     Formatter class for order data display.
@@ -21,7 +23,7 @@ class OrderFormatter(
 
     def format(
         self,
-        data: Union[MarketOrder, LimitOrder, OrderInfo, OrderResult, List[OrderInfo]],
+        data: MarketOrder | LimitOrder | OrderInfo | OrderResult | list[OrderInfo],
         **kwargs: Any,
     ) -> str:
         """
@@ -176,7 +178,7 @@ class OrderFormatter(
             }
         return status_map.get(status, status.value.upper())
 
-    def _format_order_infos(self, orders: List[OrderInfo]) -> str:
+    def _format_order_infos(self, orders: list[OrderInfo]) -> str:
         """
         Format a list of OrderInfo objects as a table using TableFormatter.
 

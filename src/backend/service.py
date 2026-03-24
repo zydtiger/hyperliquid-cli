@@ -7,18 +7,17 @@ functionality through HTTP endpoints.
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import typer
 import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from .exchange.hyperliquid_client import HyperliquidClient
-from .request_handlers import setup_request_handlers
-from models.api import HealthResponse, RootResponse, HealthStatus
+from models.api import HealthResponse, HealthStatus, RootResponse
 from models.config import Config
 
+from .exchange.hyperliquid_client import HyperliquidClient
+from .request_handlers import setup_request_handlers
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -86,8 +85,8 @@ def create_app(config: Config) -> FastAPI:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Service unavailable: {str(e)}",
-            )
+                detail=f"Service unavailable: {e!s}",
+            ) from e
 
     # Add root endpoint
     @app.get("/")
@@ -103,8 +102,8 @@ def create_app(config: Config) -> FastAPI:
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Service unavailable: {str(e)}",
-            )
+                detail=f"Service unavailable: {e!s}",
+            ) from e
 
     return app
 
@@ -120,10 +119,10 @@ def entry_func(
         dir_okay=False,
         readable=True,
     ),
-    host: Optional[str] = typer.Option(
+    host: str | None = typer.Option(
         None, "--host", help="Host to bind the server to (overrides config)"
     ),
-    port: Optional[int] = typer.Option(
+    port: int | None = typer.Option(
         None, "--port", help="Port to bind the server to (overrides config)"
     ),
     reload: bool = typer.Option(False, "--reload", help="Enable auto-reload for development"),
@@ -159,7 +158,7 @@ def entry_func(
 
     except Exception as e:
         logger.error(f"Failed to start server: {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from e
 
 
 def main() -> None:

@@ -5,8 +5,8 @@ This package provides various formatting utilities for displaying data
 in the command-line interface.
 """
 
-from .table_formatter import TableFormatter
-from .order_formatter import OrderFormatter
 from .account_formatter import AccountFormatter
+from .order_formatter import OrderFormatter
+from .table_formatter import TableFormatter
 
-__all__ = ["TableFormatter", "OrderFormatter", "AccountFormatter"]
+__all__ = ["AccountFormatter", "OrderFormatter", "TableFormatter"]

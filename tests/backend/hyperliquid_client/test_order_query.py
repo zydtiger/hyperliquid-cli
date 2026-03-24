@@ -5,8 +5,9 @@ This module provides comprehensive tests for order status queries
 and open orders retrieval operations.
 """
 
-import pytest
 from decimal import Decimal
+
+import pytest
 
 from models.api import ExchangeError
 from models.order import (
@@ -240,7 +241,7 @@ class TestHyperliquidClientGetOpenOrders:
         assert mock_connection.info.query_order_by_oid.call_count == 3
 
         for call in mock_connection.info.query_order_by_oid.call_args_list:
-            args, kwargs = call
+            args, _kwargs = call
             assert args[0] == "0x1234567890123456789012345678901234567890"  # user address
             assert args[1] in expected_order_ids  # order ID
 

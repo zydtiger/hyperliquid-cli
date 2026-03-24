@@ -5,7 +5,8 @@ This module provides a step-by-step wizard for modifying orders
 with proper validation and user guidance.
 """
 
-from models import ModifyOrderRequest, Config, OrderType, OrderStatus
+from models import Config, ModifyOrderRequest, OrderStatus, OrderType
+
 from ..api import BackendAPI
 from ..formatters.order_formatter import OrderFormatter
 from .prompts import Prompts
@@ -56,7 +57,7 @@ class ModifyWizard:
         try:
             order_info = self.api.get_order_status(order_id)
         except Exception as e:
-            raise ValueError(f"Failed to get order status: {e}")
+            raise ValueError(f"Failed to get order status: {e}") from e
 
         # Validate order is a limit order and open
         if order_info.order_type != OrderType.LIMIT:

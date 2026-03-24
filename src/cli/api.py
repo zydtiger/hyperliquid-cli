@@ -6,30 +6,29 @@ Hyperliquid backend FastAPI service, with proper error handling and type safety.
 """
 
 import logging
-from typing import Any, List
+from typing import Any
 
 import httpx
 
 from models.api import (
     APIError,
+    BalanceInfo,
+    CoinMetadata,
     HealthResponse,
+    PositionInfo,
     RootResponse,
     Ticker,
-    CoinMetadata,
-    PositionInfo,
-    BalanceInfo,
-)
-from models.leverage import LeverageUpdateRequest, LeverageResult
-from models.order import (
-    OrderInfo,
-    OrderResult,
-    MarketOrder,
-    LimitOrder,
-    CancelOrderRequest,
-    ModifyOrderRequest,
 )
 from models.config import Config
-
+from models.leverage import LeverageResult, LeverageUpdateRequest
+from models.order import (
+    CancelOrderRequest,
+    LimitOrder,
+    MarketOrder,
+    ModifyOrderRequest,
+    OrderInfo,
+    OrderResult,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +99,7 @@ class BackendAPI:
             return RootResponse(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get root info: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def health_check(self) -> HealthResponse:
         """
@@ -118,9 +117,9 @@ class BackendAPI:
             return HealthResponse(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Health check failed: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
-    def get_available_coins(self) -> List[str]:
+    def get_available_coins(self) -> list[str]:
         """
         Get list of all available trading coins.
 
@@ -137,7 +136,7 @@ class BackendAPI:
             return list(data) if isinstance(data, (list, tuple)) else []
         except httpx.RequestError as e:
             logger.error(f"Failed to get available coins: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def get_ticker(self, coin: str) -> Ticker:
         """
@@ -158,7 +157,7 @@ class BackendAPI:
             return Ticker(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get ticker for {coin}: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def get_metadata(self, coin: str) -> CoinMetadata:
         """
@@ -179,9 +178,9 @@ class BackendAPI:
             return CoinMetadata(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get metadata for {coin}: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
-    def get_positions(self) -> List[PositionInfo]:
+    def get_positions(self) -> list[PositionInfo]:
         """
         Get all current open positions.
 
@@ -197,7 +196,7 @@ class BackendAPI:
             return [PositionInfo(**position) for position in response.json()]
         except httpx.RequestError as e:
             logger.error(f"Failed to get positions: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def get_balances(self) -> BalanceInfo:
         """
@@ -215,7 +214,7 @@ class BackendAPI:
             return BalanceInfo(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get balances: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def get_position(self, coin: str) -> PositionInfo:
         """
@@ -236,7 +235,7 @@ class BackendAPI:
             return PositionInfo(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get position for {coin}: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def get_order_status(self, order_id: int) -> OrderInfo:
         """
@@ -257,9 +256,9 @@ class BackendAPI:
             return OrderInfo(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get order status for {order_id}: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
-    def get_open_orders(self) -> List[OrderInfo]:
+    def get_open_orders(self) -> list[OrderInfo]:
         """
         Get all open orders for the account.
 
@@ -275,7 +274,7 @@ class BackendAPI:
             return [OrderInfo(**order) for order in response.json()]
         except httpx.RequestError as e:
             logger.error(f"Failed to get open orders: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def submit_market_order(self, order: MarketOrder) -> OrderResult:
         """
@@ -300,7 +299,7 @@ class BackendAPI:
             return OrderResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to submit market order: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def submit_limit_order(self, order: LimitOrder) -> OrderResult:
         """
@@ -325,7 +324,7 @@ class BackendAPI:
             return OrderResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to submit limit order: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def cancel_order(self, order_id: int | str) -> OrderResult:
         """
@@ -354,7 +353,7 @@ class BackendAPI:
             return OrderResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to cancel order {order_id}: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def modify_order(self, request: ModifyOrderRequest) -> OrderResult:
         """
@@ -380,7 +379,7 @@ class BackendAPI:
             return OrderResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to modify order {request.order_id}: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def change_leverage(self, leverage: int, coin: str, is_cross: bool = True) -> LeverageResult:
         """
@@ -410,7 +409,7 @@ class BackendAPI:
             return LeverageResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to change leverage for {coin}: {e}")
-            raise APIError(f"Connection error: {str(e)}")
+            raise APIError(f"Connection error: {e!s}") from e
 
     def close(self) -> None:
         """Close the HTTP client."""

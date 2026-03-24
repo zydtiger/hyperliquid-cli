@@ -6,22 +6,21 @@ through HTTP requests with proper error handling and response formatting.
 """
 
 import logging
-from typing import List
 
 from fastapi import FastAPI, HTTPException, Path, status
 
-from .exchange.hyperliquid_client import HyperliquidClient
-from models.api import Ticker, CoinMetadata, PositionInfo, BalanceInfo, ExchangeError
-from models.leverage import LeverageUpdateRequest, LeverageResult
+from models.api import BalanceInfo, CoinMetadata, ExchangeError, PositionInfo, Ticker
+from models.leverage import LeverageResult, LeverageUpdateRequest
 from models.order import (
-    OrderInfo,
-    MarketOrder,
-    LimitOrder,
-    OrderResult,
     CancelOrderRequest,
+    LimitOrder,
+    MarketOrder,
     ModifyOrderRequest,
+    OrderInfo,
+    OrderResult,
 )
 
+from .exchange.hyperliquid_client import HyperliquidClient
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +35,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
     """
 
     @app.get("/available_coins")
-    async def get_available_coins() -> List[str]:
+    async def get_available_coins() -> list[str]:
         """
         Get list of available trading coins.
 
@@ -44,17 +43,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             List[str]: List of available coin symbols
         """
         try:
-            coins = client.get_available_coins()
-            return coins
+            return client.get_available_coins()
         except ExchangeError as e:
             logger.error(f"Exchange error getting available coins: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting available coins: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.get("/ticker/{coin}")
     async def get_ticker(
@@ -70,17 +68,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             Ticker: Ticker data
         """
         try:
-            ticker = client.get_ticker(coin)
-            return ticker
+            return client.get_ticker(coin)
         except ExchangeError as e:
             logger.error(f"Exchange error getting ticker for {coin}: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting ticker for {coin}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.get("/metadata/{coin}")
     async def get_metadata(
@@ -96,20 +93,19 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             CoinMetadata: Coin metadata
         """
         try:
-            metadata = client.get_metadata(coin)
-            return metadata
+            return client.get_metadata(coin)
         except ExchangeError as e:
             logger.error(f"Exchange error getting metadata for {coin}: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting metadata for {coin}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.get("/positions")
-    async def get_positions() -> List[PositionInfo]:
+    async def get_positions() -> list[PositionInfo]:
         """
         Get current open positions.
 
@@ -117,17 +113,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             List[PositionInfo]: List of open positions
         """
         try:
-            positions = client.get_positions()
-            return positions
+            return client.get_positions()
         except ExchangeError as e:
             logger.error(f"Exchange error getting positions: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting positions: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.get("/positions/{coin}")
     async def get_position(
@@ -158,7 +153,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
 
         except ExchangeError as e:
             logger.error(f"Exchange error getting position for {coin}: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except HTTPException:
             # Re-raise HTTP exceptions (like 404)
             raise
@@ -167,7 +162,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.get("/balances")
     async def get_balances() -> BalanceInfo:
@@ -178,17 +173,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             BalanceInfo: Comprehensive balance information including perpetuals, spot, and staking
         """
         try:
-            balances = client.get_balances()
-            return balances
+            return client.get_balances()
         except ExchangeError as e:
             logger.error(f"Exchange error getting balances: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting balances: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.get("/order_status/{order_id}")
     async def get_order_status(
@@ -204,20 +198,19 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             OrderInfo: Detailed order information
         """
         try:
-            order_info = client.get_order_status(order_id)
-            return order_info
+            return client.get_order_status(order_id)
         except ExchangeError as e:
             logger.error(f"Exchange error getting order status for {order_id}: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting order status for {order_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.get("/open_orders")
-    async def get_open_orders() -> List[OrderInfo]:
+    async def get_open_orders() -> list[OrderInfo]:
         """
         Get all open orders for the account.
 
@@ -225,17 +218,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             List[OrderInfo]: List of open orders with full details
         """
         try:
-            orders = client.get_open_orders()
-            return orders
+            return client.get_open_orders()
         except ExchangeError as e:
             logger.error(f"Exchange error getting open orders: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting open orders: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.post("/market_order")
     async def submit_market_order(order: MarketOrder) -> OrderResult:
@@ -249,17 +241,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             OrderResult: Result of the order submission with order ID and status
         """
         try:
-            result = client.submit_market_order(order)
-            return result
+            return client.submit_market_order(order)
         except ExchangeError as e:
             logger.error(f"Exchange error submitting market order: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error submitting market order: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.post("/limit_order")
     async def submit_limit_order(order: LimitOrder) -> OrderResult:
@@ -273,17 +264,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             OrderResult: Result of the order submission with order ID and status
         """
         try:
-            result = client.submit_limit_order(order)
-            return result
+            return client.submit_limit_order(order)
         except ExchangeError as e:
             logger.error(f"Exchange error submitting limit order: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error submitting limit order: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.post("/cancel_order")
     async def cancel_order(request: CancelOrderRequest) -> OrderResult:
@@ -299,17 +289,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             OrderResult: Result of the cancellation operation with success status and details
         """
         try:
-            result = client.cancel_order(request.order_id)
-            return result
+            return client.cancel_order(request.order_id)
         except ExchangeError as e:
             logger.error(f"Exchange error cancelling order {request.order_id}: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error cancelling order {request.order_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.post("/modify_order")
     async def modify_order(request: ModifyOrderRequest) -> OrderResult:
@@ -327,17 +316,16 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
             OrderResult: Result of the modification operation with success status and details
         """
         try:
-            result = client.modify_order(request.order_id, request.price, request.quantity)
-            return result
+            return client.modify_order(request.order_id, request.price, request.quantity)
         except ExchangeError as e:
             logger.error(f"Exchange error modifying order {request.order_id}: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error modifying order {request.order_id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e
 
     @app.post("/change_leverage", response_model=LeverageResult)
     async def change_leverage(request: LeverageUpdateRequest) -> LeverageResult:
@@ -356,18 +344,17 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:
                           message, and updated position information if successful
         """
         try:
-            result = client.change_leverage(
+            return client.change_leverage(
                 leverage=request.leverage,
                 coin=request.coin,
                 is_cross=request.is_cross,
             )
-            return result
         except ExchangeError as e:
             logger.error(f"Exchange error changing leverage for {request.coin}: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error changing leverage for {request.coin}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
-            )
+            ) from e

@@ -7,10 +7,8 @@ API communication between the CLI frontend and backend service.
 
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
-
 
 # ============================================================================
 # EXCEPTIONS / ERRORS
@@ -20,7 +18,7 @@ from pydantic import BaseModel, Field
 class APIError(Exception):
     """Exception raised when the backend API returns an error response."""
 
-    def __init__(self, message: str, status_code: Optional[int] = None):
+    def __init__(self, message: str, status_code: int | None = None):
         super().__init__(message)
         self.status_code = status_code
         self.message = message
@@ -129,7 +127,7 @@ class BalanceInfo(BaseModel):
     spot_balances: list[SpotBalance] = Field(default_factory=list, description="Spot coin balances")
 
     # Staking Information
-    staking_info: Optional[StakingInfo] = Field(None, description="Staking delegations and rewards")
+    staking_info: StakingInfo | None = Field(None, description="Staking delegations and rewards")
 
 
 # ============================================================================
@@ -137,19 +135,16 @@ class BalanceInfo(BaseModel):
 # ============================================================================
 
 __all__ = [
-    # Exceptions
     "APIError",
+    "BalanceInfo",
+    "CoinMetadata",
     "ExchangeError",
-    # Enums/Types
+    "HealthResponse",
     "HealthStatus",
     "LeverageType",
-    # Response Models
-    "HealthResponse",
-    "RootResponse",
-    "Ticker",
-    "CoinMetadata",
     "PositionInfo",
+    "RootResponse",
     "SpotBalance",
     "StakingInfo",
-    "BalanceInfo",
+    "Ticker",
 ]

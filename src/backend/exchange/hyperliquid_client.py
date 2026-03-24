@@ -6,7 +6,6 @@ handling data retrieval and portfolio management operations.
 """
 
 from decimal import Decimal
-from typing import List, Optional
 
 from hyperliquid.utils.signing import Tif
 
@@ -63,7 +62,7 @@ class HyperliquidClient:
         """
         return self.connection.test_connection()
 
-    def get_available_coins(self) -> List[str]:
+    def get_available_coins(self) -> list[str]:
         """
         Get list of available trading coins.
 
@@ -71,7 +70,7 @@ class HyperliquidClient:
             List[str]: List of available coin symbols
         """
 
-        def _get_available_coins() -> List[str]:
+        def _get_available_coins() -> list[str]:
             meta = self.connection.info.meta()
             return [asset["name"] for asset in meta["universe"]]
 
@@ -295,11 +294,11 @@ class HyperliquidClient:
                 )
 
             except Exception as e:
-                raise ExchangeError(f"Failed to get balance information: {e}")
+                raise ExchangeError(f"Failed to get balance information: {e}") from e
 
         return self.connection.retry_operation(_get_balances)
 
-    def get_positions(self) -> List[PositionInfo]:
+    def get_positions(self) -> list[PositionInfo]:
         """
         Get current open positions.
 
@@ -307,7 +306,7 @@ class HyperliquidClient:
             List[PositionInfo]: List of open positions
         """
 
-        def _get_positions() -> List[PositionInfo]:
+        def _get_positions() -> list[PositionInfo]:
             user_state = self.connection.info.user_state(self.config.hyperliquid.account_address)
             positions = []
 
@@ -497,11 +496,11 @@ class HyperliquidClient:
                 )
 
             except Exception as e:
-                raise ExchangeError(f"Failed to get order status: {e}")
+                raise ExchangeError(f"Failed to get order status: {e}") from e
 
         return self.connection.retry_operation(_get_order_status)
 
-    def get_open_orders(self) -> List[OrderInfo]:
+    def get_open_orders(self) -> list[OrderInfo]:
         """
         Get all open orders for the account.
 
@@ -512,7 +511,7 @@ class HyperliquidClient:
             ExchangeError: If open orders retrieval fails
         """
 
-        def _get_open_orders() -> List[OrderInfo]:
+        def _get_open_orders() -> list[OrderInfo]:
             try:
                 # Get open orders list from the API
                 orders_data = self.connection.info.open_orders(
@@ -541,7 +540,7 @@ class HyperliquidClient:
                 return open_orders
 
             except Exception as e:
-                raise ExchangeError(f"Failed to get open orders: {e}")
+                raise ExchangeError(f"Failed to get open orders: {e}") from e
 
         return self.connection.retry_operation(_get_open_orders)
 
@@ -611,7 +610,7 @@ class HyperliquidClient:
                                 status=OrderStatus.OPEN,
                                 message="Market order is resting on the book",
                             )
-                        elif "error" in status:
+                        if "error" in status:
                             error = status["error"]
                             return OrderResult(
                                 success=False,
@@ -620,7 +619,7 @@ class HyperliquidClient:
                                 message="Market order failed",
                                 error=error,
                             )
-                        elif "filled" in status:
+                        if "filled" in status:
                             fill = status["filled"]
                             return OrderResult(
                                 success=True,
@@ -637,13 +636,12 @@ class HyperliquidClient:
                         message="Market order submission failed - no status returned",
                         error="Unknown response structure",
                     )
-                else:
-                    return OrderResult(
-                        success=False,
-                        status=OrderStatus.REJECTED,
-                        message="Market order submission failed",
-                        error=result.get("response", "Unknown error"),
-                    )
+                return OrderResult(
+                    success=False,
+                    status=OrderStatus.REJECTED,
+                    message="Market order submission failed",
+                    error=result.get("response", "Unknown error"),
+                )
 
             except Exception as e:
                 return OrderResult(
@@ -706,7 +704,7 @@ class HyperliquidClient:
                                 status=OrderStatus.OPEN,
                                 message="Limit order is resting on the book",
                             )
-                        elif "error" in status:
+                        if "error" in status:
                             error = status["error"]
                             return OrderResult(
                                 success=False,
@@ -715,7 +713,7 @@ class HyperliquidClient:
                                 message="Limit order failed",
                                 error=error,
                             )
-                        elif "filled" in status:
+                        if "filled" in status:
                             fill = status["filled"]
                             return OrderResult(
                                 success=True,
@@ -732,13 +730,12 @@ class HyperliquidClient:
                         message="Limit order submission failed - no status returned",
                         error="Unknown response structure",
                     )
-                else:
-                    return OrderResult(
-                        success=False,
-                        status=OrderStatus.REJECTED,
-                        message="Limit order submission failed",
-                        error=result.get("response", "Unknown error"),
-                    )
+                return OrderResult(
+                    success=False,
+                    status=OrderStatus.REJECTED,
+                    message="Limit order submission failed",
+                    error=result.get("response", "Unknown error"),
+                )
 
             except Exception as e:
                 return OrderResult(
@@ -768,10 +765,9 @@ class HyperliquidClient:
         def _cancel_order() -> OrderResult:
             if order_id == "all":
                 return self._cancel_all_orders()
-            elif isinstance(order_id, int) and order_id > 0:
+            if isinstance(order_id, int) and order_id > 0:
                 return self._cancel_specific_order(order_id)
-            else:
-                raise ValueError("order_id must be positive integer or 'all'")
+            raise ValueError("order_id must be positive integer or 'all'")
 
         return self.connection.retry_operation(_cancel_order)
 
@@ -798,7 +794,7 @@ class HyperliquidClient:
                     message=f"Order {order_id} cancellation failed",
                     error=f"Order {order_id} is already cancelled",
                 )
-            elif order_info.status == OrderStatus.FILLED:
+            if order_info.status == OrderStatus.FILLED:
                 return OrderResult(
                     success=False,
                     order_id=order_id,
@@ -806,7 +802,7 @@ class HyperliquidClient:
                     message=f"Order {order_id} cancellation failed",
                     error=f"Order {order_id} is already filled",
                 )
-            elif order_info.status == OrderStatus.REJECTED:
+            if order_info.status == OrderStatus.REJECTED:
                 return OrderResult(
                     success=False,
                     order_id=order_id,
@@ -814,14 +810,13 @@ class HyperliquidClient:
                     message=f"Order {order_id} cancellation failed",
                     error=f"Order {order_id} was already rejected",
                 )
-            else:
-                return OrderResult(
-                    success=False,
-                    order_id=order_id,
-                    status=order_info.status,
-                    message=f"Order {order_id} cancellation failed",
-                    error=f"Order {order_id} is {order_info.status.value} and cannot be cancelled",
-                )
+            return OrderResult(
+                success=False,
+                order_id=order_id,
+                status=order_info.status,
+                message=f"Order {order_id} cancellation failed",
+                error=f"Order {order_id} is {order_info.status.value} and cannot be cancelled",
+            )
 
         # Cancel the order using the exchange API
         result = self.connection.exchange.cancel(order_info.coin, order_id)
@@ -845,7 +840,7 @@ class HyperliquidClient:
                         status=OrderStatus.CANCELLED,
                         message=f"Order {order_id} cancelled successfully",
                     )
-                elif isinstance(status, dict) and "error" in status:
+                if isinstance(status, dict) and "error" in status:
                     # Order cancellation failed
                     error = status["error"]
                     return OrderResult(
@@ -863,14 +858,13 @@ class HyperliquidClient:
                 status=OrderStatus.CANCELLED,
                 message=f"Order {order_id} cancelled successfully",
             )
-        else:
-            return OrderResult(
-                success=False,
-                order_id=order_id,
-                status=OrderStatus.REJECTED,
-                message="Order cancellation failed",
-                error=result.get("response", "Unknown error"),
-            )
+        return OrderResult(
+            success=False,
+            order_id=order_id,
+            status=OrderStatus.REJECTED,
+            message="Order cancellation failed",
+            error=result.get("response", "Unknown error"),
+        )
 
     def _cancel_all_orders(self) -> OrderResult:
         """
@@ -924,8 +918,8 @@ class HyperliquidClient:
     def modify_order(
         self,
         order_id: int,
-        price: Optional[Decimal] = None,
-        quantity: Optional[Decimal] = None,
+        price: Decimal | None = None,
+        quantity: Decimal | None = None,
     ) -> OrderResult:
         """
         Modify price and/or quantity of an existing open limit order.
@@ -964,16 +958,15 @@ class HyperliquidClient:
                         raise ValueError(
                             f"Order {order_id} is already cancelled and cannot be modified"
                         )
-                    elif current_order.status == OrderStatus.FILLED:
+                    if current_order.status == OrderStatus.FILLED:
                         raise ValueError(
                             f"Order {order_id} is already filled and cannot be modified"
                         )
-                    elif current_order.status == OrderStatus.REJECTED:
+                    if current_order.status == OrderStatus.REJECTED:
                         raise ValueError(f"Order {order_id} was rejected and cannot be modified")
-                    else:
-                        raise ValueError(
-                            f"Order {order_id} is {current_order.status.value} and cannot be modified"
-                        )
+                    raise ValueError(
+                        f"Order {order_id} is {current_order.status.value} and cannot be modified"
+                    )
 
                 if current_order.order_type != OrderType.LIMIT:
                     raise ValueError(
@@ -1032,7 +1025,7 @@ class HyperliquidClient:
                                 status=OrderStatus.OPEN,
                                 message=f"Order {order_id} modified successfully - price: {new_price}, quantity: {new_quantity}",
                             )
-                        elif "error" in status:
+                        if "error" in status:
                             error = status["error"]
                             return OrderResult(
                                 success=False,
@@ -1049,14 +1042,13 @@ class HyperliquidClient:
                         status=OrderStatus.OPEN,
                         message=f"Order {order_id} modified successfully - price: {new_price}, quantity: {new_quantity}",
                     )
-                else:
-                    return OrderResult(
-                        success=False,
-                        order_id=order_id,
-                        status=OrderStatus.REJECTED,
-                        message="Order modification failed",
-                        error=result.get("response", "Unknown error"),
-                    )
+                return OrderResult(
+                    success=False,
+                    order_id=order_id,
+                    status=OrderStatus.REJECTED,
+                    message="Order modification failed",
+                    error=result.get("response", "Unknown error"),
+                )
 
             except Exception as e:
                 return OrderResult(
@@ -1137,30 +1129,29 @@ class HyperliquidClient:
                         message=f"Successfully updated {coin} leverage to {leverage}x ({leverage_type} margin)",
                         updated_position=updated_position,
                     )
+                error_response = result.get("response", "Unknown error")
+
+                # Handle specific error messages with better user feedback
+                if "Cannot switch leverage type with open position" in str(error_response):
+                    error_msg = f"Cannot switch leverage type for {coin} with open position. Close the position first or use the same margin type."
+                elif (
+                    "isolated position does not have sufficient margin"
+                    in str(error_response).lower()
+                ):
+                    error_msg = f"Insufficient margin to decrease leverage for {coin} isolated position. Add margin to the position or use a higher leverage."
                 else:
-                    error_response = result.get("response", "Unknown error")
+                    error_msg = f"Failed to update {coin} leverage: {error_response}"
 
-                    # Handle specific error messages with better user feedback
-                    if "Cannot switch leverage type with open position" in str(error_response):
-                        error_msg = f"Cannot switch leverage type for {coin} with open position. Close the position first or use the same margin type."
-                    elif (
-                        "isolated position does not have sufficient margin"
-                        in str(error_response).lower()
-                    ):
-                        error_msg = f"Insufficient margin to decrease leverage for {coin} isolated position. Add margin to the position or use a higher leverage."
-                    else:
-                        error_msg = f"Failed to update {coin} leverage: {error_response}"
-
-                    return LeverageResult(
-                        success=False,
-                        message=error_msg,
-                        updated_position=None,
-                    )
+                return LeverageResult(
+                    success=False,
+                    message=error_msg,
+                    updated_position=None,
+                )
 
             except Exception as e:
                 return LeverageResult(
                     success=False,
-                    message=f"Leverage update failed for {coin}: {str(e)}",
+                    message=f"Leverage update failed for {coin}: {e!s}",
                     updated_position=None,
                 )
 
@@ -1169,10 +1160,9 @@ class HyperliquidClient:
     def _convert_tif_value(self, tif: OrderTif) -> Tif:
         if tif == OrderTif.GTC:
             return "Gtc"
-        elif tif == OrderTif.IOC:
+        if tif == OrderTif.IOC:
             return "Ioc"
-        else:
-            return "Alo"
+        return "Alo"
 
 
 __all__ = [

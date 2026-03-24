@@ -497,5 +497,5 @@ class TestHyperliquidClientSubmitLimitOrder:
         client.submit_limit_order(sell_order)
 
         # Verify SELL side maps to is_buy=False
-        args, kwargs = client.connection.exchange.order.call_args
+        _args, kwargs = client.connection.exchange.order.call_args
         assert kwargs["is_buy"] is False
