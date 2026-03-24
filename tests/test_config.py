@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from models.config import (
     BackendConfig,
@@ -43,10 +44,14 @@ class TestHyperliquidConfig:
 
     def test_valid_config_creation(self):
         """Test creating valid HyperliquidConfig."""
-        config = HyperliquidConfig(
-            account_address="0x1234567890123456789012345678901234567890",
-            private_key="0x1234567890123456789012345678901234567890123456789012345678901234",
-            network="mainnet",
+        config = HyperliquidConfig.model_validate(
+            {
+                "account_address": "0x1234567890123456789012345678901234567890",
+                "private_key": (
+                    "0x1234567890123456789012345678901234567890123456789012345678901234"
+                ),
+                "network": "mainnet",
+            }
         )
         assert config.account_address == "0x1234567890123456789012345678901234567890"
         assert (
@@ -114,10 +119,14 @@ class TestHyperliquidConfig:
     def test_extra_fields_forbidden(self):
         """Test extra fields are rejected."""
         with pytest.raises(Exception) as exc_info:
-            HyperliquidConfig(
-                account_address="0x1234567890123456789012345678901234567890",
-                private_key="0x1234567890123456789012345678901234567890123456789012345678901234",
-                unknown_field="value",
+            HyperliquidConfig.model_validate(
+                {
+                    "account_address": "0x1234567890123456789012345678901234567890",
+                    "private_key": (
+                        "0x1234567890123456789012345678901234567890123456789012345678901234"
+                    ),
+                    "unknown_field": "value",
+                }
             )
         assert "Extra inputs are not permitted" in str(exc_info.value)
 
@@ -142,9 +151,11 @@ class TestTradingConfig:
 
     def test_valid_config_creation(self):
         """Test creating valid TradingConfig."""
-        config = TradingConfig(
-            default_slippage=Decimal("0.05"),
-            default_time_in_force="GTC",
+        config = TradingConfig.model_validate(
+            {
+                "default_slippage": Decimal("0.05"),
+                "default_time_in_force": "GTC",
+            }
         )
         assert config.default_slippage == Decimal("0.05")
         assert config.default_time_in_force == OrderTif.GTC
@@ -186,19 +197,19 @@ class TestTradingConfig:
         """Test string to enum conversion for time_in_force."""
         valid_values = ["ALO", "IOC", "GTC"]
         for value in valid_values:
-            config = TradingConfig(default_time_in_force=value)
+            config = TradingConfig.model_validate({"default_time_in_force": value})
             assert isinstance(config.default_time_in_force, OrderTif)
 
         # Invalid case sensitivity
         invalid_values = ["Alo", "Ioc", "Gtc", "alo", "ioc", "gtc", "INVALID"]
         for value in invalid_values:
-            with pytest.raises(Exception):
-                TradingConfig(default_time_in_force=value)
+            with pytest.raises(ValidationError):
+                TradingConfig.model_validate({"default_time_in_force": value})
 
     def test_extra_fields_forbidden(self):
         """Test extra fields are rejected."""
         with pytest.raises(Exception) as exc_info:
-            TradingConfig(unknown_field="value")
+            TradingConfig.model_validate({"unknown_field": "value"})
         assert "Extra inputs are not permitted" in str(exc_info.value)
 
     def test_validate_assignment(self):
@@ -214,13 +225,15 @@ class TestTradingConfig:
             config.default_slippage = Decimal("2.0")
         assert "Input should be less than 1" in str(exc_info.value)
 
+        attr_name = "default_time_in_force"
+
         # Valid enum assignment should work
-        config.default_time_in_force = "IOC"
+        setattr(config, attr_name, "IOC")
         assert config.default_time_in_force == OrderTif.IOC
 
         # Invalid enum assignment should fail
-        with pytest.raises(Exception):
-            config.default_time_in_force = "INVALID"
+        with pytest.raises(ValidationError):
+            setattr(config, attr_name, "INVALID")
 
 
 class TestLoggingConfig:
@@ -247,13 +260,13 @@ class TestLoggingConfig:
         """Test invalid log levels are rejected."""
         invalid_levels = ["TRACE", "VERBOSE", "INFO ", " debug", "invalid"]
         for level in invalid_levels:
-            with pytest.raises(ValueError, match="logging.level must be one of"):
+            with pytest.raises(ValueError, match=r"logging\.level must be one of"):
                 LoggingConfig(level=level)
 
     def test_extra_fields_forbidden(self):
         """Test extra fields are rejected."""
         with pytest.raises(Exception) as exc_info:
-            LoggingConfig(unknown_field="value")
+            LoggingConfig.model_validate({"unknown_field": "value"})
         assert "Extra inputs are not permitted" in str(exc_info.value)
 
     def test_validate_assignment(self):
@@ -265,7 +278,7 @@ class TestLoggingConfig:
         assert config.level == "ERROR"
 
         # Invalid assignment should fail
-        with pytest.raises(ValueError, match="logging.level must be one of"):
+        with pytest.raises(ValueError, match=r"logging\.level must be one of"):
             config.level = "INVALID"
 
 
@@ -276,11 +289,11 @@ class TestBackendConfig:
         """Test creating valid BackendConfig."""
         logging_config = LoggingConfig(level="DEBUG")
         config = BackendConfig(
-            host="0.0.0.0",
+            host="127.0.0.1",
             port=9000,
             logging=logging_config,
         )
-        assert config.host == "0.0.0.0"
+        assert config.host == "127.0.0.1"
         assert config.port == 9000
         assert config.logging.level == "DEBUG"
 
@@ -316,25 +329,29 @@ class TestBackendConfig:
     def test_nested_logging_config(self):
         """Test nested logging config validation."""
         # Valid nested config
-        config = BackendConfig(
-            host="localhost",
-            port=8080,
-            logging={"level": "DEBUG"},
+        config = BackendConfig.model_validate(
+            {
+                "host": "localhost",
+                "port": 8080,
+                "logging": {"level": "DEBUG"},
+            }
         )
         assert config.logging.level == "DEBUG"
 
         # Invalid nested config
-        with pytest.raises(ValueError, match="logging.level must be one of"):
-            BackendConfig(
-                host="localhost",
-                port=8080,
-                logging={"level": "INVALID"},
+        with pytest.raises(ValueError, match=r"logging\.level must be one of"):
+            BackendConfig.model_validate(
+                {
+                    "host": "localhost",
+                    "port": 8080,
+                    "logging": {"level": "INVALID"},
+                }
             )
 
     def test_extra_fields_forbidden(self):
         """Test extra fields are rejected."""
         with pytest.raises(Exception) as exc_info:
-            BackendConfig(unknown_field="value")
+            BackendConfig.model_validate({"unknown_field": "value"})
         assert "Extra inputs are not permitted" in str(exc_info.value)
 
     def test_validate_assignment(self):
@@ -342,8 +359,8 @@ class TestBackendConfig:
         config = BackendConfig()
 
         # Valid assignments should work
-        config.host = "0.0.0.0"
-        assert config.host == "0.0.0.0"
+        config.host = "127.0.0.1"
+        assert config.host == "127.0.0.1"
 
         config.port = 9000
         assert config.port == 9000
@@ -356,7 +373,7 @@ class TestBackendConfig:
             config.port = 70000
         assert "Input should be less than or equal to 65535" in str(exc_info.value)
 
-        with pytest.raises(ValueError, match="logging.level must be one of"):
+        with pytest.raises(ValueError, match=r"logging\.level must be one of"):
             config.logging.level = "INVALID"
 
 
@@ -376,18 +393,18 @@ class TestConfig:
                 "default_time_in_force": "IOC",
             },
             "backend": {
-                "host": "0.0.0.0",
+                "host": "127.0.0.1",
                 "port": 9000,
                 "logging": {"level": "DEBUG"},
             },
         }
-        config = Config(**config_data)
+        config = Config.model_validate(config_data)
 
         assert config.hyperliquid.account_address == "0x1234567890123456789012345678901234567890"
         assert config.hyperliquid.network == NetworkType.MAINNET
         assert config.trading.default_slippage == Decimal("0.02")
         assert config.trading.default_time_in_force == OrderTif.IOC
-        assert config.backend.host == "0.0.0.0"
+        assert config.backend.host == "127.0.0.1"
         assert config.backend.port == 9000
         assert config.backend.logging.level == "DEBUG"
 
@@ -399,7 +416,7 @@ class TestConfig:
                 "private_key": "0x1234567890123456789012345678901234567890123456789012345678901234",
             }
         }
-        config = Config(**config_data)
+        config = Config.model_validate(config_data)
 
         assert config.hyperliquid.network == NetworkType.MAINNET  # Default
         assert config.trading.default_slippage == Decimal("0.01")  # Default
@@ -414,7 +431,7 @@ class TestConfig:
             "trading": {"default_slippage": "0.02"},
         }
         with pytest.raises(Exception) as exc_info:
-            Config(**config_data)
+            Config.model_validate(config_data)
         assert "hyperliquid" in str(exc_info.value)
 
     def test_extra_fields_forbidden(self):
@@ -427,7 +444,7 @@ class TestConfig:
             "unknown_section": "value",
         }
         with pytest.raises(Exception) as exc_info:
-            Config(**config_data)
+            Config.model_validate(config_data)
         assert "Extra inputs are not permitted" in str(exc_info.value)
 
     def test_nested_extra_fields_forbidden(self):
@@ -440,7 +457,7 @@ class TestConfig:
             }
         }
         with pytest.raises(Exception) as exc_info:
-            Config(**config_data)
+            Config.model_validate(config_data)
         assert "Extra inputs are not permitted" in str(exc_info.value)
 
     def test_from_dict_method(self):
@@ -451,7 +468,7 @@ class TestConfig:
                 "private_key": "0x1234567890123456789012345678901234567890123456789012345678901234",
             }
         }
-        config = Config(**config_data)
+        config = Config.model_validate(config_data)
         assert isinstance(config, Config)
         assert config.hyperliquid.account_address == "0x1234567890123456789012345678901234567890"
 
@@ -481,9 +498,9 @@ class TestConfig:
         finally:
             temp_path.unlink()
 
-    def test_from_file_not_found(self):
+    def test_from_file_not_found(self, tmp_path: Path):
         """Test from_file raises error for non-existent file."""
-        non_existent_path = Path("/tmp/does_not_exist_config.yaml")
+        non_existent_path = tmp_path / "does_not_exist_config.yaml"
         with pytest.raises(ConfigurationError, match="Configuration file not found"):
             Config.from_file(non_existent_path)
 
@@ -536,11 +553,13 @@ class TestConfig:
 
     def test_validate_assignment(self):
         """Test assignment validation works on nested configs."""
-        config = Config(
-            **{
+        config = Config.model_validate(
+            {
                 "hyperliquid": {
                     "account_address": "0x1234567890123456789012345678901234567890",
-                    "private_key": "0x1234567890123456789012345678901234567890123456789012345678901234",
+                    "private_key": (
+                        "0x1234567890123456789012345678901234567890123456789012345678901234"
+                    ),
                 }
             }
         )
@@ -584,7 +603,7 @@ class TestConfigIntegration:
             },
         }
 
-        config = Config(**config_data)
+        config = Config.model_validate(config_data)
 
         # Verify all values are correctly parsed and converted
         assert config.hyperliquid.account_address == "0xabcdef123456789012345678901234567890abcdef"
@@ -603,7 +622,7 @@ class TestConfigIntegration:
                 "private_key": "0x1234567890123456789012345678901234567890123456789012345678901234",
             }
         }
-        config = Config(**config_data)
+        config = Config.model_validate(config_data)
 
         # Test model_dump works
         data = config.model_dump()
@@ -627,7 +646,7 @@ class TestConfigIntegration:
             }
         }
 
-        original_config = Config(**config_dict)
+        original_config = Config.model_validate(config_dict)
 
         # Test copy
         copied_config = original_config.model_copy()

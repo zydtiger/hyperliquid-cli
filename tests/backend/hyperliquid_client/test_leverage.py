@@ -279,7 +279,11 @@ class TestHyperliquidClientLeverage:
         # Test isolated margin insufficient error
         mock_connection.exchange.update_leverage.return_value = {
             "status": "err",
-            "response": "Isolated position does not have sufficient margin available to decrease leverage. To decrease leverage, add margin to the position.",
+            "response": (
+                "Isolated position does not have sufficient margin available "
+                "to decrease leverage. To decrease leverage, add margin to "
+                "the position."
+            ),
         }
 
         result = client.change_leverage(5, "BTC", False)

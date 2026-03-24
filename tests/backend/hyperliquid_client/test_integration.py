@@ -47,7 +47,8 @@ class TestHyperliquidClientIntegration:
             max_leverage=25,
         )
 
-        # Custom retry operation for integration test - different methods need different return values
+        # Custom retry operation for this integration test.
+        # Different methods need different return values.
         def mock_retry_operation_integration(func):
             if func.__name__ == "_get_available_coins":
                 return ["BTC", "ETH", "SOL"]

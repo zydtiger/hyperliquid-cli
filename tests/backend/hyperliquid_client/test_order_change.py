@@ -399,7 +399,10 @@ class TestHyperliquidClientModifyOrder:
             order_id=123456,
             status=OrderStatus.REJECTED,
             message="Order modification failed",
-            error="Order 123456 is a market order and cannot be modified (only limit orders can be modified)",
+            error=(
+                "Order 123456 is a market order and cannot be modified "
+                "(only limit orders can be modified)"
+            ),
         )
         mock_connection.info.query_order_by_oid.return_value = market_order_response
 
@@ -410,7 +413,10 @@ class TestHyperliquidClientModifyOrder:
             order_id=123456,
             status=OrderStatus.REJECTED,
             message="Order modification failed",
-            error="Order 123456 is a market order and cannot be modified (only limit orders can be modified)",
+            error=(
+                "Order 123456 is a market order and cannot be modified "
+                "(only limit orders can be modified)"
+            ),
         )
         assert result == expected_result
 
