@@ -56,18 +56,24 @@ class OrderFormatter(
             lines.append("ORDER SUMMARY")
             lines.append("=" * 40)
 
-            lines.append(f"Side:        {data.side.upper()}")
-            lines.append(f"Coin:        {data.coin}")
-            lines.append(f"Quantity:    {data.quantity}")
+            lines.append(self._format_field("Side", data.side.upper()))
+            lines.append(self._format_field("Coin", data.coin))
+            lines.append(self._format_field("Quantity", data.quantity))
 
             if isinstance(data, LimitOrder):
-                lines.append("Type:        Limit Order")
-                lines.append(f"Price:       ${data.price}")
-                lines.append(f"TIF:         {data.time_in_force.value}")
+                lines.append(self._format_field("Type", "Limit Order"))
+                lines.append(self._format_field("Price", f"${data.price}"))
+                lines.append(self._format_field("TIF", data.time_in_force.value))
             else:
-                lines.append("Type:        Market Order")
+                lines.append(self._format_field("Type", "Market Order"))
 
-            lines.append(f"Reduce Only: {'Yes' if data.reduce_only else 'No'}")
+            lines.append(self._format_field("Reduce Only", "Yes" if data.reduce_only else "No"))
+            if data.trigger is None:
+                lines.append(self._format_field("Trigger", "No"))
+            else:
+                lines.append(self._format_field("Trigger", "Yes"))
+                lines.append(self._format_field("Trigger Type", data.trigger.trigger_type.name))
+                lines.append(self._format_field("Trigger Px", f"${data.trigger.trigger_price}"))
             lines.append("=" * 40)
 
             return "\n".join(lines)
@@ -93,33 +99,33 @@ class OrderFormatter(
         lines.append("=" * 50)
 
         # Basic order information
-        lines.append(f"Order ID:    {order.order_id}")
-        lines.append(f"Coin:        {order.coin}")
-        lines.append(f"Side:        {order.side.upper()}")
-        lines.append(f"Type:        {order.order_type.upper()}")
-        lines.append(f"Status:      {self._format_status(order.status)}")
+        lines.append(self._format_field("Order ID", order.order_id))
+        lines.append(self._format_field("Coin", order.coin))
+        lines.append(self._format_field("Side", order.side.upper()))
+        lines.append(self._format_field("Type", order.order_type.upper()))
+        lines.append(self._format_field("Status", self._format_status(order.status)))
 
         # Quantity information
-        lines.append(f"Quantity:    {order.quantity}")
-        lines.append(f"Filled:      {order.filled_quantity}")
-        lines.append(f"Remaining:   {order.remaining_quantity}")
+        lines.append(self._format_field("Quantity", order.quantity))
+        lines.append(self._format_field("Filled", order.filled_quantity))
+        lines.append(self._format_field("Remaining", order.remaining_quantity))
 
         # Price information
         if order.price is not None:
-            lines.append(f"Limit Price: ${order.price}")
+            lines.append(self._format_field("Limit Price", f"${order.price}"))
         else:
-            lines.append("Limit Price: N/A (Market Order)")
+            lines.append(self._format_field("Limit Price", "N/A (Market Order)"))
 
         if order.average_fill_price is not None:
-            lines.append(f"Avg Fill:    ${order.average_fill_price}")
+            lines.append(self._format_field("Avg Fill", f"${order.average_fill_price}"))
         else:
-            lines.append("Avg Fill:    N/A")
+            lines.append(self._format_field("Avg Fill", "N/A"))
 
         # Additional information
         if order.time_in_force is not None:
-            lines.append(f"TIF:         {order.time_in_force.value}")
-        lines.append(f"Reduce Only: {'Yes' if order.reduce_only else 'No'}")
-        lines.append(f"Timestamp:   {order.timestamp}")
+            lines.append(self._format_field("TIF", order.time_in_force.value))
+        lines.append(self._format_field("Reduce Only", "Yes" if order.reduce_only else "No"))
+        lines.append(self._format_field("Timestamp", order.timestamp))
 
         lines.append("=" * 50)
 
@@ -179,6 +185,10 @@ class OrderFormatter(
                 OrderStatus.PARTIALLY_FILLED: "🟡 PARTIALLY FILLED",
             }
         return status_map.get(status, status.value.upper())
+
+    def _format_field(self, label: str, value: Any) -> str:
+        """Format a label-value pair with right-aligned labels."""
+        return f"{label.ljust(12)}: {value}"
 
     def _format_order_infos(self, orders: list[OrderInfo]) -> str:
         """
