@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Path, status
 
 from models.api import BalanceInfo, CoinMetadata, ExchangeError, PositionInfo, Ticker
 from models.leverage import LeverageResult, LeverageUpdateRequest
+from models.margin import IsolatedMarginUpdateRequest, IsolatedMarginUpdateResult
 from models.order import (
     CancelOrderRequest,
     LimitOrder,
@@ -355,6 +356,37 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error changing leverage for {request.coin}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            ) from e
+
+    @app.post("/update_isolated_margin", response_model=IsolatedMarginUpdateResult)
+    async def update_isolated_margin(
+        request: IsolatedMarginUpdateRequest,
+    ) -> IsolatedMarginUpdateResult:
+        """
+        Update isolated margin for a specific position.
+
+        Request body:
+        {
+            "coin": str,      # Symbol of the cryptocurrency
+            "amount": decimal # Signed isolated margin delta in USD
+        }
+
+        Returns:
+            IsolatedMarginUpdateResult: Result of the isolated margin update operation
+        """
+        try:
+            return client.update_isolated_margin(
+                amount=request.amount,
+                coin=request.coin,
+            )
+        except ExchangeError as e:
+            logger.error(f"Exchange error updating isolated margin for {request.coin}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        except Exception as e:
+            logger.error(f"Unexpected error updating isolated margin for {request.coin}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",

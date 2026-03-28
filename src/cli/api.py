@@ -6,6 +6,7 @@ Hyperliquid backend FastAPI service, with proper error handling and type safety.
 """
 
 import logging
+from decimal import Decimal
 from typing import Any
 
 import httpx
@@ -22,6 +23,7 @@ from models.api import (
 )
 from models.config import Config
 from models.leverage import LeverageResult, LeverageUpdateRequest
+from models.margin import IsolatedMarginUpdateRequest, IsolatedMarginUpdateResult
 from models.order import (
     CancelOrderRequest,
     LimitOrder,
@@ -32,6 +34,7 @@ from models.order import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 class BackendAPI:
     """
@@ -410,6 +413,34 @@ class BackendAPI:
             return LeverageResult(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to change leverage for {coin}: {e}")
+            raise APIError(f"Connection error: {e!s}") from e
+
+    def update_isolated_margin(self, amount: Decimal, coin: str) -> IsolatedMarginUpdateResult:
+        """
+        Update isolated margin for a specific position.
+
+        Args:
+            amount: Signed isolated margin delta in USD
+            coin: Symbol of the cryptocurrency
+
+        Returns:
+            IsolatedMarginUpdateResult: Result of the isolated margin update operation
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            request = IsolatedMarginUpdateRequest(amount=amount, coin=coin)
+
+            response = self.client.post(
+                "/update_isolated_margin",
+                content=request.model_dump_json(),
+                headers={"Content-Type": "application/json"},
+            )
+            self._handle_response_error(response)
+            return IsolatedMarginUpdateResult(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to update isolated margin for {coin}: {e}")
             raise APIError(f"Connection error: {e!s}") from e
 
     def close(self) -> None:

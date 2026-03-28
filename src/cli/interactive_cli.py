@@ -6,6 +6,7 @@ for managing orders, positions, and account status.
 """
 
 import cmd
+from decimal import Decimal, InvalidOperation
 
 import typer
 
@@ -17,6 +18,7 @@ from .formatters import AccountFormatter, OrderFormatter, TableFormatter
 from .interactive import ModifyWizard, OrderWizard
 
 MIN_CHANGE_LEVERAGE_ARGS = 2
+MIN_UPDATE_MARGIN_ARGS = 2
 MIN_LEVERAGE = 1
 MAX_LEVERAGE = 250
 
@@ -588,6 +590,93 @@ class InteractiveCLI(cmd.Cmd):
         print("  - Isolated margin uses only the position's margin as collateral")
         print("  - Leverage values must be between 1 and 250")
 
+    def do_update_margin(self, args: str) -> None:
+        """
+        Update isolated margin for a specific position.
+        Usage: update_margin <coin> <amount>
+        Examples:
+          update_margin ETH 1
+          update_margin ETH -0.5
+        """
+        if not args.strip():
+            print("❌ Error: Coin and amount are required")
+            print("Usage: update_margin <coin> <amount>")
+            print("Example: update_margin ETH 1")
+            return
+
+        parts = args.strip().split()
+        if len(parts) < MIN_UPDATE_MARGIN_ARGS:
+            print("❌ Error: Margin amount is required")
+            print("Usage: update_margin <coin> <amount>")
+            print("Example: update_margin ETH 1")
+            return
+
+        coin = parts[0].upper()
+
+        try:
+            amount = Decimal(parts[1])
+        except InvalidOperation:
+            print("❌ Error: Margin amount must be a valid decimal value")
+            return
+
+        if amount == 0:
+            print("❌ Error: Margin amount must be non-zero")
+            return
+
+        try:
+            with BackendAPI(self.config) as api:
+                action = "Adding" if amount > 0 else "Removing"
+                direction = "to" if amount > 0 else "from"
+                print(f"⏳ {action} ${abs(amount):.2f} isolated margin {direction} {coin}...")
+
+                try:
+                    current_position = api.get_position(coin)
+                    print(f"📊 Current {coin} position:")
+                    formatter = AccountFormatter()
+                    print(formatter.format([current_position]))
+                    print()
+                except Exception:
+                    print(f"🔵 No current {coin} position found or error fetching position data")
+                    print()
+
+                result = api.update_isolated_margin(amount, coin)
+
+                if result.success:
+                    print("✅ Success!")
+                    print(f"💵 {result.message}")
+
+                    if result.updated_position:
+                        print()
+                        print("📊 Updated position:")
+                        formatter = AccountFormatter()
+                        print(formatter.format([result.updated_position]))
+                else:
+                    print("❌ Failed!")
+                    print(f"Error: {result.message}")
+
+        except Exception as e:
+            print(f"❌ Failed to update isolated margin: {e}")
+        finally:
+            print()
+
+    def help_update_margin(self) -> None:
+        """Show help for the update_margin command."""
+        print("update_margin - Update isolated margin for a specific position")
+        print("Usage: update_margin <coin> <amount>")
+        print()
+        print("Arguments:")
+        print("  coin      Symbol of the cryptocurrency (e.g., ETH, BTC, SOL)")
+        print("  amount    Signed USD margin delta; positive adds margin and negative removes")
+        print()
+        print("Examples:")
+        print("  update_margin ETH 1       # Add $1.00 isolated margin to ETH")
+        print("  update_margin ETH -0.5    # Remove $0.50 isolated margin from ETH")
+        print()
+        print("Notes:")
+        print("  - You must have an open isolated position for the specified coin")
+        print("  - Cross margin positions are not eligible for isolated margin updates")
+        print("  - Amounts must be non-zero and use at most 6 decimal places")
+
     def help_modify_order(self) -> None:
         """Show help for the modify_order command."""
         print("modify_order - Modify an existing order using interactive wizard")
@@ -620,6 +709,7 @@ class InteractiveCLI(cmd.Cmd):
             "cancel_order",
             "modify_order",
             "change_leverage",
+            "update_margin",
             "info",
             "status",
             "positions",

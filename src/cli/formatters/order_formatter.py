@@ -68,12 +68,6 @@ class OrderFormatter(
                 lines.append(self._format_field("Type", "Market Order"))
 
             lines.append(self._format_field("Reduce Only", "Yes" if data.reduce_only else "No"))
-            if data.trigger is None:
-                lines.append(self._format_field("Trigger", "No"))
-            else:
-                lines.append(self._format_field("Trigger", "Yes"))
-                lines.append(self._format_field("Trigger Type", data.trigger.trigger_type.name))
-                lines.append(self._format_field("Trigger Px", f"${data.trigger.trigger_price}"))
             lines.append("=" * 40)
 
             return "\n".join(lines)

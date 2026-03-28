@@ -731,6 +731,119 @@ curl -X POST http://localhost:8080/change_leverage \
 }
 ```
 
+#### POST /update_isolated_margin
+Update isolated margin for a specific position.
+
+The underlying Hyperliquid exchange call acknowledges success with:
+```json
+{
+  "status": "ok",
+  "response": {
+    "type": "default"
+  }
+}
+```
+
+The backend treats that exchange acknowledgement as success, then refreshes the position and returns the normalized API response below.
+
+**Request Body:**
+```json
+{
+  "coin": "ETH",
+  "amount": "1.0"
+}
+```
+
+**Parameters:**
+- `coin` (string, required): Symbol of the cryptocurrency
+- `amount` (decimal, required): Signed USD isolated margin delta; positive adds margin and negative removes
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Successfully added $1.00 isolated margin to ETH",
+  "updated_position": {
+    "coin": "ETH",
+    "size": "0.1",
+    "entry_price": "3000.0",
+    "mark_price": "3100.0",
+    "unrealized_pnl": "10.0",
+    "leverage": 15,
+    "leverage_type": "isolated",
+    "margin_used": "101.0",
+    "cum_funding": "0.5"
+  }
+}
+```
+
+`updated_position` may be `null` if the exchange update succeeds but the post-update position refresh fails.
+
+**Usage Example:**
+```bash
+# Add $1.00 isolated margin to ETH
+curl -X POST http://localhost:8080/update_isolated_margin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "ETH",
+    "amount": "1.0"
+  }'
+
+# Remove $0.50 isolated margin from ETH
+curl -X POST http://localhost:8080/update_isolated_margin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "ETH",
+    "amount": "-0.5"
+  }'
+
+# Response for successful add
+{
+  "success": true,
+  "message": "Successfully added $1.00 isolated margin to ETH",
+  "updated_position": {
+    "coin": "ETH",
+    "size": "0.1",
+    "entry_price": "3000.0",
+    "mark_price": "3100.0",
+    "unrealized_pnl": "10.0",
+    "leverage": 15,
+    "leverage_type": "isolated",
+    "margin_used": "101.0",
+    "cum_funding": "0.5"
+  }
+}
+
+# Response for successful removal
+{
+  "success": true,
+  "message": "Successfully removed $0.50 isolated margin from ETH",
+  "updated_position": {
+    "coin": "ETH",
+    "size": "0.1",
+    "entry_price": "3000.0",
+    "mark_price": "3100.0",
+    "unrealized_pnl": "10.0",
+    "leverage": 15,
+    "leverage_type": "isolated",
+    "margin_used": "100.5",
+    "cum_funding": "0.5"
+  }
+}
+
+# Response for invalid amount precision
+{
+  "detail": [
+    {
+      "type": "value_error",
+      "loc": ["body", "amount"],
+      "msg": "Value error, Amount must have at most 6 decimal places",
+      "input": "0.1234567"
+    }
+  ]
+}
+```
+
 ### Portfolio Endpoints
 
 #### GET /positions

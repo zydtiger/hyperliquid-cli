@@ -21,6 +21,7 @@ from models.api import (
 )
 from models.config import Config
 from models.leverage import LeverageResult
+from models.margin import IsolatedMarginUpdateResult, get_decimal_places
 from models.order import (
     LimitOrder,
     MarketOrder,
@@ -36,6 +37,7 @@ from .hyperliquid_connection import HyperliquidConnection
 
 MIN_LEVERAGE = 1
 MAX_LEVERAGE = 250
+MAX_DECIMALS = 6
 
 
 class HyperliquidClient:
@@ -1190,6 +1192,140 @@ class HyperliquidClient:
                 )
 
         return self.connection.retry_operation(_change_leverage)
+
+    def update_isolated_margin(self, amount: Decimal, coin: str) -> IsolatedMarginUpdateResult:
+        """
+        Update isolated margin for a specific position.
+
+        Args:
+            amount: Signed USD delta for isolated margin
+            coin: Symbol of the cryptocurrency
+
+        Returns:
+            IsolatedMarginUpdateResult: Result of the isolated margin update operation
+        """
+
+        def _update_isolated_margin() -> IsolatedMarginUpdateResult:  # noqa: PLR0911, PLR0912
+            try:
+                if not coin or not isinstance(coin, str):
+                    return IsolatedMarginUpdateResult(
+                        success=False,
+                        message="Invalid coin symbol: must be a non-empty string",
+                        updated_position=None,
+                    )
+
+                if not isinstance(amount, Decimal):
+                    try:
+                        parsed_amount = Decimal(str(amount))
+                    except Exception:
+                        return IsolatedMarginUpdateResult(
+                            success=False,
+                            message="Invalid amount: must be a valid decimal value",
+                            updated_position=None,
+                        )
+                else:
+                    parsed_amount = amount
+
+                if parsed_amount == 0:
+                    return IsolatedMarginUpdateResult(
+                        success=False,
+                        message="Invalid amount: isolated margin update amount must be non-zero",
+                        updated_position=None,
+                    )
+
+                decimal_places = get_decimal_places(parsed_amount)
+                if decimal_places > MAX_DECIMALS:
+                    return IsolatedMarginUpdateResult(
+                        success=False,
+                        message=(
+                            "Invalid amount: isolated margin update amount "
+                            "must have at most 6 decimal places"
+                        ),
+                        updated_position=None,
+                    )
+
+                current_position = next(
+                    (position for position in self.get_positions() if position.coin == coin),
+                    None,
+                )
+                if current_position is None:
+                    return IsolatedMarginUpdateResult(
+                        success=False,
+                        message=f"No open position found for {coin}",
+                        updated_position=None,
+                    )
+
+                if current_position.leverage_type != LeverageType.ISOLATED:
+                    return IsolatedMarginUpdateResult(
+                        success=False,
+                        message=(
+                            f"Cannot update isolated margin for {coin}: "
+                            "position is using cross margin"
+                        ),
+                        updated_position=None,
+                    )
+
+                result = self.connection.exchange.update_isolated_margin(float(parsed_amount), coin)
+                result_status = result.get("status")
+                response_payload = result.get("response")
+
+                if result_status == "ok":
+                    if isinstance(response_payload, dict) and response_payload.get("type") not in (
+                        None,
+                        "default",
+                    ):
+                        return IsolatedMarginUpdateResult(
+                            success=False,
+                            message=(
+                                f"Unexpected isolated margin response for {coin}: "
+                                f"{response_payload}"
+                            ),
+                            updated_position=None,
+                        )
+
+                    try:
+                        updated_positions = self.get_positions()
+                        updated_position = next(
+                            (position for position in updated_positions if position.coin == coin),
+                            None,
+                        )
+                    except Exception:
+                        updated_position = None
+
+                    action = "added" if parsed_amount > 0 else "removed"
+                    direction = "to" if parsed_amount > 0 else "from"
+                    return IsolatedMarginUpdateResult(
+                        success=True,
+                        message=(
+                            f"Successfully {action} ${abs(parsed_amount):.2f} "
+                            f"isolated margin {direction} {coin}"
+                        ),
+                        updated_position=updated_position,
+                    )
+
+                if isinstance(response_payload, dict):
+                    error_response = response_payload.get("error") or response_payload.get(
+                        "message"
+                    )
+                    if error_response is None:
+                        error_response = str(response_payload)
+                else:
+                    error_response = response_payload or "Unknown error"
+
+                return IsolatedMarginUpdateResult(
+                    success=False,
+                    message=f"Failed to update isolated margin for {coin}: {error_response}",
+                    updated_position=None,
+                )
+
+            except Exception as e:
+                return IsolatedMarginUpdateResult(
+                    success=False,
+                    message=f"Isolated margin update failed for {coin}: {e!s}",
+                    updated_position=None,
+                )
+
+        return self.connection.retry_operation(_update_isolated_margin)
 
     def _convert_tif_value(self, tif: OrderTif) -> Tif:
         if tif == OrderTif.GTC:

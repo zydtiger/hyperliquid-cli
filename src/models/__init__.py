@@ -27,6 +27,7 @@ from .config import (
     NetworkType,
     TradingConfig,
 )
+from .margin import IsolatedMarginUpdateRequest, IsolatedMarginUpdateResult
 from .order import (
     CancelOrderRequest,
     LimitOrder,
@@ -52,6 +53,8 @@ __all__ = [
     "HealthResponse",
     "HealthStatus",
     "HyperliquidConfig",
+    "IsolatedMarginUpdateRequest",
+    "IsolatedMarginUpdateResult",
     "LeverageType",
     "LimitOrder",
     "LoggingConfig",
