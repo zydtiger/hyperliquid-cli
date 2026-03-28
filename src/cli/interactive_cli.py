@@ -49,6 +49,10 @@ class InteractiveCLI(cmd.Cmd):
                 wizard = OrderWizard(self.config, api)
                 order = wizard.run()
 
+                if order.trigger is not None:
+                    print("🚧 Trigger orders are not wired to backend submission yet")
+                    return
+
                 print("⏳ Submitting order...")
 
                 # Submit order based on type
@@ -89,9 +93,10 @@ class InteractiveCLI(cmd.Cmd):
         print("- Setting price (for limit orders)")
         print("- Specifying quantity")
         print("- Configuring additional options")
+        print("- Optionally adding a trigger price with STOP/TAKE selection")
         print()
         print("The wizard provides market data suggestions and validates all inputs.")
-        print("Orders are submitted immediately upon confirmation.")
+        print("Orders without triggers are submitted immediately upon confirmation.")
 
     def do_status(self, args: str) -> None:
         """Show account status."""

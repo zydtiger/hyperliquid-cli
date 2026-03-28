@@ -37,7 +37,9 @@ from .order import (
     OrderSide,
     OrderStatus,
     OrderTif,
+    OrderTrigger,
     OrderType,
+    TriggerType,
 )
 
 __all__ = [
@@ -63,6 +65,7 @@ __all__ = [
     "OrderSide",
     "OrderStatus",
     "OrderTif",
+    "OrderTrigger",
     "OrderType",
     "PositionInfo",
     "RootResponse",
@@ -70,4 +73,5 @@ __all__ = [
     "StakingInfo",
     "Ticker",
     "TradingConfig",
+    "TriggerType",
 ]

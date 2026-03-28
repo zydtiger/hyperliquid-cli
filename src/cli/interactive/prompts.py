@@ -7,7 +7,7 @@ that can be shared across different CLI components.
 
 from decimal import Decimal, InvalidOperation
 
-from models import Config, OrderSide, OrderTif
+from models import Config, OrderSide, OrderTif, OrderTrigger, TriggerType
 
 from ..api import BackendAPI
 
@@ -15,9 +15,7 @@ DEFAULT_SIZE_DECIMALS = 2
 
 
 class Prompts:
-    """
-    Collection of interactive prompt methods for user input.
-    """
+    """Collection of interactive prompt methods for user input."""
 
     def __init__(self, config: Config, api: BackendAPI):
         """
@@ -256,6 +254,44 @@ class Prompts:
             if response in ["n", "no", "false", "0"]:
                 return False
             print("❌ Please enter 'y' (yes) or 'n' (no)")
+
+    def get_trigger_type_selection(self) -> TriggerType:
+        """Prompt user to select a trigger type."""
+        while True:
+            print("\n🎯 Select trigger type:")
+            print("1. STOP")
+            print("2. TAKE")
+
+            choice = input("Enter choice (1-2): ").strip()
+
+            if choice == "1":
+                return TriggerType.STOP
+            if choice == "2":
+                return TriggerType.TAKE
+            print("❌ Please enter 1 (STOP) or 2 (TAKE)")
+
+    def get_trigger_price_input(self, coin: str) -> Decimal:
+        """Prompt user to input trigger price."""
+        while True:
+            try:
+                trigger_price_input = input(f"📝 Enter trigger price for {coin}: ").strip()
+                trigger_price = Decimal(trigger_price_input)
+                if trigger_price <= 0:
+                    print("❌ Trigger price must be greater than 0")
+                    continue
+                return trigger_price
+            except (InvalidOperation, ValueError):
+                print("❌ Please enter a valid number (e.g., 45000.50)")
+
+    def get_trigger_input(self, coin: str) -> OrderTrigger | None:
+        """Prompt user to optionally configure a trigger."""
+        if not self.get_yes_no_input("\nAdd trigger price?", default=False):
+            return None
+
+        return OrderTrigger(
+            trigger_type=self.get_trigger_type_selection(),
+            trigger_price=self.get_trigger_price_input(coin),
+        )
 
 
 __all__ = [
