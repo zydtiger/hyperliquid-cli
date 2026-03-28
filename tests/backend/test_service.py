@@ -36,6 +36,7 @@ from models.api import (
 )
 from models.config import Config, HyperliquidConfig, NetworkType
 from models.leverage import LeverageResult
+from models.margin import IsolatedMarginUpdateResult
 from models.order import (
     LimitOrder,
     MarketOrder,
@@ -2143,3 +2144,86 @@ class TestChangeLeverageEndpoint(TestBackendService):
             mock_client.change_leverage.assert_called_once_with(
                 leverage=leverage, coin=coin, is_cross=is_cross
             )
+
+
+class TestUpdateIsolatedMarginEndpoint(TestBackendService):
+    """Test cases for the /update_isolated_margin endpoint."""
+
+    def test_update_isolated_margin_endpoint_success(
+        self, test_app: TestClient, mock_client: Mock, sample_position: PositionInfo
+    ):
+        """Test successful isolated margin update."""
+        mock_client.update_isolated_margin.return_value = IsolatedMarginUpdateResult(
+            success=True,
+            message="Successfully added $1.00 isolated margin to ETH",
+            updated_position=sample_position.model_copy(update={"coin": "ETH"}),
+        )
+
+        response = test_app.post(
+            "/update_isolated_margin",
+            json={"coin": "ETH", "amount": "1"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["message"] == "Successfully added $1.00 isolated margin to ETH"
+        assert data["updated_position"]["coin"] == "ETH"
+        mock_client.update_isolated_margin.assert_called_once_with(amount=Decimal("1"), coin="ETH")
+
+    def test_update_isolated_margin_endpoint_missing_required_fields(self, test_app: TestClient):
+        """Test isolated margin update with missing required fields."""
+        response = test_app.post(
+            "/update_isolated_margin",
+            json={"coin": "ETH"},
+        )
+        assert response.status_code == 422
+
+        response = test_app.post(
+            "/update_isolated_margin",
+            json={"amount": "1"},
+        )
+        assert response.status_code == 422
+
+    def test_update_isolated_margin_endpoint_zero_amount_validation(self, test_app: TestClient):
+        """Test isolated margin update with zero amount."""
+        response = test_app.post(
+            "/update_isolated_margin",
+            json={"coin": "ETH", "amount": "0"},
+        )
+        assert response.status_code == 422
+
+    def test_update_isolated_margin_endpoint_invalid_amount_validation(self, test_app: TestClient):
+        """Test isolated margin update with invalid amount values."""
+        response = test_app.post(
+            "/update_isolated_margin",
+            json={"coin": "ETH", "amount": "abc"},
+        )
+        assert response.status_code == 422
+
+        response = test_app.post(
+            "/update_isolated_margin",
+            json={"coin": "ETH", "amount": "0.1234567"},
+        )
+        assert response.status_code == 422
+
+    def test_update_isolated_margin_endpoint_argument_propagation(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test isolated margin update argument propagation to the client."""
+        mock_client.update_isolated_margin.return_value = IsolatedMarginUpdateResult(
+            success=False,
+            message="No open position found for ETH",
+            updated_position=None,
+        )
+
+        response = test_app.post(
+            "/update_isolated_margin",
+            json={"coin": "ETH", "amount": "-0.5"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is False
+        mock_client.update_isolated_margin.assert_called_once_with(
+            amount=Decimal("-0.5"), coin="ETH"
+        )
