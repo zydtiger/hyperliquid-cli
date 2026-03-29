@@ -77,6 +77,7 @@ class TestHyperliquidClientPositions:
             leverage=25,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("0.411524"),
+            removable_margin=Decimal("0"),
             cum_funding=Decimal("87.082076"),
         )
 
@@ -90,6 +91,7 @@ class TestHyperliquidClientPositions:
             leverage=10,
             leverage_type=LeverageType.CROSS,
             margin_used=Decimal("4.9"),
+            removable_margin=None,
             cum_funding=Decimal("120.5"),
         )
 
@@ -167,6 +169,63 @@ class TestHyperliquidClientPositions:
         result = client.get_positions()
 
         assert result == []
+
+    def test_get_positions_computes_positive_removable_margin(
+        self,
+        client,
+        mock_connection,
+        sample_meta_response,
+        sample_asset_ctxs_response,
+        mock_retry_operation,
+    ):
+        """Test removable margin calculation for isolated positions with excess margin."""
+        user_state = {
+            "assetPositions": [
+                {
+                    "type": "oneWay",
+                    "position": {
+                        "coin": "ETH",
+                        "szi": "0.02",
+                        "leverage": {"type": "isolated", "value": 5, "rawUsd": "-76.0"},
+                        "entryPx": "4000.0",
+                        "positionValue": "100.0",
+                        "unrealizedPnl": "2.0",
+                        "returnOnEquity": "0.1",
+                        "liquidationPx": "3200.0",
+                        "marginUsed": "30.0",
+                        "maxLeverage": 25,
+                        "cumFunding": {
+                            "allTime": "1.0",
+                            "sinceOpen": "0.0",
+                            "sinceChange": "0.0",
+                        },
+                    },
+                }
+            ]
+        }
+
+        mock_info = mock_connection.info
+        mock_info.user_state.return_value = user_state
+        mock_info.meta_and_asset_ctxs.return_value = (
+            sample_meta_response,
+            sample_asset_ctxs_response,
+        )
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        with patch.object(
+            client,
+            "get_ticker",
+            return_value=Ticker(
+                coin="ETH",
+                mark_price=Decimal("3000.0"),
+                funding_rate=Decimal("-0.0002"),
+                open_interest=Decimal("5000.0"),
+            ),
+        ):
+            result = client.get_positions()
+
+        assert len(result) == 1
+        assert result[0].removable_margin == Decimal("10.0")
 
     def test_get_positions_with_retry_failure(self, client, mock_connection):
         """Test retry failure when getting positions."""

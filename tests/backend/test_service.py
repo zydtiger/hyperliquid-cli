@@ -101,6 +101,7 @@ class TestBackendService:
             leverage=10,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("420.00"),
+            removable_margin=Decimal("25.00"),
             cum_funding=Decimal("15.25"),
         )
 
@@ -501,6 +502,7 @@ class TestRequestHandlers(TestBackendService):
                 "leverage": 10,
                 "leverage_type": "isolated",
                 "margin_used": "420.00",
+                "removable_margin": "25.00",
                 "cum_funding": "15.25",
             }
         ]
@@ -543,6 +545,7 @@ class TestRequestHandlers(TestBackendService):
             "leverage": 10,
             "leverage_type": "isolated",
             "margin_used": "420.00",
+            "removable_margin": "25.00",
             "cum_funding": "15.25",
         }
         assert response.json() == expected
@@ -559,6 +562,7 @@ class TestRequestHandlers(TestBackendService):
             leverage=5,
             leverage_type=LeverageType.CROSS,
             margin_used=Decimal("600.00"),
+            removable_margin=None,
             cum_funding=Decimal("5.00"),
         )
         mock_client.get_positions.return_value = [eth_position]
