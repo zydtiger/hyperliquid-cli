@@ -381,3 +381,135 @@ class TestHyperliquidClientGetOpenOrders:
 
         assert len(result) == 1
         assert result == [expected_single_order]
+
+
+class TestHyperliquidClientGetOrderHistory:
+    """Test cases for the get_order_history method."""
+
+    def test_get_order_history_success(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_historical_orders_response,
+        sample_user_fills_response,
+        expected_order_history,
+    ):
+        """Test successful filled-order history aggregation."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.historical_orders.return_value = sample_historical_orders_response
+        mock_connection.info.user_fills_by_time.return_value = sample_user_fills_response
+
+        result = client.get_order_history(10)
+
+        assert result == expected_order_history
+        mock_connection.info.historical_orders.assert_called_once_with(
+            "0x1234567890123456789012345678901234567890"
+        )
+        mock_connection.info.user_fills_by_time.assert_called_once()
+        call_args = mock_connection.info.user_fills_by_time.call_args[0]
+        assert call_args[0] == "0x1234567890123456789012345678901234567890"
+        assert call_args[1] == 1762271504000
+
+    def test_get_order_history_applies_limit(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_historical_orders_response,
+        sample_user_fills_response,
+        expected_order_history,
+    ):
+        """Test history retrieval applies the requested limit."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.historical_orders.return_value = sample_historical_orders_response
+        mock_connection.info.user_fills_by_time.return_value = sample_user_fills_response
+
+        result = client.get_order_history(1)
+
+        assert result == [expected_order_history[0]]
+        mock_connection.info.user_fills_by_time.assert_called_once_with(
+            "0x1234567890123456789012345678901234567890",
+            1762271507000,
+        )
+
+    def test_get_order_history_expands_until_limit_is_reached(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_historical_orders_response,
+        sample_user_fills_response,
+        expected_order_history,
+    ):
+        """Test history retrieval widens the fill query until enough rows are found."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.historical_orders.return_value = sample_historical_orders_response
+
+        def fills_for_start_time(_address: str, start_time: int):
+            if start_time == 1762271506000:
+                return sample_user_fills_response[:2]
+            if start_time == 1762271504000:
+                return sample_user_fills_response
+            raise AssertionError(f"Unexpected start_time: {start_time}")
+
+        mock_connection.info.user_fills_by_time.side_effect = fills_for_start_time
+
+        result = client.get_order_history(2)
+
+        assert result == expected_order_history
+        assert mock_connection.info.user_fills_by_time.call_args_list[0].args == (
+            "0x1234567890123456789012345678901234567890",
+            1762271506000,
+        )
+        assert mock_connection.info.user_fills_by_time.call_args_list[1].args == (
+            "0x1234567890123456789012345678901234567890",
+            1762271504000,
+        )
+
+    def test_get_order_history_empty(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test history retrieval when no filled entries are available."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.historical_orders.return_value = []
+        mock_connection.info.user_fills_by_time.return_value = []
+
+        result = client.get_order_history(10)
+
+        assert result == []
+
+    def test_get_order_history_historical_orders_error(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test history retrieval when historical_orders fails."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.historical_orders.side_effect = Exception("API Error")
+
+        with pytest.raises(ExchangeError) as exc_info:
+            client.get_order_history(10)
+
+        assert "Failed to get order history: API Error" in str(exc_info.value)
+
+    def test_get_order_history_user_fills_error(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_historical_orders_response,
+    ):
+        """Test history retrieval when user_fills_by_time fails."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.historical_orders.return_value = sample_historical_orders_response
+        mock_connection.info.user_fills_by_time.side_effect = Exception("Fill API Error")
+
+        with pytest.raises(ExchangeError) as exc_info:
+            client.get_order_history(10)
+
+        assert "Failed to get order history: Fill API Error" in str(exc_info.value)

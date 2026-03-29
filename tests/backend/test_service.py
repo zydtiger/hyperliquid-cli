@@ -41,6 +41,7 @@ from models.order import (
     LimitOrder,
     MarketOrder,
     ModifyOrderRequest,
+    OrderHistoryEntry,
     OrderInfo,
     OrderResult,
     OrderSide,
@@ -225,6 +226,42 @@ class TestBackendService:
         ]
 
     @pytest.fixture
+    def sample_order_history(self) -> list[OrderHistoryEntry]:
+        """Sample order history for testing."""
+        return [
+            OrderHistoryEntry(
+                time=1762271507000,
+                coin="ETH",
+                direction="Open Long",
+                price=Decimal("2020.6"),
+                size=Decimal("0.005"),
+                notional=Decimal("10.1030"),
+                fee=Decimal("0.004000"),
+                fee_usdc=Decimal("0.004000"),
+                fee_token="USDC",  # noqa: S106 - fee token symbol, not a credential
+                gross_closed_pnl=Decimal("0.300000"),
+                closed_pnl=Decimal("0.296000"),
+                order_id=333001,
+                status=OrderStatus.FILLED,
+            ),
+            OrderHistoryEntry(
+                time=1762271506000,
+                coin="BTC",
+                direction="Close Short",
+                price=Decimal("50000.0"),
+                size=Decimal("0.010000"),
+                notional=Decimal("500.000000"),
+                fee=Decimal("0.000010"),
+                fee_usdc=Decimal("0.500000"),
+                fee_token="BTC",  # noqa: S106 - fee token symbol, not a credential
+                gross_closed_pnl=Decimal("10.000000"),
+                closed_pnl=Decimal("9.500000"),
+                order_id=333002,
+                status=OrderStatus.FILLED,
+            ),
+        ]
+
+    @pytest.fixture
     def sample_balance(self) -> BalanceInfo:
         """Sample balance information for testing."""
         return BalanceInfo(
@@ -386,6 +423,7 @@ class TestRequestHandlers(TestBackendService):
             "/balances",
             "/order_status/{order_id}",
             "/open_orders",
+            "/order_history",
             "/market_order",
             "/limit_order",
             "/cancel_order",
@@ -814,6 +852,85 @@ class TestRequestHandlers(TestBackendService):
         mock_client.get_open_orders.side_effect = Exception("Network error")
 
         response = test_app.get("/open_orders")
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+
+    def test_order_history_endpoint_success(
+        self, test_app: TestClient, mock_client: Mock, sample_order_history: list[OrderHistoryEntry]
+    ):
+        """Test successful /order_history endpoint."""
+        mock_client.get_order_history.return_value = sample_order_history
+
+        response = test_app.get("/order_history?limit=10")
+
+        assert response.status_code == 200
+        assert response.json() == [
+            {
+                "time": 1762271507000,
+                "coin": "ETH",
+                "direction": "Open Long",
+                "price": "2020.6",
+                "size": "0.005",
+                "notional": "10.1030",
+                "fee": "0.004000",
+                "fee_usdc": "0.004000",
+                "fee_token": "USDC",
+                "gross_closed_pnl": "0.300000",
+                "closed_pnl": "0.296000",
+                "order_id": 333001,
+                "status": "filled",
+            },
+            {
+                "time": 1762271506000,
+                "coin": "BTC",
+                "direction": "Close Short",
+                "price": "50000.0",
+                "size": "0.010000",
+                "notional": "500.000000",
+                "fee": "0.000010",
+                "fee_usdc": "0.500000",
+                "fee_token": "BTC",
+                "gross_closed_pnl": "10.000000",
+                "closed_pnl": "9.500000",
+                "order_id": 333002,
+                "status": "filled",
+            },
+        ]
+        mock_client.get_order_history.assert_called_once_with(10)
+
+    def test_order_history_endpoint_empty(self, test_app: TestClient, mock_client: Mock):
+        """Test /order_history endpoint with no history."""
+        mock_client.get_order_history.return_value = []
+
+        response = test_app.get("/order_history")
+
+        assert response.status_code == 200
+        assert response.json() == []
+        mock_client.get_order_history.assert_called_once_with(10)
+
+    def test_order_history_endpoint_invalid_limit(self, test_app: TestClient, mock_client: Mock):
+        """Test /order_history endpoint with invalid limit."""
+        response = test_app.get("/order_history?limit=0")
+
+        assert response.status_code == 422
+        assert "greater than or equal to 1" in response.json()["detail"][0]["msg"]
+        mock_client.get_order_history.assert_not_called()
+
+    def test_order_history_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
+        """Test /order_history endpoint with exchange error."""
+        mock_client.get_order_history.side_effect = ExchangeError("Authentication failed")
+
+        response = test_app.get("/order_history")
+
+        assert response.status_code == 400
+        assert "Authentication failed" in response.json()["detail"]
+
+    def test_order_history_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
+        """Test /order_history endpoint with unexpected error."""
+        mock_client.get_order_history.side_effect = Exception("Network error")
+
+        response = test_app.get("/order_history")
 
         assert response.status_code == 500
         assert response.json()["detail"] == "Internal server error"
@@ -1658,6 +1775,7 @@ class TestIntegration(TestBackendService):
             leverage=10,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("420.00"),
+            removable_margin=Decimal("25.00"),
             cum_funding=Decimal("15.25"),
         )
         mock_client.get_positions.return_value = [position]
@@ -1917,6 +2035,7 @@ class TestChangeLeverageEndpoint(TestBackendService):
                 leverage=21,
                 leverage_type=LeverageType.CROSS,
                 margin_used=Decimal("14.29"),
+                removable_margin=None,
                 cum_funding=Decimal("0.5"),
             ),
         )
@@ -1953,6 +2072,7 @@ class TestChangeLeverageEndpoint(TestBackendService):
                 leverage=15,
                 leverage_type=LeverageType.ISOLATED,
                 margin_used=Decimal("166.67"),
+                removable_margin=Decimal("83.33"),
                 cum_funding=Decimal("1.2"),
             ),
         )

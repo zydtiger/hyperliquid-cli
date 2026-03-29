@@ -23,6 +23,7 @@ from models.config import Config, HyperliquidConfig, NetworkType, TradingConfig
 from models.order import (
     LimitOrder,
     MarketOrder,
+    OrderHistoryEntry,
     OrderInfo,
     OrderSide,
     OrderStatus,
@@ -615,5 +616,120 @@ def expected_open_orders() -> list[OrderInfo]:
             timestamp=1762271506634,
             reduce_only=False,
             time_in_force=OrderTif.GTC,
+        ),
+    ]
+
+
+@pytest.fixture
+def sample_historical_orders_response() -> list[dict[str, Any]]:
+    """Sample response from historical_orders API."""
+    return [
+        {
+            "status": "filled",
+            "statusTimestamp": 1762271507000,
+            "order": {"coin": "ETH", "side": "B", "oid": 333001},
+        },
+        {
+            "status": "filled",
+            "statusTimestamp": 1762271506000,
+            "order": {"coin": "BTC", "side": "S", "oid": 333002},
+        },
+        {
+            "status": "canceled",
+            "statusTimestamp": 1762271505000,
+            "order": {"coin": "DOGE", "side": "B", "oid": 333003},
+        },
+        {
+            "status": "filled",
+            "statusTimestamp": 1762271504000,
+            "order": {"coin": "SOL", "side": "B", "oid": 333004},
+        },
+    ]
+
+
+@pytest.fixture
+def sample_user_fills_response() -> list[dict[str, Any]]:
+    """Sample response from user_fills_by_time API."""
+    return [
+        {
+            "oid": 333001,
+            "coin": "ETH",
+            "dir": "Open Long",
+            "px": "2020.0",
+            "sz": "0.002",
+            "fee": "0.001500",
+            "feeToken": "USDC",
+            "closedPnl": "0.100000",
+            "time": 1762271506500,
+        },
+        {
+            "oid": 333001,
+            "coin": "ETH",
+            "dir": "Open Long",
+            "px": "2021.0",
+            "sz": "0.003",
+            "fee": "0.002500",
+            "feeToken": "USDC",
+            "closedPnl": "0.200000",
+            "time": 1762271506600,
+        },
+        {
+            "oid": 333002,
+            "coin": "BTC",
+            "dir": "Close Short",
+            "px": "50000.0",
+            "sz": "0.010000",
+            "fee": "0.000010",
+            "feeToken": "BTC",
+            "closedPnl": "10.000000",
+            "time": 1762271505900,
+        },
+        {
+            "oid": 333003,
+            "coin": "DOGE",
+            "dir": "Open Long",
+            "px": "0.09",
+            "sz": "1000.0",
+            "fee": "0.050000",
+            "feeToken": "USDC",
+            "closedPnl": "0.000000",
+            "time": 1762271504900,
+        },
+    ]
+
+
+@pytest.fixture
+def expected_order_history() -> list[OrderHistoryEntry]:
+    """Expected order history entries after aggregation."""
+    return [
+        OrderHistoryEntry(
+            time=1762271507000,
+            coin="ETH",
+            direction="Open Long",
+            price=Decimal("2020.6"),
+            size=Decimal("0.005"),
+            notional=Decimal("10.1030"),
+            fee=Decimal("0.004000"),
+            fee_usdc=Decimal("0.004000"),
+            fee_token="USDC",  # noqa: S106 - fee token symbol, not a credential
+            gross_closed_pnl=Decimal("0.300000"),
+            closed_pnl=Decimal("0.296000"),
+            order_id=333001,
+            status=OrderStatus.FILLED,
+        ),
+        OrderHistoryEntry(
+            time=1762271506000,
+            coin="BTC",
+            direction="Close Short",
+            price=Decimal("50000.0"),
+            size=Decimal("0.010000"),
+            notional=Decimal("500.000000"),
+            fee=Decimal("0.000010"),
+            fee_usdc=Decimal("0.500000"),
+            fee_token="BTC",  # noqa: S106 - fee token symbol, not a credential
+            gross_closed_pnl=Decimal("10.000000"),
+            closed_pnl=Decimal("9.500000"),
+            order_id=333002,
+            status=OrderStatus.FILLED,
         ),
     ]

@@ -10,6 +10,7 @@ from cli.interactive_cli import InteractiveCLI
 from models.api import LeverageType, PositionInfo
 from models.config import Config, HyperliquidConfig, NetworkType
 from models.margin import IsolatedMarginUpdateResult
+from models.order import OrderHistoryEntry, OrderStatus
 
 
 @pytest.fixture
@@ -118,7 +119,7 @@ def test_update_margin_shows_hint_and_calls_backend(
 
     assert created_apis[0].calls == [(Decimal("1"), "ETH")]
     assert "estimated removable isolated margin is up to $12.34" in output
-    assert "Updated hint: estimated removable isolated margin is $13.34" in output
+    assert "Updated hint: estimated removable isolated margin is up to $13.34" in output
 
 
 def test_update_margin_requires_existing_position(
@@ -159,3 +160,116 @@ def test_update_margin_requires_existing_position(
 
     assert created_apis[0].calls == []
     assert "No current ETH position found" in output
+
+
+@pytest.fixture
+def order_history_entries() -> list[OrderHistoryEntry]:
+    """Sample filled-order history entries for CLI tests."""
+    return [
+        OrderHistoryEntry(
+            time=1762271507000,
+            coin="ETH",
+            direction="Open Long",
+            price=Decimal("2020.6"),
+            size=Decimal("0.005"),
+            notional=Decimal("10.1030"),
+            fee=Decimal("0.004000"),
+            fee_usdc=Decimal("0.004000"),
+            fee_token="USDC",  # noqa: S106 - fee token symbol, not a credential
+            gross_closed_pnl=Decimal("0.300000"),
+            closed_pnl=Decimal("0.296000"),
+            order_id=333001,
+            status=OrderStatus.FILLED,
+        )
+    ]
+
+
+def test_order_history_defaults_to_ten(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+    order_history_entries: list[OrderHistoryEntry],
+):
+    """Test order_history defaults to 10 entries."""
+    created_apis = []
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            self.calls = []
+            created_apis.append(self)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_order_history(self, limit: int) -> list[OrderHistoryEntry]:
+            self.calls.append(limit)
+            return order_history_entries
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_order_history("")
+    output = capsys.readouterr().out
+
+    assert created_apis[0].calls == [10]
+    assert "Order History (1)" in output
+    assert "Time" in output
+    assert "Closed PnL" in output
+
+
+def test_order_history_uses_explicit_limit(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+    order_history_entries: list[OrderHistoryEntry],
+):
+    """Test order_history forwards the explicit limit."""
+    created_apis = []
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            self.calls = []
+            created_apis.append(self)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_order_history(self, limit: int) -> list[OrderHistoryEntry]:
+            self.calls.append(limit)
+            return order_history_entries
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_order_history("5")
+    capsys.readouterr()
+
+    assert created_apis[0].calls == [5]
+
+
+@pytest.mark.parametrize("args", ["abc", "0", "-1", "1 2"])
+def test_order_history_rejects_invalid_args(
+    args: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test order_history validates CLI arguments."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            raise AssertionError("BackendAPI should not be created for invalid args")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_order_history(args)
+    output = capsys.readouterr().out
+
+    assert "Usage: order_history [N]" in output
