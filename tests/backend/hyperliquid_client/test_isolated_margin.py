@@ -29,9 +29,12 @@ class TestHyperliquidClientIsolatedMargin:
             leverage=15,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("100"),
+            removable_margin=Decimal("80"),
             cum_funding=Decimal("0.5"),
         )
-        updated_position = current_position.model_copy(update={"margin_used": Decimal("101")})
+        updated_position = current_position.model_copy(
+            update={"margin_used": Decimal("101"), "removable_margin": Decimal("81")}
+        )
         mock_connection.exchange.update_isolated_margin.return_value = {
             "status": "ok",
             "response": {"type": "default"},
@@ -57,9 +60,12 @@ class TestHyperliquidClientIsolatedMargin:
             leverage=15,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("101"),
+            removable_margin=Decimal("81"),
             cum_funding=Decimal("0.5"),
         )
-        updated_position = current_position.model_copy(update={"margin_used": Decimal("100.5")})
+        updated_position = current_position.model_copy(
+            update={"margin_used": Decimal("100.5"), "removable_margin": Decimal("80.5")}
+        )
         mock_connection.exchange.update_isolated_margin.return_value = {
             "status": "ok",
             "response": {"type": "default"},
@@ -95,6 +101,7 @@ class TestHyperliquidClientIsolatedMargin:
             leverage=10,
             leverage_type=LeverageType.CROSS,
             margin_used=Decimal("500"),
+            removable_margin=None,
             cum_funding=Decimal("1.0"),
         )
 
@@ -151,6 +158,7 @@ class TestHyperliquidClientIsolatedMargin:
             leverage=15,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("100"),
+            removable_margin=Decimal("80"),
             cum_funding=Decimal("0.5"),
         )
         mock_connection.exchange.update_isolated_margin.return_value = {
@@ -179,6 +187,7 @@ class TestHyperliquidClientIsolatedMargin:
             leverage=15,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("100"),
+            removable_margin=Decimal("80"),
             cum_funding=Decimal("0.5"),
         )
         mock_connection.exchange.update_isolated_margin.return_value = {
@@ -205,6 +214,7 @@ class TestHyperliquidClientIsolatedMargin:
             leverage=15,
             leverage_type=LeverageType.ISOLATED,
             margin_used=Decimal("100"),
+            removable_margin=Decimal("80"),
             cum_funding=Decimal("0.5"),
         )
         mock_connection.exchange.update_isolated_margin.return_value = {
