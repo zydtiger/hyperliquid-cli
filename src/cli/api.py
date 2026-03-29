@@ -29,6 +29,7 @@ from models.order import (
     LimitOrder,
     MarketOrder,
     ModifyOrderRequest,
+    OrderHistoryEntry,
     OrderInfo,
     OrderResult,
 )
@@ -277,6 +278,27 @@ class BackendAPI:
             return [OrderInfo(**order) for order in response.json()]
         except httpx.RequestError as e:
             logger.error(f"Failed to get open orders: {e}")
+            raise APIError(f"Connection error: {e!s}") from e
+
+    def get_order_history(self, limit: int = 10) -> list[OrderHistoryEntry]:
+        """
+        Get recent filled-order history for the account.
+
+        Args:
+            limit: Maximum number of entries to return
+
+        Returns:
+            List[OrderHistoryEntry]: Recent filled-order history entries
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.get("/order_history", params={"limit": limit})
+            self._handle_response_error(response)
+            return [OrderHistoryEntry(**order) for order in response.json()]
+        except httpx.RequestError as e:
+            logger.error(f"Failed to get order history: {e}")
             raise APIError(f"Connection error: {e!s}") from e
 
     def submit_market_order(self, order: MarketOrder) -> OrderResult:

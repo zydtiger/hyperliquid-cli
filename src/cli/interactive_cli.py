@@ -22,6 +22,7 @@ MIN_CHANGE_LEVERAGE_ARGS = 2
 MIN_UPDATE_MARGIN_ARGS = 2
 MIN_LEVERAGE = 1
 MAX_LEVERAGE = 250
+DEFAULT_ORDER_HISTORY_LIMIT = 10
 
 
 class InteractiveCLI(cmd.Cmd):
@@ -381,6 +382,58 @@ class InteractiveCLI(cmd.Cmd):
         print()
         print("The orders are displayed in a clean table format for easy scanning.")
         print("If no open orders exist, a message indicating this will be shown.")
+
+    def do_order_history(self, args: str) -> None:
+        """
+        Get recent filled-order history for the account.
+
+        Usage: order_history [N]
+        """
+        parts = args.strip().split()
+        if len(parts) > 1:
+            print("❌ Error: Too many arguments")
+            print("Usage: order_history [N]")
+            print("Example: order_history 5")
+            return
+
+        limit = DEFAULT_ORDER_HISTORY_LIMIT
+        if parts:
+            try:
+                limit = int(parts[0])
+                if limit <= 0:
+                    raise ValueError("N must be a positive integer")
+            except ValueError as e:
+                print(f"❌ Invalid history limit: {e}")
+                print("Usage: order_history [N]")
+                print("Example: order_history 5")
+                return
+
+        try:
+            with BackendAPI(self.config) as api:
+                formatter = OrderFormatter()
+                history = api.get_order_history(limit)
+                if history:
+                    print(formatter.format(history))
+                else:
+                    print("No filled orders found.")
+                print()
+        except Exception as e:
+            print(f"❌ Error fetching order history: {e}")
+
+    def help_order_history(self) -> None:
+        """Show help for the order_history command."""
+        print("order_history - Get recent filled-order history")
+        print("Usage: order_history [N]")
+        print()
+        print("Arguments:")
+        print("  N           Optional positive integer number of entries to display")
+        print()
+        print("Examples:")
+        print("  order_history")
+        print("  order_history 5")
+        print()
+        print(f"If N is omitted, the default is {DEFAULT_ORDER_HISTORY_LIMIT}.")
+        print("Only filled orders are included, ordered newest first.")
 
     def do_cancel_order(self, args: str) -> None:
         """
@@ -744,6 +797,7 @@ class InteractiveCLI(cmd.Cmd):
             "order",
             "order_status",
             "open_orders",
+            "order_history",
             "cancel_order",
             "modify_order",
             "change_leverage",

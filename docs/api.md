@@ -257,6 +257,62 @@ curl http://localhost:8080/open_orders
 []
 ```
 
+#### GET /order_history
+Get recent filled-order history for the configured account.
+
+**Query Parameters:**
+- `limit` (integer, optional): Maximum number of filled history entries to return. Defaults to `10`. Minimum value is `1`.
+
+**Response:**
+```json
+[
+  {
+    "time": 1762271507000,
+    "coin": "ETH",
+    "direction": "Open Long",
+    "price": "2020.6",
+    "size": "0.005",
+    "notional": "10.1030",
+    "fee": "0.004000",
+    "fee_usdc": "0.004000",
+    "fee_token": "USDC",
+    "gross_closed_pnl": "0.300000",
+    "closed_pnl": "0.296000",
+    "order_id": 333001,
+    "status": "filled"
+  }
+]
+```
+
+**Field Descriptions:**
+- `time`: Fill completion timestamp in Unix milliseconds
+- `coin`: Trading pair symbol
+- `direction`: Exchange-reported fill direction
+- `price`: Average fill price across all fills for the order
+- `size`: Total filled size
+- `notional`: Total filled notional
+- `fee`: Total fee in the reported fee token
+- `fee_usdc`: Fee converted to USDC when possible
+- `fee_token`: Fee token symbol
+- `gross_closed_pnl`: Closed PnL before fees
+- `closed_pnl`: Closed PnL after fees
+- `order_id`: Unique order identifier from the exchange
+- `status`: Historical order status. This endpoint currently returns filled orders only.
+
+**Error Responses:**
+- `400 Bad Request`: Exchange error or authentication issue
+- `422 Unprocessable Entity`: Invalid `limit` query parameter
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Get the 10 most recent filled orders
+curl "http://localhost:8080/order_history"
+
+# Get the 5 most recent filled orders
+curl "http://localhost:8080/order_history?limit=5"
+```
+
 #### POST /market_order
 Submit a market order for immediate execution at the best available price.
 

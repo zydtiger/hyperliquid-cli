@@ -5,17 +5,26 @@ This module provides formatting utilities for displaying order information
 in a user-friendly way.
 """
 
+from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from models import LimitOrder, MarketOrder
-from models.order import OrderInfo, OrderResult, OrderStatus
+from models.order import OrderHistoryEntry, OrderInfo, OrderResult, OrderStatus
 
 from .base import Formatter
 from .table_formatter import TableFormatter
 
 
 class OrderFormatter(
-    Formatter[MarketOrder | LimitOrder | OrderInfo | OrderResult | list[OrderInfo]]
+    Formatter[
+        MarketOrder
+        | LimitOrder
+        | OrderInfo
+        | OrderResult
+        | list[OrderInfo]
+        | list[OrderHistoryEntry]
+    ]
 ):
     """
     Formatter class for order data display.
@@ -23,7 +32,14 @@ class OrderFormatter(
 
     def format(
         self,
-        data: MarketOrder | LimitOrder | OrderInfo | OrderResult | list[OrderInfo],
+        data: (
+            MarketOrder
+            | LimitOrder
+            | OrderInfo
+            | OrderResult
+            | list[OrderInfo]
+            | list[OrderHistoryEntry]
+        ),
         **kwargs: Any,
     ) -> str:
         """
@@ -39,7 +55,11 @@ class OrderFormatter(
         """
         # Handle List[OrderInfo] objects (multiple orders display)
         if isinstance(data, list) and all(isinstance(item, OrderInfo) for item in data):
-            return self._format_order_infos(data)
+            return self._format_order_infos(data)  # type: ignore
+
+        # Handle List[OrderHistoryEntry] objects (filled order history display)
+        if isinstance(data, list) and all(isinstance(item, OrderHistoryEntry) for item in data):
+            return self._format_order_history(data)  # type: ignore
 
         # Handle OrderResult objects (order submission result)
         if isinstance(data, OrderResult):
@@ -74,7 +94,8 @@ class OrderFormatter(
 
         raise ValueError(
             f"Unsupported data type: {type(data)}. Expected MarketOrder, "
-            "LimitOrder, OrderInfo, OrderResult, or List[OrderInfo]."
+            "LimitOrder, OrderInfo, OrderResult, List[OrderInfo], "
+            "or List[OrderHistoryEntry]."
         )
 
     def _format_order_info(self, order: OrderInfo) -> str:
@@ -237,6 +258,42 @@ class OrderFormatter(
         # Use TableFormatter to create the table
         table_formatter = TableFormatter()
         return table_formatter.format((headers, rows), title=f"Open Orders ({len(orders)})")
+
+    def _format_order_history(self, entries: list[OrderHistoryEntry]) -> str:
+        """Format filled-order history as a table."""
+        if not entries:
+            return "No filled orders found."
+
+        headers = ["Time", "Coin", "Direction", "Price", "Size", "Value", "Fee", "Closed PnL"]
+        rows = [
+            [
+                self._format_timestamp(entry.time),
+                entry.coin,
+                entry.direction,
+                self._format_price(entry.price),
+                f"{entry.size:,.6f}",
+                f"${entry.notional:,.2f}",
+                self._format_fee(entry.fee, entry.fee_token),
+                f"${entry.closed_pnl:+,.2f}",
+            ]
+            for entry in entries
+        ]
+
+        table_formatter = TableFormatter()
+        return table_formatter.format((headers, rows), title=f"Order History ({len(entries)})")
+
+    def _format_fee(self, fee: Decimal, fee_token: str) -> str:
+        """Format fee with token symbol."""
+        return f"{fee:,.6f} {fee_token}".rstrip("0").rstrip(".")
+
+    def _format_price(self, price: Decimal) -> str:
+        """Format a price with grouping and variable precision."""
+        price_str = f"{price:,.6f}".rstrip("0").rstrip(".")
+        return f"${price_str or '0'}"
+
+    def _format_timestamp(self, timestamp_ms: int) -> str:
+        """Format an exchange timestamp in local time."""
+        return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%m/%d/%Y %H:%M:%S")
 
 
 __all__ = [

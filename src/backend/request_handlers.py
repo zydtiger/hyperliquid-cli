@@ -6,8 +6,9 @@ through HTTP requests with proper error handling and response formatting.
 """
 
 import logging
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Path, status
+from fastapi import FastAPI, HTTPException, Path, Query, status
 
 from models.api import BalanceInfo, CoinMetadata, ExchangeError, PositionInfo, Ticker
 from models.leverage import LeverageResult, LeverageUpdateRequest
@@ -17,6 +18,7 @@ from models.order import (
     LimitOrder,
     MarketOrder,
     ModifyOrderRequest,
+    OrderHistoryEntry,
     OrderInfo,
     OrderResult,
 )
@@ -225,6 +227,31 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting open orders: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            ) from e
+
+    @app.get("/order_history")
+    async def get_order_history(
+        limit: Annotated[int, Query(ge=1, description="Maximum entries to return")] = 10,
+    ) -> list[OrderHistoryEntry]:
+        """
+        Get recent filled-order history for the configured account.
+
+        Args:
+            limit: Maximum number of entries to return
+
+        Returns:
+            List[OrderHistoryEntry]: Filled-order history entries
+        """
+        try:
+            return client.get_order_history(limit)
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting order history: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        except Exception as e:
+            logger.error(f"Unexpected error getting order history: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",

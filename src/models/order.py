@@ -100,6 +100,24 @@ class OrderInfo(BaseModel):
     time_in_force: OrderTif | None = Field(None, description="Time-in-force policy")
 
 
+class OrderHistoryEntry(BaseModel):
+    """Aggregated filled-order history entry."""
+
+    time: int = Field(..., description="Fill completion timestamp in milliseconds")
+    coin: str = Field(..., description="Trading pair symbol")
+    direction: str = Field(..., description="Exchange-reported fill direction")
+    price: Decimal = Field(..., description="Average fill price")
+    size: Decimal = Field(..., description="Filled size")
+    notional: Decimal = Field(..., description="Total filled notional")
+    fee: Decimal = Field(..., description="Total fee in fee token units")
+    fee_usdc: Decimal = Field(..., description="Fee converted to USDC when possible")
+    fee_token: str = Field(..., description="Fee token symbol")
+    gross_closed_pnl: Decimal = Field(..., description="Closed PnL before fees")
+    closed_pnl: Decimal = Field(..., description="Closed PnL after fees")
+    order_id: int = Field(..., description="Order identifier")
+    status: OrderStatus = Field(..., description="Historical order status")
+
+
 class CancelOrderRequest(BaseModel):
     """Request model for cancel order endpoint."""
 
@@ -123,6 +141,7 @@ __all__ = [
     "LimitOrder",
     "MarketOrder",
     "ModifyOrderRequest",
+    "OrderHistoryEntry",
     "OrderInfo",
     "OrderResult",
     "OrderSide",
