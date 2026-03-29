@@ -109,20 +109,28 @@ class AccountFormatter(Formatter[BalanceInfo | list[PositionInfo]]):
         if not positions:
             return "\nNo open positions"
 
+        show_removable_margin = any(position.removable_margin is not None for position in positions)
         data = [["Coin", "Size", "Entry", "Mark", "PnL", "Leverage", "Margin"]]
+        if show_removable_margin:
+            data[0].append("Removable")
 
         for position in positions:
-            data.append(
-                [
-                    position.coin,
-                    f"{position.size:,.6f}",
-                    f"${position.entry_price:,.2f}",
-                    f"${position.mark_price:,.2f}",
-                    f"${position.unrealized_pnl:+,.2f}",
-                    f"{position.leverage}x",
-                    f"${position.margin_used:,.2f}",
-                ]
-            )
+            row = [
+                position.coin,
+                f"{position.size:,.6f}",
+                f"${position.entry_price:,.2f}",
+                f"${position.mark_price:,.2f}",
+                f"${position.unrealized_pnl:+,.2f}",
+                f"{position.leverage}x",
+                f"${position.margin_used:,.2f}",
+            ]
+            if show_removable_margin:
+                row.append(
+                    f"${position.removable_margin:,.2f}"
+                    if position.removable_margin is not None
+                    else ""
+                )
+            data.append(row)
 
         return self.table_formatter.format(
             (data[0], data[1:]), title=f"Current Positions ({len(positions)})"

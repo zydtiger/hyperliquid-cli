@@ -10,6 +10,7 @@ from decimal import Decimal, InvalidOperation
 
 import typer
 
+from models.api import LeverageType, PositionInfo
 from models.config import Config
 from models.order import LimitOrder
 
@@ -590,6 +591,45 @@ class InteractiveCLI(cmd.Cmd):
         print("  - Isolated margin uses only the position's margin as collateral")
         print("  - Leverage values must be between 1 and 250")
 
+    def _print_position(self, title: str, position: PositionInfo) -> None:
+        """Print a single position using the account formatter."""
+        print(title)
+        formatter = AccountFormatter()
+        print(formatter.format([position]))
+
+    def _print_removable_margin_hint(self, position: PositionInfo, prefix: str = "💡 Hint") -> None:
+        """Print the removable isolated margin hint when available."""
+        if position.removable_margin is None:
+            return
+
+        print(
+            f"{prefix}: estimated removable isolated margin is up to "
+            f"${position.removable_margin:,.2f}"
+        )
+
+    def _get_update_margin_position(self, api: BackendAPI, coin: str) -> PositionInfo | None:
+        """Fetch and validate the position required for isolated margin updates."""
+        try:
+            current_position = api.get_position(coin)
+        except Exception:
+            print(f"❌ No current {coin} position found")
+            print()
+            return None
+
+        self._print_position(f"📊 Current {coin} position:", current_position)
+        print()
+
+        if current_position.leverage_type != LeverageType.ISOLATED:
+            print(f"❌ {coin} is using cross margin; isolated margin updates are unavailable")
+            print()
+            return None
+
+        self._print_removable_margin_hint(current_position)
+        if current_position.removable_margin is not None:
+            print()
+
+        return current_position
+
     def do_update_margin(self, args: str) -> None:
         """
         Update isolated margin for a specific position.
@@ -627,17 +667,11 @@ class InteractiveCLI(cmd.Cmd):
             with BackendAPI(self.config) as api:
                 action = "Adding" if amount > 0 else "Removing"
                 direction = "to" if amount > 0 else "from"
-                print(f"⏳ {action} ${abs(amount):.2f} isolated margin {direction} {coin}...")
+                current_position = self._get_update_margin_position(api, coin)
+                if current_position is None:
+                    return
 
-                try:
-                    current_position = api.get_position(coin)
-                    print(f"📊 Current {coin} position:")
-                    formatter = AccountFormatter()
-                    print(formatter.format([current_position]))
-                    print()
-                except Exception:
-                    print(f"🔵 No current {coin} position found or error fetching position data")
-                    print()
+                print(f"⏳ {action} ${abs(amount):.2f} isolated margin {direction} {coin}...")
 
                 result = api.update_isolated_margin(amount, coin)
 
@@ -647,9 +681,12 @@ class InteractiveCLI(cmd.Cmd):
 
                     if result.updated_position:
                         print()
-                        print("📊 Updated position:")
-                        formatter = AccountFormatter()
-                        print(formatter.format([result.updated_position]))
+                        self._print_position("📊 Updated position:", result.updated_position)
+                        if result.updated_position.removable_margin is not None:
+                            print()
+                            self._print_removable_margin_hint(
+                                result.updated_position, prefix="💡 Updated hint"
+                            )
                 else:
                     print("❌ Failed!")
                     print(f"Error: {result.message}")
@@ -675,6 +712,7 @@ class InteractiveCLI(cmd.Cmd):
         print("Notes:")
         print("  - You must have an open isolated position for the specified coin")
         print("  - Cross margin positions are not eligible for isolated margin updates")
+        print("  - The command shows an estimated removable isolated margin hint first")
         print("  - Amounts must be non-zero and use at most 6 decimal places")
 
     def help_modify_order(self) -> None:

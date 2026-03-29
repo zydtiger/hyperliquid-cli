@@ -772,6 +772,7 @@ The backend treats that exchange acknowledgement as success, then refreshes the 
     "leverage": 15,
     "leverage_type": "isolated",
     "margin_used": "101.0",
+    "removable_margin": "13.34",
     "cum_funding": "0.5"
   }
 }
@@ -810,6 +811,7 @@ curl -X POST http://localhost:8080/update_isolated_margin \
     "leverage": 15,
     "leverage_type": "isolated",
     "margin_used": "101.0",
+    "removable_margin": "13.34",
     "cum_funding": "0.5"
   }
 }
@@ -827,6 +829,7 @@ curl -X POST http://localhost:8080/update_isolated_margin \
     "leverage": 15,
     "leverage_type": "isolated",
     "margin_used": "100.5",
+    "removable_margin": "12.84",
     "cum_funding": "0.5"
   }
 }
@@ -849,6 +852,8 @@ curl -X POST http://localhost:8080/update_isolated_margin \
 #### GET /positions
 Get all current open positions for the configured account.
 
+`removable_margin` is an estimated isolated-margin removal hint. It is `null` for cross-margin positions.
+
 **Response:**
 ```json
 [
@@ -861,6 +866,7 @@ Get all current open positions for the configured account.
     "leverage": 10,
     "leverage_type": "isolated",
     "margin_used": "420.00",
+    "removable_margin": "25.00",
     "cum_funding": "15.25"
   },
   ...

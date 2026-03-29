@@ -40,6 +40,20 @@ MAX_LEVERAGE = 250
 MAX_DECIMALS = 6
 
 
+def calculate_removable_margin(
+    position_value: Decimal,
+    leverage: int,
+    margin_used: Decimal,
+    leverage_type: LeverageType,
+) -> Decimal | None:
+    """Estimate removable isolated margin from current position requirements."""
+    if leverage_type != LeverageType.ISOLATED:
+        return None
+
+    removable_margin = margin_used - (position_value / Decimal(leverage))
+    return max(removable_margin, Decimal("0"))
+
+
 class HyperliquidClient:
     """
     High-level client for interacting with the Hyperliquid exchange.
@@ -346,11 +360,18 @@ class HyperliquidClient:
                     coin = position["position"]["coin"]
                     size = Decimal(str(position["position"]["szi"]))
                     entry_price = Decimal(str(position["position"]["entryPx"]))
+                    position_value = Decimal(str(position["position"]["positionValue"]))
                     mark_price = self.get_ticker(coin).mark_price
                     unrealized_pnl = Decimal(str(position["position"]["unrealizedPnl"]))
                     leverage = position["position"]["leverage"]["value"]
                     leverage_type = LeverageType(position["position"]["leverage"]["type"])
                     margin_used = Decimal(str(position["position"]["marginUsed"]))
+                    removable_margin = calculate_removable_margin(
+                        position_value=position_value,
+                        leverage=leverage,
+                        margin_used=margin_used,
+                        leverage_type=leverage_type,
+                    )
                     cum_funding = Decimal(str(position["position"]["cumFunding"]["allTime"]))
 
                     positions.append(
@@ -363,6 +384,7 @@ class HyperliquidClient:
                             leverage=leverage,
                             leverage_type=leverage_type,
                             margin_used=margin_used,
+                            removable_margin=removable_margin,
                             cum_funding=cum_funding,
                         )
                     )

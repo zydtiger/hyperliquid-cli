@@ -94,6 +94,13 @@ class PositionInfo(BaseModel):
     leverage: int = Field(..., description="Position leverage")
     leverage_type: LeverageType = Field(..., description="Type of leverage (isolated or cross)")
     margin_used: Decimal = Field(..., description="Margin used for the position")
+    removable_margin: Decimal | None = Field(
+        None,
+        description=(
+            "Estimated removable isolated margin based on current position margin "
+            "requirements; null for cross positions"
+        ),
+    )
     cum_funding: Decimal = Field(..., description="Cumulative funding payments")
 
 
