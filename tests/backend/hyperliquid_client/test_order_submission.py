@@ -11,6 +11,7 @@ from unittest.mock import patch
 from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.order import (
     LimitOrder,
+    MarketOrder,
     OrderResult,
     OrderSide,
     OrderStatus,
@@ -209,6 +210,62 @@ class TestHyperliquidClientSubmitMarketOrder:
             error="Insufficient balance",
         )
         assert result == expected_result
+
+    def test_submit_market_order_resolves_spot_symbol(
+        self,
+        client,
+        mock_config_with_slippage,
+        market_success_response_resting,
+        mock_retry_operation,
+    ):
+        """Test market order submission resolves spot pair symbols to raw ids."""
+        with patch(
+            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            return_value=client.connection,
+        ):
+            client = HyperliquidClient(mock_config_with_slippage)
+
+        client.connection.info.spot_meta.return_value = {
+            "universe": [{"tokens": [441, 360], "name": "@441", "index": 441, "isCanonical": True}],
+            "tokens": [{}] * 442,
+        }
+        client.connection.info.spot_meta.return_value["tokens"][360] = {
+            "name": "USDC",
+            "szDecimals": 6,
+            "weiDecimals": 6,
+            "index": 360,
+        }
+        client.connection.info.spot_meta.return_value["tokens"][441] = {
+            "name": "UBTC",
+            "szDecimals": 5,
+            "weiDecimals": 8,
+            "index": 441,
+        }
+        client.connection.exchange.market_open.return_value = market_success_response_resting  # type: ignore[attr-defined]
+        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+
+        result = client.submit_market_order(
+            MarketOrder(
+                coin="UBTC/USDC",
+                side=OrderSide.BUY,
+                quantity=Decimal("0.01"),
+                reduce_only=False,
+            )
+        )
+
+        assert result == OrderResult(
+            success=True,
+            order_id=123456789,
+            status=OrderStatus.OPEN,
+            message="Market order is resting on the book",
+        )
+        client.connection.exchange.market_open.assert_called_once_with(  # type: ignore[attr-defined]
+            name="@441",
+            is_buy=True,
+            sz=0.01,
+            px=None,
+            slippage=0.01,
+        )
 
 
 class TestHyperliquidClientSubmitLimitOrder:
@@ -499,3 +556,55 @@ class TestHyperliquidClientSubmitLimitOrder:
         # Verify SELL side maps to is_buy=False
         _args, kwargs = client.connection.exchange.order.call_args
         assert kwargs["is_buy"] is False
+
+    def test_submit_limit_order_resolves_spot_symbol(
+        self,
+        client,
+        limit_success_response_resting,
+        mock_retry_operation,
+    ):
+        """Test limit order submission resolves spot pair symbols to raw ids."""
+        client.connection.info.spot_meta.return_value = {
+            "universe": [{"tokens": [441, 360], "name": "@441", "index": 441, "isCanonical": True}],
+            "tokens": [{}] * 442,
+        }
+        client.connection.info.spot_meta.return_value["tokens"][360] = {
+            "name": "USDC",
+            "szDecimals": 6,
+            "weiDecimals": 6,
+            "index": 360,
+        }
+        client.connection.info.spot_meta.return_value["tokens"][441] = {
+            "name": "UBTC",
+            "szDecimals": 5,
+            "weiDecimals": 8,
+            "index": 441,
+        }
+        client.connection.exchange.order.return_value = limit_success_response_resting
+        client.connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.submit_limit_order(
+            LimitOrder(
+                coin="UBTC/USDC",
+                side=OrderSide.BUY,
+                quantity=Decimal("0.01"),
+                price=Decimal("95000.0"),
+                reduce_only=False,
+                time_in_force=OrderTif.GTC,
+            )
+        )
+
+        assert result == OrderResult(
+            success=True,
+            order_id=987654321,
+            status=OrderStatus.OPEN,
+            message="Limit order is resting on the book",
+        )
+        client.connection.exchange.order.assert_called_once_with(
+            name="@441",
+            is_buy=True,
+            sz=0.01,
+            limit_px=95000.0,
+            order_type={"limit": {"tif": "Gtc"}},
+            reduce_only=False,
+        )

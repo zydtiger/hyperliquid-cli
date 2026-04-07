@@ -32,6 +32,38 @@ class TestHyperliquidClientAvailableCoins:
         assert result == ["BTC", "ETH", "SOL"]
         mock_connection.retry_operation.assert_called_once()
 
+    def test_get_available_coins_includes_spot_pairs(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_meta_response,
+    ):
+        """Test available coins includes resolved spot pair symbols."""
+        mock_info = mock_connection.info
+        mock_info.meta.return_value = sample_meta_response
+        mock_info.spot_meta.return_value = {
+            "universe": [{"tokens": [441, 360], "name": "@441", "index": 441, "isCanonical": True}],
+            "tokens": [{}] * 442,
+        }
+        mock_info.spot_meta.return_value["tokens"][360] = {
+            "name": "USDC",
+            "szDecimals": 6,
+            "weiDecimals": 6,
+            "index": 360,
+        }
+        mock_info.spot_meta.return_value["tokens"][441] = {
+            "name": "UBTC",
+            "szDecimals": 5,
+            "weiDecimals": 8,
+            "index": 441,
+        }
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_available_coins()
+
+        assert result == ["BTC", "ETH", "SOL", "UBTC/USDC"]
+
     def test_get_available_coins_empty_universe(
         self,
         client,
