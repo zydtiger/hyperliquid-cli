@@ -203,6 +203,45 @@ class TestHyperliquidClientOrderStatus:
 
         assert "Failed to get order status: API Error" in str(exc_info.value)
 
+    def test_get_order_status_resolves_spot_symbol(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test spot order status returns the human-readable pair symbol."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = {
+            "order": {
+                "order": {
+                    "coin": "@142",
+                    "side": "B",
+                    "limitPx": "87000.0",
+                    "sz": "0.001",
+                    "oid": 220717680699,
+                    "timestamp": 1762141573999,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.001",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762141574000,
+            }
+        }
+        mock_connection.info.spot_meta.return_value = {
+            "universe": [{"tokens": [0, 1], "name": "@142", "index": 142, "isCanonical": True}],
+            "tokens": [
+                {"name": "BTC", "szDecimals": 5, "weiDecimals": 8, "index": 0},
+                {"name": "USDC", "szDecimals": 6, "weiDecimals": 6, "index": 1},
+            ],
+        }
+
+        result = client.get_order_status(220717680699)
+
+        assert result.coin == "BTC/USDC"
+        mock_connection.info.spot_meta.assert_called_once_with()
+
 
 class TestHyperliquidClientGetOpenOrders:
     """Test cases for the get_open_orders method."""
@@ -513,3 +552,45 @@ class TestHyperliquidClientGetOrderHistory:
             client.get_order_history(10)
 
         assert "Failed to get order history: Fill API Error" in str(exc_info.value)
+
+    def test_get_order_history_resolves_spot_symbol_and_fee_conversion(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test spot fills resolve to pair symbols before fee conversion."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.historical_orders.return_value = [
+            {
+                "status": "filled",
+                "statusTimestamp": 1762271507000,
+                "order": {"coin": "@142", "side": "B", "oid": 333142},
+            }
+        ]
+        mock_connection.info.user_fills_by_time.return_value = [
+            {
+                "oid": 333142,
+                "coin": "@142",
+                "dir": "Open Long",
+                "px": "50000.0",
+                "sz": "0.010000",
+                "fee": "0.000010",
+                "feeToken": "BTC",
+                "closedPnl": "0.000000",
+                "time": 1762271506900,
+            }
+        ]
+        mock_connection.info.spot_meta.return_value = {
+            "universe": [{"tokens": [0, 1], "name": "@142", "index": 142, "isCanonical": True}],
+            "tokens": [
+                {"name": "BTC", "szDecimals": 5, "weiDecimals": 8, "index": 0},
+                {"name": "USDC", "szDecimals": 6, "weiDecimals": 6, "index": 1},
+            ],
+        }
+
+        result = client.get_order_history(10)
+
+        assert len(result) == 1
+        assert result[0].coin == "BTC/USDC"
+        assert result[0].fee_usdc == Decimal("0.500000")

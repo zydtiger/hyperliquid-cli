@@ -652,6 +652,55 @@ class TestHyperliquidClientModifyOrder:
         assert result.success is True
         mock_connection.retry_operation.assert_called_once()
 
+    def test_modify_order_resolves_spot_symbol_for_exchange_request(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test spot order modification uses the resolved pair symbol."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = {
+            "order": {
+                "order": {
+                    "coin": "@142",
+                    "side": "B",
+                    "limitPx": "87000.0",
+                    "sz": "0.001",
+                    "oid": 123499,
+                    "timestamp": 1762271506999,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.001",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271507000,
+            }
+        }
+        mock_connection.info.spot_meta.return_value = {
+            "universe": [{"tokens": [0, 1], "name": "@142", "index": 142, "isCanonical": True}],
+            "tokens": [
+                {"name": "BTC", "szDecimals": 5, "weiDecimals": 8, "index": 0},
+                {"name": "USDC", "szDecimals": 6, "weiDecimals": 6, "index": 1},
+            ],
+        }
+        mock_connection.exchange.modify_order.return_value = {
+            "status": "ok",
+            "response": {"type": "order", "data": {"statuses": [{"resting": {"oid": 123499}}]}},
+        }
+
+        client.modify_order(123499, Decimal("88000.0"), Decimal("0.001"))
+
+        mock_connection.exchange.modify_order.assert_called_once_with(
+            oid=123499,
+            name="BTC/USDC",
+            is_buy=True,
+            sz=0.001,
+            limit_px=88000.0,
+            order_type={"limit": {"tif": "Gtc"}},
+        )
+
 
 class TestHyperliquidClientCancelOrder:
     """Test cases for the cancel_order method."""
@@ -1088,3 +1137,43 @@ class TestHyperliquidClientCancelOrder:
 
         assert result.success is True
         mock_connection.retry_operation.assert_called_once()
+
+    def test_cancel_specific_order_resolves_spot_symbol_for_exchange_request(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        cancel_success_response,
+    ):
+        """Test spot order cancellation uses the resolved pair symbol."""
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = {
+            "order": {
+                "order": {
+                    "coin": "@142",
+                    "side": "B",
+                    "limitPx": "87000.0",
+                    "sz": "0.001",
+                    "oid": 123500,
+                    "timestamp": 1762271507099,
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "0.001",
+                    "tif": "Gtc",
+                },
+                "status": "open",
+                "statusTimestamp": 1762271507100,
+            }
+        }
+        mock_connection.info.spot_meta.return_value = {
+            "universe": [{"tokens": [0, 1], "name": "@142", "index": 142, "isCanonical": True}],
+            "tokens": [
+                {"name": "BTC", "szDecimals": 5, "weiDecimals": 8, "index": 0},
+                {"name": "USDC", "szDecimals": 6, "weiDecimals": 6, "index": 1},
+            ],
+        }
+        mock_connection.exchange.cancel.return_value = cancel_success_response
+
+        client.cancel_order(123500)
+
+        mock_connection.exchange.cancel.assert_called_once_with("BTC/USDC", 123500)

@@ -5,7 +5,6 @@ This module provides step-by-step wizards for creating orders and
 configuring trading parameters.
 """
 
-
 from models import Config, LimitOrder, MarketOrder
 
 from ..api import BackendAPI

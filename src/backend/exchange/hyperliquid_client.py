@@ -5,6 +5,7 @@ This module provides a high-level client interface for the Hyperliquid exchange,
 handling data retrieval and portfolio management operations.
 """
 
+from collections.abc import Callable, Mapping
 from decimal import Decimal
 from typing import Any
 
@@ -40,6 +41,7 @@ from .hyperliquid_connection import HyperliquidConnection
 MIN_LEVERAGE = 1
 MAX_LEVERAGE = 250
 MAX_DECIMALS = 6
+SPOT_PAIR_TOKEN_COUNT = 2
 
 
 def decimal_value(value: Any) -> Decimal:
@@ -59,6 +61,36 @@ def fee_to_usdc(fee: Decimal, fee_token: str, coin: str, price: Decimal) -> Deci
         return fee * price
 
     return fee
+
+
+def build_spot_symbol_map(spot_meta: Mapping[str, Any]) -> dict[str, str]:
+    """Build a map from raw Hyperliquid spot ids to display symbols."""
+    symbol_map: dict[str, str] = {}
+    tokens = spot_meta.get("tokens", [])
+
+    for spot_info in spot_meta.get("universe", []):
+        raw_symbol = str(spot_info.get("name", ""))
+        token_indexes = spot_info.get("tokens", [])
+        if not raw_symbol or len(token_indexes) != SPOT_PAIR_TOKEN_COUNT:
+            continue
+
+        try:
+            base_info = tokens[token_indexes[0]]
+            quote_info = tokens[token_indexes[1]]
+        except (IndexError, TypeError):
+            continue
+
+        base = str(base_info.get("name", ""))
+        quote = str(quote_info.get("name", ""))
+        if base and quote:
+            symbol_map[raw_symbol] = f"{base}/{quote}"
+
+    return symbol_map
+
+
+def resolve_spot_symbol(coin: str, spot_symbol_map: Mapping[str, str]) -> str:
+    """Resolve a raw Hyperliquid spot coin id like @142 to BTC/USDC."""
+    return spot_symbol_map.get(coin, coin)
 
 
 def aggregate_fills_by_order(fills: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -115,6 +147,7 @@ def build_order_history_entries(
     historical_orders: list[dict[str, Any]],
     fills_by_order: dict[int, dict[str, Any]],
     limit: int,
+    resolve_coin: Callable[[str], str] | None = None,
 ) -> list[OrderHistoryEntry]:
     """Build filled-order history entries from historical orders and aggregated fills."""
     rows: list[OrderHistoryEntry] = []
@@ -135,10 +168,14 @@ def build_order_history_entries(
         if filled_size > 0:
             avg_price = fill_summary["notional"] / filled_size
 
+        coin = str(order.get("coin", ""))
+        if resolve_coin is not None:
+            coin = resolve_coin(coin)
+
         rows.append(
             OrderHistoryEntry(
                 time=int(entry.get("statusTimestamp") or fill_summary["last_fill_time"]),
-                coin=str(order.get("coin", "")),
+                coin=coin,
                 direction=fill_summary["dir"] or str(order.get("side", "")),
                 price=avg_price,
                 size=filled_size,
@@ -189,6 +226,23 @@ class HyperliquidClient:
         """
         self.config = config
         self.connection = HyperliquidConnection(config)
+        self._spot_symbol_map: dict[str, str] | None = None
+
+    def _get_spot_symbol_map(self) -> dict[str, str]:
+        """Load and cache raw spot-id to pair-symbol mappings."""
+        if self._spot_symbol_map is None:
+            self._spot_symbol_map = build_spot_symbol_map(self.connection.info.spot_meta())
+        return self._spot_symbol_map
+
+    def _resolve_coin_symbol(self, coin: str) -> str:
+        """Resolve raw exchange spot ids while leaving perp symbols untouched."""
+        if not coin.startswith("@"):
+            return coin
+
+        try:
+            return resolve_spot_symbol(coin, self._get_spot_symbol_map())
+        except Exception:
+            return coin
 
     def test_connection(self) -> bool:
         """
@@ -627,7 +681,7 @@ class HyperliquidClient:
 
                 return OrderInfo(
                     order_id=order_id,
-                    coin=order_data.get("coin", ""),
+                    coin=self._resolve_coin_symbol(order_data.get("coin", "")),
                     side=(OrderSide.BUY if order_data.get("side") == "B" else OrderSide.SELL),
                     order_type=order_type,
                     quantity=original_quantity,
@@ -726,11 +780,20 @@ class HyperliquidClient:
                         filled_entries[candidate_count - 1].get("statusTimestamp") or 0
                     )
                     fills = self.connection.info.user_fills_by_time(address, start_time)
-                    fills_by_order = aggregate_fills_by_order(fills)
+                    fills_by_order = aggregate_fills_by_order(
+                        [
+                            {
+                                **fill,
+                                "coin": self._resolve_coin_symbol(str(fill.get("coin", ""))),
+                            }
+                            for fill in fills
+                        ]
+                    )
                     rows = build_order_history_entries(
                         filled_entries[:candidate_count],
                         fills_by_order,
                         limit,
+                        resolve_coin=self._resolve_coin_symbol,
                     )
                     if len(rows) >= limit or candidate_count == len(filled_entries):
                         return rows
