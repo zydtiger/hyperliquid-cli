@@ -6,7 +6,9 @@ handling data retrieval and portfolio management operations.
 """
 
 from decimal import Decimal
+from typing import cast
 
+from hyperliquid.utils.signing import OrderType as ExchangeOrderType
 from hyperliquid.utils.signing import Tif
 
 from models.api import (
@@ -29,7 +31,9 @@ from models.order import (
     OrderSide,
     OrderStatus,
     OrderTif,
+    OrderTrigger,
     OrderType,
+    TriggerType,
 )
 
 from .hyperliquid_connection import HyperliquidConnection
@@ -564,6 +568,17 @@ class HyperliquidClient:
 
         def _submit_market_order() -> OrderResult:
             try:
+                if order.trigger is not None:
+                    result = self.connection.exchange.order(
+                        name=order.coin,
+                        is_buy=(order.side.value == "buy"),
+                        sz=float(order.quantity),
+                        limit_px=self._get_trigger_market_limit_px(order),
+                        order_type=self._build_trigger_order_type(order.trigger, is_market=True),
+                        reduce_only=order.reduce_only,
+                    )
+                    return self._parse_order_submission_result(result, "Market order")
+
                 # Use market_open for non-reduce-only orders, market_close for reduce-only orders
                 slippage = float(self.config.trading.default_slippage)
                 if order.reduce_only:
@@ -600,52 +615,7 @@ class HyperliquidClient:
                 #     },
                 # }
 
-                # Parse response
-                if result.get("status") == "ok":
-                    # Check individual order statuses from response.data
-                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
-
-                    for status in statuses:
-                        if "resting" in status:
-                            oid = status["resting"]["oid"]
-                            return OrderResult(
-                                success=True,
-                                order_id=oid,
-                                status=OrderStatus.OPEN,
-                                message="Market order is resting on the book",
-                            )
-                        if "error" in status:
-                            error = status["error"]
-                            return OrderResult(
-                                success=False,
-                                order_id=None,
-                                status=OrderStatus.REJECTED,
-                                message="Market order failed",
-                                error=error,
-                            )
-                        if "filled" in status:
-                            fill = status["filled"]
-                            return OrderResult(
-                                success=True,
-                                order_id=fill["oid"],
-                                status=OrderStatus.FILLED,
-                                message=f"Market order filled {fill['totalSz']} at {fill['avgPx']}",
-                            )
-
-                    # Fallback if no statuses found
-                    return OrderResult(
-                        success=False,
-                        order_id=None,
-                        status=OrderStatus.REJECTED,
-                        message="Market order submission failed - no status returned",
-                        error="Unknown response structure",
-                    )
-                return OrderResult(
-                    success=False,
-                    status=OrderStatus.REJECTED,
-                    message="Market order submission failed",
-                    error=result.get("response", "Unknown error"),
-                )
+                return self._parse_order_submission_result(result, "Market order")
 
             except Exception as e:
                 return OrderResult(
@@ -673,16 +643,25 @@ class HyperliquidClient:
 
         def _submit_limit_order() -> OrderResult:
             try:
+                order_type: ExchangeOrderType
+                if order.trigger is not None:
+                    order_type = self._build_trigger_order_type(order.trigger, is_market=False)
+                else:
+                    order_type = cast(
+                        ExchangeOrderType,
+                        {
+                            "limit": {
+                                "tif": self._convert_tif_value(order.time_in_force),
+                            }
+                        },
+                    )
+
                 result = self.connection.exchange.order(
                     name=order.coin,
                     is_buy=(order.side.value == "buy"),
                     sz=float(order.quantity),
                     limit_px=float(order.price),
-                    order_type={
-                        "limit": {
-                            "tif": self._convert_tif_value(order.time_in_force),
-                        }
-                    },
+                    order_type=order_type,
                     reduce_only=order.reduce_only,
                 )
 
@@ -694,52 +673,7 @@ class HyperliquidClient:
                 #     },
                 # }
 
-                # Parse response
-                if result.get("status") == "ok":
-                    # Check individual order statuses from response.data
-                    statuses = result.get("response", {}).get("data", {}).get("statuses", [])
-
-                    for status in statuses:
-                        if "resting" in status:
-                            oid = status["resting"]["oid"]
-                            return OrderResult(
-                                success=True,
-                                order_id=oid,
-                                status=OrderStatus.OPEN,
-                                message="Limit order is resting on the book",
-                            )
-                        if "error" in status:
-                            error = status["error"]
-                            return OrderResult(
-                                success=False,
-                                order_id=None,
-                                status=OrderStatus.REJECTED,
-                                message="Limit order failed",
-                                error=error,
-                            )
-                        if "filled" in status:
-                            fill = status["filled"]
-                            return OrderResult(
-                                success=True,
-                                order_id=fill["oid"],
-                                status=OrderStatus.FILLED,
-                                message=f"Limit order filled {fill['totalSz']} at {fill['avgPx']}",
-                            )
-
-                    # Fallback if no statuses found
-                    return OrderResult(
-                        success=False,
-                        order_id=None,
-                        status=OrderStatus.REJECTED,
-                        message="Limit order submission failed - no status returned",
-                        error="Unknown response structure",
-                    )
-                return OrderResult(
-                    success=False,
-                    status=OrderStatus.REJECTED,
-                    message="Limit order submission failed",
-                    error=result.get("response", "Unknown error"),
-                )
+                return self._parse_order_submission_result(result, "Limit order")
 
             except Exception as e:
                 return OrderResult(
@@ -1197,6 +1131,85 @@ class HyperliquidClient:
         if tif == OrderTif.IOC:
             return "Ioc"
         return "Alo"
+
+    def _build_trigger_order_type(
+        self,
+        trigger: OrderTrigger,
+        *,
+        is_market: bool,
+    ) -> ExchangeOrderType:
+        return cast(
+            ExchangeOrderType,
+            {
+                "trigger": {
+                    "triggerPx": float(trigger.trigger_price),
+                    "isMarket": is_market,
+                    "tpsl": self._convert_trigger_type(trigger.trigger_type),
+                }
+            },
+        )
+
+    def _convert_trigger_type(self, trigger_type: TriggerType) -> str:
+        if trigger_type == TriggerType.STOP:
+            return "sl"
+        return "tp"
+
+    def _get_trigger_market_limit_px(self, order: MarketOrder) -> float:
+        slippage = float(self.config.trading.default_slippage)
+        return float(
+            self.connection.exchange._slippage_price(  # type: ignore[attr-defined]
+                order.coin,
+                order.side == OrderSide.BUY,
+                slippage,
+                None,
+            )
+        )
+
+    def _parse_order_submission_result(self, result: dict, order_label: str) -> OrderResult:
+        if result.get("status") == "ok":
+            statuses = result.get("response", {}).get("data", {}).get("statuses", [])
+
+            for status in statuses:
+                if "resting" in status:
+                    oid = status["resting"]["oid"]
+                    return OrderResult(
+                        success=True,
+                        order_id=oid,
+                        status=OrderStatus.OPEN,
+                        message=f"{order_label} is resting on the book",
+                    )
+                if "error" in status:
+                    error = status["error"]
+                    return OrderResult(
+                        success=False,
+                        order_id=None,
+                        status=OrderStatus.REJECTED,
+                        message=f"{order_label} failed",
+                        error=error,
+                    )
+                if "filled" in status:
+                    fill = status["filled"]
+                    return OrderResult(
+                        success=True,
+                        order_id=fill["oid"],
+                        status=OrderStatus.FILLED,
+                        message=f"{order_label} filled {fill['totalSz']} at {fill['avgPx']}",
+                    )
+
+            return OrderResult(
+                success=False,
+                order_id=None,
+                status=OrderStatus.REJECTED,
+                message=f"{order_label} submission failed - no status returned",
+                error="Unknown response structure",
+            )
+
+        return OrderResult(
+            success=False,
+            status=OrderStatus.REJECTED,
+            message=f"{order_label} submission failed",
+            error=result.get("response", "Unknown error"),
+        )
 
 
 __all__ = [

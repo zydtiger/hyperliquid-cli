@@ -266,7 +266,11 @@ Submit a market order for immediate execution at the best available price.
   "coin": "ETH",
   "side": "buy",
   "quantity": "0.1",
-  "reduce_only": false
+  "reduce_only": false,
+  "trigger": {
+    "trigger_price": "3500",
+    "trigger_type": "take"
+  }
 }
 ```
 
@@ -275,6 +279,9 @@ Submit a market order for immediate execution at the best available price.
 - `side` (string): Order side ("buy" or "sell")
 - `quantity` (string): Order quantity as decimal string
 - `reduce_only` (boolean): Whether the order is reduce-only (true/false)
+- `trigger` (object|null): Optional trigger configuration for stop-loss or take-profit activation
+- `trigger.trigger_price` (string): Trigger price as decimal string
+- `trigger.trigger_type` (string): Trigger behavior (`"stop"` or `"take"`)
 
 **Response:**
 ```json
@@ -327,6 +334,20 @@ curl -X POST http://localhost:8080/market_order \
     "quantity": "0.05",
     "reduce_only": true
   }'
+
+# Submit trigger market stop-loss order
+curl -X POST http://localhost:8080/market_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "ETH",
+    "side": "sell",
+    "quantity": "0.02",
+    "reduce_only": true,
+    "trigger": {
+      "trigger_price": "1000",
+      "trigger_type": "stop"
+    }
+  }'
 ```
 
 #### POST /limit_order
@@ -340,7 +361,11 @@ Submit a limit order with specified price and time-in-force policy.
   "quantity": "0.05",
   "price": "50000.0",
   "reduce_only": false,
-  "time_in_force": "GTC"
+  "time_in_force": "GTC",
+  "trigger": {
+    "trigger_price": "4500",
+    "trigger_type": "take"
+  }
 }
 ```
 
@@ -351,11 +376,17 @@ Submit a limit order with specified price and time-in-force policy.
 - `price` (string): Limit price as decimal string
 - `reduce_only` (boolean): Whether the order is reduce-only (true/false)
 - `time_in_force` (string): Time in force policy ("GTC", "IOC", "ALO")
+- `trigger` (object|null): Optional trigger configuration for stop-loss or take-profit activation
+- `trigger.trigger_price` (string): Trigger price as decimal string
+- `trigger.trigger_type` (string): Trigger behavior (`"stop"` or `"take"`)
 
 **Time-in-Force Options:**
 - `GTC`: Good Till Cancelled - active until filled or cancelled
 - `IOC`: Immediate or Cancel - execute immediately or cancel remaining quantity
 - `ALO`: At Limit Order - active until touched, then becomes limit order
+
+When `trigger` is present, the submitted `price` is still used as the limit price after the trigger fires.
+Hyperliquid trigger orders do not expose time-in-force, so `time_in_force` is currently ignored for triggered limit orders.
 
 **Response:**
 ```json
@@ -404,6 +435,22 @@ curl -X POST http://localhost:8080/limit_order \
     "price": "150.0",
     "reduce_only": false,
     "time_in_force": "IOC"
+  }'
+
+# Submit trigger limit take-profit order
+curl -X POST http://localhost:8080/limit_order \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coin": "ETH",
+    "side": "sell",
+    "quantity": "0.02",
+    "price": "4000.0",
+    "reduce_only": true,
+    "time_in_force": "GTC",
+    "trigger": {
+      "trigger_price": "4500",
+      "trigger_type": "take"
+    }
   }'
 ```
 

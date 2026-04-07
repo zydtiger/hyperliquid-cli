@@ -49,10 +49,6 @@ class InteractiveCLI(cmd.Cmd):
                 wizard = OrderWizard(self.config, api)
                 order = wizard.run()
 
-                if order.trigger is not None:
-                    print("🚧 Trigger orders are not wired to backend submission yet")
-                    return
-
                 print("⏳ Submitting order...")
 
                 # Submit order based on type

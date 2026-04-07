@@ -159,10 +159,11 @@ def test_do_order_submits_non_trigger_limit_order(capsys) -> None:
     assert "formatted" in capsys.readouterr().out
 
 
-def test_do_order_blocks_trigger_submission(capsys) -> None:
+def test_do_order_submits_trigger_market_order(capsys) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
+    api.submit_market_order.return_value = Mock()
     wizard = Mock()
     wizard.run.return_value = MarketOrder(
         coin="BTC",
@@ -179,9 +180,10 @@ def test_do_order_blocks_trigger_submission(capsys) -> None:
     with (
         patch("cli.interactive_cli.BackendAPI", return_value=backend_api),
         patch("cli.interactive_cli.OrderWizard", return_value=wizard),
+        patch("cli.interactive_cli.OrderFormatter.format", return_value="formatted"),
     ):
         cli.do_order("")
 
     api.submit_limit_order.assert_not_called()
-    api.submit_market_order.assert_not_called()
-    assert "Trigger orders are not wired to backend submission yet" in capsys.readouterr().out
+    api.submit_market_order.assert_called_once()
+    assert "formatted" in capsys.readouterr().out
