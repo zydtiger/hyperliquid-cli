@@ -147,6 +147,7 @@ def test_open_orders_formatter_shows_trigger_columns_only_when_needed() -> None:
             timestamp=1,
             reduce_only=False,
             time_in_force=OrderTif.GTC,
+            trigger=None,
         ),
         OrderInfo(
             order_id=2,
@@ -194,6 +195,7 @@ def test_open_orders_formatter_omits_trigger_columns_when_absent() -> None:
             timestamp=1,
             reduce_only=False,
             time_in_force=None,
+            trigger=None,
         )
     ]
 
