@@ -259,8 +259,8 @@ class Prompts:
         """Prompt user to select a trigger type."""
         while True:
             print("\n🎯 Select trigger type:")
-            print("1. STOP")
-            print("2. TAKE")
+            print("1. Stop")
+            print("2. Take")
 
             choice = input("Enter choice (1-2): ").strip()
 
@@ -268,7 +268,7 @@ class Prompts:
                 return TriggerType.STOP
             if choice == "2":
                 return TriggerType.TAKE
-            print("❌ Please enter 1 (STOP) or 2 (TAKE)")
+            print("❌ Please enter 1 (Stop) or 2 (Take)")
 
     def get_trigger_price_input(self, coin: str) -> Decimal:
         """Prompt user to input trigger price."""
