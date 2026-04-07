@@ -114,6 +114,9 @@ class OrderInfo(BaseModel):
     timestamp: int = Field(..., description="Order creation timestamp")
     reduce_only: bool = Field(..., description="Whether the order is reduce-only")
     time_in_force: OrderTif | None = Field(None, description="Time-in-force policy")
+    trigger: OrderTrigger | None = Field(
+        None, description="Trigger configuration for conditional orders"
+    )
 
 
 class CancelOrderRequest(BaseModel):

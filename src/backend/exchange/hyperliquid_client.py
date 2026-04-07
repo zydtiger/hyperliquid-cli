@@ -486,6 +486,7 @@ class HyperliquidClient:
                 # Determine order type from API orderType field
                 order_type_str = order_data.get("orderType", "Limit").upper()
                 order_type = OrderType.LIMIT if order_type_str == "LIMIT" else OrderType.MARKET
+                trigger = self._extract_order_trigger(order_data)
 
                 return OrderInfo(
                     order_id=order_id,
@@ -501,6 +502,7 @@ class HyperliquidClient:
                     timestamp=int(order_data.get("timestamp", 0)),
                     reduce_only=bool(order_data.get("reduceOnly", False)),
                     time_in_force=time_in_force,
+                    trigger=trigger,
                 )
 
             except Exception as e:
@@ -1164,6 +1166,47 @@ class HyperliquidClient:
                 None,
             )
         )
+
+    def _extract_order_trigger(self, order_data: dict) -> OrderTrigger | None:
+        if not order_data.get("isTrigger"):
+            return None
+
+        trigger_px = order_data.get("triggerPx")
+        if trigger_px in (None, "0", "0.0"):
+            return None
+
+        trigger_type = self._parse_trigger_type(
+            order_data.get("triggerCondition"),
+            OrderSide.BUY if order_data.get("side") == "B" else OrderSide.SELL,
+        )
+        if trigger_type is None:
+            return None
+
+        return OrderTrigger(
+            trigger_price=Decimal(str(trigger_px)),
+            trigger_type=trigger_type,
+        )
+
+    def _parse_trigger_type(  # noqa: PLR0911
+        self,
+        trigger_condition: str | None,
+        side: OrderSide,
+    ) -> TriggerType | None:
+        if not trigger_condition:
+            return None
+
+        normalized = trigger_condition.strip().lower()
+        if normalized in {"n/a", "na"}:
+            return None
+        if "tp" in normalized or "take" in normalized:
+            return TriggerType.TAKE
+        if "sl" in normalized or "stop" in normalized:
+            return TriggerType.STOP
+        if "above" in normalized:
+            return TriggerType.STOP if side == OrderSide.BUY else TriggerType.TAKE
+        if "below" in normalized:
+            return TriggerType.TAKE if side == OrderSide.BUY else TriggerType.STOP
+        return None
 
     def _parse_order_submission_result(self, result: dict, order_label: str) -> OrderResult:
         if result.get("status") == "ok":
