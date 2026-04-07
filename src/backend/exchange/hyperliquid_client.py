@@ -5,6 +5,7 @@ This module provides a high-level client interface for the Hyperliquid exchange,
 handling data retrieval and portfolio management operations.
 """
 
+import logging
 from collections.abc import Callable, Mapping
 from decimal import Decimal
 from typing import Any
@@ -37,6 +38,8 @@ from models.order import (
 )
 
 from .hyperliquid_connection import HyperliquidConnection
+
+logger = logging.getLogger(__name__)
 
 MIN_LEVERAGE = 1
 MAX_LEVERAGE = 250
@@ -91,6 +94,19 @@ def build_spot_symbol_map(spot_meta: Mapping[str, Any]) -> dict[str, str]:
 def resolve_spot_symbol(coin: str, spot_symbol_map: Mapping[str, str]) -> str:
     """Resolve a raw Hyperliquid spot coin id like @142 to BTC/USDC."""
     return spot_symbol_map.get(coin, coin)
+
+
+def normalize_spot_order_symbol(coin: str, spot_symbol_map: Mapping[str, str]) -> str:
+    """Resolve a user-facing spot pair symbol like BTC/USDC to the raw spot id."""
+    if coin.startswith("@"):
+        return coin
+
+    normalized_coin = coin.upper()
+    for raw_symbol, display_symbol in spot_symbol_map.items():
+        if display_symbol.upper() == normalized_coin:
+            return raw_symbol
+
+    return coin
 
 
 def aggregate_fills_by_order(fills: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -244,6 +260,13 @@ class HyperliquidClient:
         except Exception:
             return coin
 
+    def _normalize_order_coin(self, coin: str) -> str:
+        """Normalize user-facing spot pair symbols before submitting exchange orders."""
+        try:
+            return normalize_spot_order_symbol(coin, self._get_spot_symbol_map())
+        except Exception:
+            return coin
+
     def test_connection(self) -> bool:
         """
         Test the connection to the exchange.
@@ -263,7 +286,16 @@ class HyperliquidClient:
 
         def _get_available_coins() -> list[str]:
             meta = self.connection.info.meta()
-            return [asset["name"] for asset in meta["universe"]]
+            coins = [asset["name"] for asset in meta["universe"]]
+
+            try:
+                for spot_symbol in self._get_spot_symbol_map().values():
+                    if spot_symbol not in coins:
+                        coins.append(spot_symbol)
+            except Exception:
+                logger.exception("Failed to load spot symbols while listing available coins")
+
+            return coins
 
         return self.connection.retry_operation(_get_available_coins)
 
@@ -825,18 +857,20 @@ class HyperliquidClient:
 
         def _submit_market_order() -> OrderResult:
             try:
+                coin = self._normalize_order_coin(order.coin)
+
                 # Use market_open for non-reduce-only orders, market_close for reduce-only orders
                 slippage = float(self.config.trading.default_slippage)
                 if order.reduce_only:
                     result = self.connection.exchange.market_close(
-                        coin=order.coin,
+                        coin=coin,
                         sz=float(order.quantity),
                         px=None,  # Market price
                         slippage=slippage,
                     )
                 else:
                     result = self.connection.exchange.market_open(
-                        name=order.coin,
+                        name=coin,
                         is_buy=(order.side.value == "buy"),
                         sz=float(order.quantity),
                         px=None,  # Market price
@@ -934,8 +968,9 @@ class HyperliquidClient:
 
         def _submit_limit_order() -> OrderResult:
             try:
+                coin = self._normalize_order_coin(order.coin)
                 result = self.connection.exchange.order(
-                    name=order.coin,
+                    name=coin,
                     is_buy=(order.side.value == "buy"),
                     sz=float(order.quantity),
                     limit_px=float(order.price),
