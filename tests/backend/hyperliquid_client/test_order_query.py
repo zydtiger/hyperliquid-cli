@@ -15,7 +15,9 @@ from models.order import (
     OrderSide,
     OrderStatus,
     OrderTif,
+    OrderTrigger,
     OrderType,
+    TriggerType,
 )
 
 
@@ -170,6 +172,61 @@ class TestHyperliquidClientOrderStatus:
         mock_connection.info.query_order_by_oid.return_value = api_response
 
         result = client.get_order_status(220717680687)
+
+        assert result == expected_order
+
+    def test_get_order_status_success_trigger_order(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test trigger order status includes trigger type and price."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "DOGE",
+                    "side": "S",
+                    "limitPx": "0.099141",
+                    "sz": "30000.0",
+                    "oid": 367120653089,
+                    "timestamp": 1762141573007,
+                    "triggerCondition": "triggeredAbove",
+                    "isTrigger": True,
+                    "triggerPx": "0.1",
+                    "reduceOnly": False,
+                    "orderType": "Limit",
+                    "origSz": "30000.0",
+                },
+                "status": "open",
+                "statusTimestamp": 1762141573008,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=367120653089,
+            coin="DOGE",
+            side=OrderSide.SELL,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("30000.0"),
+            price=Decimal("0.099141"),
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("30000.0"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1762141573007,
+            reduce_only=False,
+            time_in_force=None,
+            trigger=OrderTrigger(
+                trigger_type=TriggerType.TAKE,
+                trigger_price=Decimal("0.1"),
+            ),
+        )
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(367120653089)
 
         assert result == expected_order
 

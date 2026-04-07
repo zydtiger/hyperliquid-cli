@@ -720,6 +720,7 @@ class TestRequestHandlers(TestBackendService):
                 "timestamp": 1762271506632,
                 "reduce_only": False,
                 "time_in_force": "GTC",
+                "trigger": None,
             },
             {
                 "order_id": 987654321,
@@ -735,6 +736,7 @@ class TestRequestHandlers(TestBackendService):
                 "timestamp": 1762271506633,
                 "reduce_only": False,
                 "time_in_force": "IOC",
+                "trigger": None,
             },
             {
                 "order_id": 555666777,
@@ -750,6 +752,7 @@ class TestRequestHandlers(TestBackendService):
                 "timestamp": 1762271506634,
                 "reduce_only": False,
                 "time_in_force": None,
+                "trigger": None,
             },
         ]
         assert response.json() == expected

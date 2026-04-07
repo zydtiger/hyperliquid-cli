@@ -12,9 +12,12 @@ from models import (
     LimitOrder,
     MarketOrder,
     NetworkType,
+    OrderInfo,
     OrderSide,
+    OrderStatus,
     OrderTif,
     OrderTrigger,
+    OrderType,
     TriggerType,
 )
 
@@ -94,7 +97,7 @@ def test_trigger_type_prompt_retries_on_invalid_choice(monkeypatch, capsys) -> N
     trigger_type = prompts.get_trigger_type_selection()
 
     assert trigger_type == TriggerType.TAKE
-    assert "Please enter 1 (STOP) or 2 (TAKE)" in capsys.readouterr().out
+    assert "Please enter 1 (Stop) or 2 (Take)" in capsys.readouterr().out
 
 
 def test_trigger_price_prompt_retries_on_invalid_input(monkeypatch, capsys) -> None:
@@ -126,6 +129,78 @@ def test_order_formatter_includes_trigger_details() -> None:
     assert "Trigger     : Yes" in output
     assert "Trigger Type: TAKE" in output
     assert "Trigger Px  : $3500" in output
+
+
+def test_open_orders_formatter_shows_trigger_columns_only_when_needed() -> None:
+    orders = [
+        OrderInfo(
+            order_id=1,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("0.005"),
+            price=Decimal("2094.7"),
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("0.005"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        ),
+        OrderInfo(
+            order_id=2,
+            coin="DOGE",
+            side=OrderSide.SELL,
+            order_type=OrderType.LIMIT,
+            quantity=Decimal("30000.0"),
+            price=Decimal("0.099141"),
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("30000.0"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=2,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+            trigger=OrderTrigger(
+                trigger_type=TriggerType.TAKE,
+                trigger_price=Decimal("0.1"),
+            ),
+        ),
+    ]
+
+    output = OrderFormatter().format(orders)
+
+    assert "Trigger Type" in output
+    assert "Trigger Px" in output
+    assert "TAKE" in output
+    assert "$0.1" in output
+    assert "N/A" not in output
+
+
+def test_open_orders_formatter_omits_trigger_columns_when_absent() -> None:
+    orders = [
+        OrderInfo(
+            order_id=1,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.MARKET,
+            quantity=Decimal("0.005"),
+            price=Decimal("2094.7"),
+            filled_quantity=Decimal("0.0"),
+            remaining_quantity=Decimal("0.005"),
+            average_fill_price=None,
+            status=OrderStatus.OPEN,
+            timestamp=1,
+            reduce_only=False,
+            time_in_force=None,
+        )
+    ]
+
+    output = OrderFormatter().format(orders)
+
+    assert "Trigger Type" not in output
+    assert "Trigger Px" not in output
 
 
 def test_do_order_submits_non_trigger_limit_order(capsys) -> None:
