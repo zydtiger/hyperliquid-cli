@@ -562,10 +562,33 @@ class HyperliquidClient:
                 address = self.config.hyperliquid.account_address
                 staking_summary = self.connection.info.user_staking_summary(address)
                 delegations = self.connection.info.user_staking_delegations(address)
+                validator_summaries = self.connection.info.post(
+                    "/info", {"type": "validatorSummaries"}
+                )
+                validators_by_address = {
+                    str(summary.get("validator", "")): summary for summary in validator_summaries
+                }
 
                 active_delegations = [
                     StakingDelegation(
                         validator=str(delegation.get("validator", "")),
+                        name=str(
+                            validators_by_address.get(str(delegation.get("validator", "")), {}).get(
+                                "name", delegation.get("validator", "")
+                            )
+                        ),
+                        commission=(
+                            decimal_value(
+                                validators_by_address.get(
+                                    str(delegation.get("validator", "")), {}
+                                ).get("commission")
+                            )
+                            if validators_by_address.get(
+                                str(delegation.get("validator", "")), {}
+                            ).get("commission")
+                            is not None
+                            else None
+                        ),
                         amount=decimal_value(delegation.get("amount")),
                     )
                     for delegation in delegations

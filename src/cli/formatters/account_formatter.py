@@ -114,11 +114,16 @@ class AccountFormatter(Formatter[BalanceInfo | StakingStatus | list[PositionInfo
             return f"{summary_table}\n\nNo active HYPE staking delegations found."
 
         delegation_rows = [
-            [delegation.validator, f"{delegation.amount:,.8f}"]
+            [
+                delegation.validator,
+                delegation.name,
+                f"{delegation.commission:.2%}" if delegation.commission is not None else None,
+                f"{delegation.amount:,.8f}",
+            ]
             for delegation in staking_status.delegations
         ]
         delegations_table = self.table_formatter.format(
-            (["Validator", "Staked HYPE"], delegation_rows),
+            (["Validator", "Name", "Commission", "Staked HYPE"], delegation_rows),
             title="🧭 Active Staking Endpoints",
         )
         return f"{summary_table}\n{delegations_table}"

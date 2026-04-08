@@ -129,6 +129,8 @@ class StakingDelegation(BaseModel):
     """Active staking delegation for a specific validator."""
 
     validator: str = Field(..., description="Validator identifier")
+    name: str = Field(..., description="Validator display name")
+    commission: Decimal | None = Field(None, description="Validator commission rate")
     amount: Decimal = Field(..., description="Delegated HYPE amount")
 
 

@@ -1050,10 +1050,14 @@ Get staking status for the configured account.
   "delegations": [
     {
       "validator": "validator-1",
+      "name": "CMI",
+      "commission": "0.05",
       "amount": "70.50000000"
     },
     {
       "validator": "validator-2",
+      "name": "HyperStake",
+      "commission": "0.10",
       "amount": "30.11607572"
     }
   ]
@@ -1064,6 +1068,8 @@ Get staking status for the configured account.
 - `total_staked`: Total delegated HYPE for the configured account
 - `delegations`: Active validator delegations with positive HYPE amounts only
 - `delegations[].validator`: Validator identifier returned by the exchange SDK
+- `delegations[].name`: Validator display name from validator summaries
+- `delegations[].commission`: Validator commission rate as a decimal fraction
 - `delegations[].amount`: Staked HYPE amount delegated to that validator
 
 **Error Responses:**
