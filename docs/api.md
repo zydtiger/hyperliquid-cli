@@ -1040,6 +1040,42 @@ Get comprehensive balance information for the configured account, including perp
 curl http://localhost:8080/balances
 ```
 
+#### GET /staking
+Get staking status for the configured account.
+
+**Response:**
+```json
+{
+  "total_staked": "100.61607572",
+  "delegations": [
+    {
+      "validator": "validator-1",
+      "amount": "70.50000000"
+    },
+    {
+      "validator": "validator-2",
+      "amount": "30.11607572"
+    }
+  ]
+}
+```
+
+**Field Descriptions:**
+- `total_staked`: Total delegated HYPE for the configured account
+- `delegations`: Active validator delegations with positive HYPE amounts only
+- `delegations[].validator`: Validator identifier returned by the exchange SDK
+- `delegations[].amount`: Staked HYPE amount delegated to that validator
+
+**Error Responses:**
+- `400 Bad Request`: Exchange error or authentication issues
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Get staking status
+curl http://localhost:8080/staking
+```
+
 #### GET /positions/{coin}
 Get position information for a specific cryptocurrency.
 

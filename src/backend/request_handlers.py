@@ -16,6 +16,7 @@ from models.api import (
     ExchangeError,
     PnlHistoryCatalog,
     PositionInfo,
+    StakingStatus,
     Ticker,
 )
 from models.leverage import LeverageResult, LeverageUpdateRequest
@@ -189,6 +190,26 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting balances: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            ) from e
+
+    @app.get("/staking")
+    async def get_staking() -> StakingStatus:
+        """
+        Get staking status for the configured account.
+
+        Returns:
+            StakingStatus: Total staked HYPE and active validator delegations
+        """
+        try:
+            return client.get_staking_status()
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting staking status: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        except Exception as e:
+            logger.error(f"Unexpected error getting staking status: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",

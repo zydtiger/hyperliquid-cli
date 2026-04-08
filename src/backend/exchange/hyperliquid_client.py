@@ -20,7 +20,9 @@ from models.api import (
     PnlHistoryCatalog,
     PositionInfo,
     SpotBalance,
+    StakingDelegation,
     StakingInfo,
+    StakingStatus,
     Ticker,
 )
 from models.config import Config
@@ -543,6 +545,41 @@ class HyperliquidClient:
                 raise ExchangeError(f"Failed to get PnL history: {e}") from e
 
         return self.connection.retry_operation(_get_pnl_history)
+
+    def get_staking_status(self) -> StakingStatus:
+        """
+        Get staking status for the configured account.
+
+        Returns:
+            StakingStatus: Total staked HYPE and active validator delegations
+
+        Raises:
+            ExchangeError: If staking status retrieval fails
+        """
+
+        def _get_staking_status() -> StakingStatus:
+            try:
+                address = self.config.hyperliquid.account_address
+                staking_summary = self.connection.info.user_staking_summary(address)
+                delegations = self.connection.info.user_staking_delegations(address)
+
+                active_delegations = [
+                    StakingDelegation(
+                        validator=str(delegation.get("validator", "")),
+                        amount=decimal_value(delegation.get("amount")),
+                    )
+                    for delegation in delegations
+                    if decimal_value(delegation.get("amount")) > 0
+                ]
+
+                return StakingStatus(
+                    total_staked=decimal_value(staking_summary.get("delegated")),
+                    delegations=active_delegations,
+                )
+            except Exception as e:
+                raise ExchangeError(f"Failed to get staking status: {e}") from e
+
+        return self.connection.retry_operation(_get_staking_status)
 
     def get_positions(self) -> list[PositionInfo]:
         """
