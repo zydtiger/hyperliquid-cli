@@ -178,6 +178,31 @@ class InteractiveCLI(cmd.Cmd):
         print("Usage: balances")
         print("Displays perpetuals account, spot balances, and staking information")
 
+    def do_staking(self, args: str) -> None:
+        """Show staking status for the configured account."""
+        if args.strip():
+            print("❌ Error: staking does not take any arguments")
+            print("Usage: staking")
+            return
+
+        try:
+            with BackendAPI(self.config) as api:
+                staking_status = api.get_staking_status()
+                formatter = AccountFormatter()
+                try:
+                    print(formatter.format(staking_status))
+                except ValueError as format_err:
+                    print(format_err)
+                print()
+        except Exception as e:
+            print(f"❌ Error fetching staking status: {e}")
+
+    def help_staking(self) -> None:
+        """Show help for the staking command."""
+        print("staking - Show staking status for the configured account")
+        print("Usage: staking")
+        print("Displays total staked HYPE and validators with active delegations")
+
     def do_conditionals(self, args: str) -> None:
         """Manage conditional orders (not implemented yet)."""
         print("🚧 Conditionals functionality not implemented yet")

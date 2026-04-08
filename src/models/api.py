@@ -125,6 +125,23 @@ class StakingInfo(BaseModel):
     pending_withdrawal_count: int = Field(..., description="Number of pending withdrawals")
 
 
+class StakingDelegation(BaseModel):
+    """Active staking delegation for a specific validator."""
+
+    validator: str = Field(..., description="Validator identifier")
+    amount: Decimal = Field(..., description="Delegated HYPE amount")
+
+
+class StakingStatus(BaseModel):
+    """Dedicated staking status view for the configured account."""
+
+    total_staked: Decimal = Field(..., description="Total staked HYPE amount")
+    delegations: list[StakingDelegation] = Field(
+        default_factory=list,
+        description="Active validator delegations with positive amounts",
+    )
+
+
 class BalanceInfo(BaseModel):
     """Comprehensive balance information for a Hyperliquid account."""
 
@@ -189,6 +206,8 @@ __all__ = [
     "PositionInfo",
     "RootResponse",
     "SpotBalance",
+    "StakingDelegation",
     "StakingInfo",
+    "StakingStatus",
     "Ticker",
 ]

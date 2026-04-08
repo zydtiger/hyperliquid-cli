@@ -20,6 +20,7 @@ from models.api import (
     PnlHistoryCatalog,
     PositionInfo,
     RootResponse,
+    StakingStatus,
     Ticker,
 )
 from models.config import Config
@@ -240,6 +241,24 @@ class BackendAPI:
             return PositionInfo(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get position for {coin}: {e}")
+            raise APIError(f"Connection error: {e!s}") from e
+
+    def get_staking_status(self) -> StakingStatus:
+        """
+        Get staking status for the configured account.
+
+        Returns:
+            StakingStatus: Total staked HYPE and active validator delegations
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.get("/staking")
+            self._handle_response_error(response)
+            return StakingStatus(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to get staking status: {e}")
             raise APIError(f"Connection error: {e!s}") from e
 
     def get_order_status(self, order_id: int) -> OrderInfo:

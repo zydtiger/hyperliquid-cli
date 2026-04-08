@@ -7,25 +7,25 @@ with type routing to handle different account data types appropriately.
 
 from typing import Any
 
-from models.api import BalanceInfo, PositionInfo
+from models.api import BalanceInfo, PositionInfo, StakingStatus
 
 from .base import Formatter
 from .table_formatter import TableFormatter
 
 
-class AccountFormatter(Formatter[BalanceInfo | list[PositionInfo]]):
+class AccountFormatter(Formatter[BalanceInfo | StakingStatus | list[PositionInfo]]):
     """Formatter for account data including positions and balances."""
 
     def __init__(self) -> None:
         """Initialize the account formatter."""
         self.table_formatter = TableFormatter()
 
-    def format(self, data: BalanceInfo | list[PositionInfo], **kwargs: Any) -> str:
+    def format(self, data: BalanceInfo | StakingStatus | list[PositionInfo], **kwargs: Any) -> str:
         """
         Format account data with type routing.
 
         Args:
-            data: Account data (BalanceInfo or List[PositionInfo])
+            data: Account data (BalanceInfo, StakingStatus, or List[PositionInfo])
 
         Returns:
             str: Formatted account information
@@ -34,12 +34,16 @@ class AccountFormatter(Formatter[BalanceInfo | list[PositionInfo]]):
         if isinstance(data, BalanceInfo):
             return self._format_balances(data)
 
+        if isinstance(data, StakingStatus):
+            return self._format_staking_status(data)
+
         # Handle List[PositionInfo] objects
         if isinstance(data, list) and all(isinstance(p, PositionInfo) for p in data):
             return self._format_positions(data)
 
         raise ValueError(
-            f"Unsupported data type: {type(data)}. Expected BalanceInfo or List[PositionInfo]."
+            "Unsupported data type: "
+            f"{type(data)}. Expected BalanceInfo, StakingStatus, or List[PositionInfo]."
         )
 
     def _format_balances(self, balance_info: BalanceInfo) -> str:
@@ -95,6 +99,29 @@ class AccountFormatter(Formatter[BalanceInfo | list[PositionInfo]]):
             output.append(staking_table)
 
         return "\n".join(output)
+
+    def _format_staking_status(self, staking_status: StakingStatus) -> str:
+        """Format staking status for display."""
+        summary_table = self.table_formatter.format(
+            (
+                ["Metric", "Value"],
+                [["Total Staked", f"{staking_status.total_staked:,.8f} HYPE"]],
+            ),
+            title="🔒 Staking Summary",
+        )
+
+        if not staking_status.delegations:
+            return f"{summary_table}\n\nNo active HYPE staking delegations found."
+
+        delegation_rows = [
+            [delegation.validator, f"{delegation.amount:,.8f}"]
+            for delegation in staking_status.delegations
+        ]
+        delegations_table = self.table_formatter.format(
+            (["Validator", "Staked HYPE"], delegation_rows),
+            title="🧭 Active Staking Endpoints",
+        )
+        return f"{summary_table}\n{delegations_table}"
 
     def _format_positions(self, positions: list[PositionInfo]) -> str:
         """
