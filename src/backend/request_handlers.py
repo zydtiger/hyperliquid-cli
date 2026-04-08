@@ -10,7 +10,14 @@ from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Path, Query, status
 
-from models.api import BalanceInfo, CoinMetadata, ExchangeError, PnlHistory, PositionInfo, Ticker
+from models.api import (
+    BalanceInfo,
+    CoinMetadata,
+    ExchangeError,
+    PnlHistoryCatalog,
+    PositionInfo,
+    Ticker,
+)
 from models.leverage import LeverageResult, LeverageUpdateRequest
 from models.margin import IsolatedMarginUpdateRequest, IsolatedMarginUpdateResult
 from models.order import (
@@ -258,12 +265,12 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
             ) from e
 
     @app.get("/pnl")
-    async def get_pnl_history() -> PnlHistory:
+    async def get_pnl_history() -> PnlHistoryCatalog:
         """
-        Get the last 7 days of total/perpetual/spot PnL history.
+        Get all supported total/perpetual/spot PnL history windows.
 
         Returns:
-            PnlHistory: Fixed-window PnL time series
+            PnlHistoryCatalog: Ordered PnL history windows for the frontend
         """
         try:
             return client.get_pnl_history()

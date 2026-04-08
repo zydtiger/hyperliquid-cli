@@ -314,35 +314,47 @@ curl "http://localhost:8080/order_history?limit=5"
 ```
 
 #### GET /pnl
-Get a fixed 7-day PnL history for the configured account.
+Get all supported PnL history windows for the configured account.
 
 **Response:**
 ```json
 {
-  "window": "7d",
-  "points": [
+  "default_window": "7d",
+  "histories": [
     {
-      "time": 1741886630493,
-      "total_pnl": "0.0",
-      "perp_pnl": "0.0",
-      "spot_pnl": "0.0"
+      "window": "1d",
+      "points": [
+        {
+          "time": 1741886630493,
+          "total_pnl": "0.0",
+          "perp_pnl": "0.0",
+          "spot_pnl": "0.0"
+        }
+      ]
     },
     {
-      "time": 1741973030493,
-      "total_pnl": "10.5",
-      "perp_pnl": "7.0",
-      "spot_pnl": "3.5"
+      "window": "7d",
+      "points": [
+        {
+          "time": 1741973030493,
+          "total_pnl": "10.5",
+          "perp_pnl": "7.0",
+          "spot_pnl": "3.5"
+        }
+      ]
     }
   ]
 }
 ```
 
 **Field Descriptions:**
-- `window`: Fixed time window label. This endpoint currently always returns `7d`.
-- `points`: Ordered PnL samples from oldest to newest.
+- `default_window`: Initial window the frontend should show. This endpoint currently returns `7d`.
+- `histories`: Ordered supported windows for the PnL TUI.
+- `window`: Window identifier. Supported values are `1d`, `3d`, `7d`, `1m`, `3m`, `6m`, `1y`, `all`.
+- `points`: Ordered PnL samples from oldest to newest for that window.
 - `time`: Sample timestamp in Unix milliseconds.
 - `total_pnl`: Total account PnL sample from the portfolio history.
-- `perp_pnl`: Perpetuals-only PnL sample from `perpWeek` history.
+- `perp_pnl`: Perpetuals-only PnL sample from the corresponding perpetual history bucket.
 - `spot_pnl`: Derived spot PnL sample computed as `total_pnl - perp_pnl`.
 
 **Error Responses:**
@@ -351,7 +363,7 @@ Get a fixed 7-day PnL history for the configured account.
 
 **Usage Example:**
 ```bash
-# Get the fixed 7-day PnL history
+# Get the ordered PnL windows for the fullscreen TUI
 curl http://localhost:8080/pnl
 ```
 

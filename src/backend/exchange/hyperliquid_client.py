@@ -17,7 +17,7 @@ from models.api import (
     CoinMetadata,
     ExchangeError,
     LeverageType,
-    PnlHistory,
+    PnlHistoryCatalog,
     PositionInfo,
     SpotBalance,
     StakingInfo,
@@ -39,7 +39,7 @@ from models.order import (
 )
 
 from .hyperliquid_connection import HyperliquidConnection
-from .pnl_history import build_pnl_history
+from .pnl_history import build_pnl_history_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -524,21 +524,21 @@ class HyperliquidClient:
 
         return self.connection.retry_operation(_get_balances)
 
-    def get_pnl_history(self) -> PnlHistory:
+    def get_pnl_history(self) -> PnlHistoryCatalog:
         """
-        Get a 7-day total/perp/spot PnL history for the configured account.
+        Get all supported total/perp/spot PnL history windows for the account.
 
         Returns:
-            PnlHistory: Ordered PnL time series for the fixed 7-day window
+            PnlHistoryCatalog: Ordered PnL time series windows for the TUI
 
         Raises:
             ExchangeError: If PnL history retrieval fails
         """
 
-        def _get_pnl_history() -> PnlHistory:
+        def _get_pnl_history() -> PnlHistoryCatalog:
             try:
                 portfolio = self.connection.info.portfolio(self.config.hyperliquid.account_address)
-                return build_pnl_history(portfolio)
+                return build_pnl_history_catalog(portfolio)
             except Exception as e:
                 raise ExchangeError(f"Failed to get PnL history: {e}") from e
 
