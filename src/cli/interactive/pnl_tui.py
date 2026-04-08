@@ -4,18 +4,21 @@ Fullscreen TUI for rendering PnL history charts.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
 from itertools import pairwise
+from typing import TypeAlias
 
 from prompt_toolkit.application import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import Window
 from prompt_toolkit.layout.controls import UIContent, UIControl
+from prompt_toolkit.mouse_events import MouseEvent
 from prompt_toolkit.styles import Style
 
-from models.api import PNL_WINDOW_ORDER, PnlHistory, PnlHistoryCatalog, PnlPoint
+from models.api import PNL_WINDOW_ORDER, PnlHistory, PnlHistoryCatalog, PnlPoint, PnlWindow
 
 BRAILLE_BITS = {
     (0, 0): 0x01,
@@ -31,6 +34,8 @@ MIN_PANEL_HEIGHT = 6
 PANEL_GAP = 1
 HEADER_LINES = 3
 FOOTER_LINES = 2
+DisplayFragment: TypeAlias = tuple[str, str] | tuple[str, str, Callable[[MouseEvent], object]]
+DisplayLine: TypeAlias = list[DisplayFragment]
 
 
 class PnlTUI:
@@ -107,7 +112,7 @@ class PnlScreenControl(UIControl):
         """Render the TUI content for the current terminal size."""
         lines = self._build_lines(max(width, 20), max(height, 12))
 
-        def get_line(index: int) -> list[tuple[str, str]]:
+        def get_line(index: int) -> DisplayLine:
             if 0 <= index < len(lines):
                 return lines[index]
             return [("class:root", " " * width)]
@@ -123,7 +128,7 @@ class PnlScreenControl(UIControl):
         next_index = self.current_window_index + delta
         self.current_window_index = min(max(next_index, 0), len(PNL_WINDOW_ORDER) - 1)
 
-    def current_window(self) -> str:
+    def current_window(self) -> PnlWindow:
         """Return the active PnL window key."""
         return PNL_WINDOW_ORDER[self.current_window_index]
 
@@ -132,11 +137,11 @@ class PnlScreenControl(UIControl):
         window = self.current_window()
         return self.history_by_window.get(window, PnlHistory(window=window, points=[]))
 
-    def _build_lines(self, width: int, height: int) -> list[list[tuple[str, str]]]:
+    def _build_lines(self, width: int, height: int) -> list[DisplayLine]:
         history = self.current_history()
         active_label = window_label(history.window)
         latest = history.points[-1] if history.points else None
-        lines: list[list[tuple[str, str]]] = [
+        lines: list[DisplayLine] = [
             [("class:header", self._pad(f" Hyperliquid PnL TUI - {active_label} ", width))],
             [("class:summary", self._pad(self._summary_line(active_label, latest), width))],
             [("class:footer", self._pad(" - prev  + next  q / Esc / Enter / Ctrl-C exit ", width))],
@@ -177,7 +182,7 @@ class PnlScreenControl(UIControl):
         width: int,
         plot_width: int,
         plot_height: int,
-    ) -> list[list[tuple[str, str]]]:
+    ) -> list[DisplayLine]:
         if not values:
             return self._render_empty_panel(title, style, width, plot_width, plot_height)
 
@@ -194,7 +199,7 @@ class PnlScreenControl(UIControl):
             right="┘",
             width=width,
         )
-        panel_lines = [[("class:root", self._pad(top_line, width))]]
+        panel_lines: list[DisplayLine] = [[("class:root", self._pad(top_line, width))]]
 
         for line in plot_lines:
             panel_lines.append(
@@ -215,7 +220,7 @@ class PnlScreenControl(UIControl):
         width: int,
         plot_width: int,
         plot_height: int,
-    ) -> list[list[tuple[str, str]]]:
+    ) -> list[DisplayLine]:
         """Render an empty state for windows that have no points."""
         top_line = self._build_border_line(
             left="┌",
@@ -231,7 +236,7 @@ class PnlScreenControl(UIControl):
         message = "No PnL samples in this window"
         empty_lines[message_row] = message.center(plot_width)[:plot_width].ljust(plot_width)
 
-        panel_lines = [[("class:root", self._pad(top_line, width))]]
+        panel_lines: list[DisplayLine] = [[("class:root", self._pad(top_line, width))]]
         for line in empty_lines:
             panel_lines.append(
                 [
