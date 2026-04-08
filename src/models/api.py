@@ -138,6 +138,7 @@ class StakingStatus(BaseModel):
     """Dedicated staking status view for the configured account."""
 
     total_staked: Decimal = Field(..., description="Total staked HYPE amount")
+    total_reward: Decimal = Field(..., description="Total rewarded HYPE amount")
     delegations: list[StakingDelegation] = Field(
         default_factory=list,
         description="Active validator delegations with positive amounts",

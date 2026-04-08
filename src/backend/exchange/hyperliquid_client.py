@@ -562,6 +562,7 @@ class HyperliquidClient:
                 address = self.config.hyperliquid.account_address
                 staking_summary = self.connection.info.user_staking_summary(address)
                 delegations = self.connection.info.user_staking_delegations(address)
+                rewards = self.connection.info.user_staking_rewards(address)
                 validator_summaries = self.connection.info.post(
                     "/info", {"type": "validatorSummaries"}
                 )
@@ -597,6 +598,10 @@ class HyperliquidClient:
 
                 return StakingStatus(
                     total_staked=decimal_value(staking_summary.get("delegated")),
+                    total_reward=sum(
+                        (decimal_value(reward.get("totalAmount")) for reward in rewards),
+                        start=Decimal("0"),
+                    ),
                     delegations=active_delegations,
                 )
             except Exception as e:

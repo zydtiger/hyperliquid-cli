@@ -1047,6 +1047,7 @@ Get staking status for the configured account.
 ```json
 {
   "total_staked": "100.61607572",
+  "total_reward": "2.00000000",
   "delegations": [
     {
       "validator": "validator-1",
@@ -1066,6 +1067,7 @@ Get staking status for the configured account.
 
 **Field Descriptions:**
 - `total_staked`: Total delegated HYPE for the configured account
+- `total_reward`: Total rewarded HYPE across staking reward history
 - `delegations`: Active validator delegations with positive HYPE amounts only
 - `delegations[].validator`: Validator identifier returned by the exchange SDK
 - `delegations[].name`: Validator display name from validator summaries

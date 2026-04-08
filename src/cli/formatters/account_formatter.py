@@ -105,7 +105,10 @@ class AccountFormatter(Formatter[BalanceInfo | StakingStatus | list[PositionInfo
         summary_table = self.table_formatter.format(
             (
                 ["Metric", "Value"],
-                [["Total Staked", f"{staking_status.total_staked:,.8f} HYPE"]],
+                [
+                    ["Total Staked", f"{staking_status.total_staked:,.8f} HYPE"],
+                    ["Total Reward", f"{staking_status.total_reward:,.8f} HYPE"],
+                ],
             ),
             title="🔒 Staking Summary",
         )
