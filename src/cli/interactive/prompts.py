@@ -10,6 +10,7 @@ from decimal import Decimal, InvalidOperation
 from models import Config, OrderSide, OrderTif
 
 from ..api import BackendAPI
+from .coin_selector import prompt_for_coin_selection
 
 DEFAULT_SIZE_DECIMALS = 2
 
@@ -40,22 +41,35 @@ class Prompts:
             coins = self.api.get_available_coins()
             print(f"\n🔵 Available coins: {', '.join(coins[:10])}...")
 
-            while True:
-                coin = input("📝 Enter coin symbol: ").strip().upper()
-                if not coin:
-                    print("❌ Coin symbol is required")
-                    continue
-                if coin in coins:
-                    return coin
-                print(f"❌ '{coin}' is not available. Choose from: {', '.join(coins[:5])}...")
+            try:
+                return prompt_for_coin_selection(coins)
+            except Exception:
+                print("\n⚠️ Interactive coin selector unavailable, using manual input")
+                return self._get_manual_coin_selection(coins)
         except Exception:
             # Fallback if API fails
             print("\n⚠️ Unable to fetch available coins, using manual input")
-            while True:
-                coin = input("📝 Enter coin symbol (e.g., BTC): ").strip().upper()
-                if coin:
-                    return coin
+            return self._get_manual_coin_selection([])
+
+    def _get_manual_coin_selection(self, coins: list[str]) -> str:
+        """Fallback manual coin prompt."""
+        canonical_by_symbol = {coin.upper(): coin for coin in coins}
+
+        while True:
+            prompt = "📝 Enter coin symbol: " if coins else "📝 Enter coin symbol (e.g., BTC): "
+            coin = input(prompt).strip().upper()
+            if not coin:
                 print("❌ Coin symbol is required")
+                continue
+
+            if not canonical_by_symbol:
+                return coin
+
+            exact_match = canonical_by_symbol.get(coin)
+            if exact_match:
+                return exact_match
+
+            print(f"❌ '{coin}' is not available. Choose from: {', '.join(coins[:5])}...")
 
     def get_side_selection(self) -> OrderSide:
         """
