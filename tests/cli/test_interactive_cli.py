@@ -14,6 +14,8 @@ from models.api import (
     PnlHistoryCatalog,
     PnlPoint,
     PositionInfo,
+    StakingDelegation,
+    StakingStatus,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
 from models.margin import IsolatedMarginUpdateResult
@@ -410,3 +412,123 @@ def test_pnl_command_handles_empty_history(
     output = capsys.readouterr().out
 
     assert "No 7-day PnL history found." in output
+
+
+def test_staking_command_renders_summary_and_table(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test staking prints summary and validator rows."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_staking_status(self) -> StakingStatus:
+            return StakingStatus(
+                total_staked=Decimal("100.61607572"),
+                delegations=[
+                    StakingDelegation(validator="validator-1", amount=Decimal("70.50000000")),
+                    StakingDelegation(validator="validator-2", amount=Decimal("30.11607572")),
+                ],
+            )
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_staking("")
+    output = capsys.readouterr().out
+
+    assert "Staking Summary" in output
+    assert "100.61607572 HYPE" in output
+    assert "Active Staking Endpoints" in output
+    assert "validator-1" in output
+    assert "70.50000000" in output
+
+
+def test_staking_command_empty_state(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test staking prints the empty-state message when no delegations exist."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_staking_status(self) -> StakingStatus:
+            return StakingStatus(total_staked=Decimal("0"), delegations=[])
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_staking("")
+    output = capsys.readouterr().out
+
+    assert "Staking Summary" in output
+    assert "0.00000000 HYPE" in output
+    assert "No active HYPE staking delegations found." in output
+
+
+def test_staking_command_rejects_extra_args(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test staking validates its no-argument interface."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            raise AssertionError("BackendAPI should not be created for invalid args")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_staking("extra")
+    output = capsys.readouterr().out
+
+    assert "Usage: staking" in output
+
+
+def test_staking_command_handles_backend_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test staking prints backend errors cleanly."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_staking_status(self) -> StakingStatus:
+            raise RuntimeError("staking unavailable")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_staking("")
+    output = capsys.readouterr().out
+
+    assert "Error fetching staking status" in output
+    assert "staking unavailable" in output

@@ -31,7 +31,9 @@ from models.api import (
     PositionInfo,
     RootResponse,
     SpotBalance,
+    StakingDelegation,
     StakingInfo,
+    StakingStatus,
     Ticker,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
@@ -284,6 +286,17 @@ class TestBackendService:
         )
 
     @pytest.fixture
+    def sample_staking_status(self) -> StakingStatus:
+        """Sample staking status for testing."""
+        return StakingStatus(
+            total_staked=Decimal("100.61607572"),
+            delegations=[
+                StakingDelegation(validator="validator-1", amount=Decimal("70.50000000")),
+                StakingDelegation(validator="validator-2", amount=Decimal("30.11607572")),
+            ],
+        )
+
+    @pytest.fixture
     def temp_config_file(self, mock_config: Config) -> Generator[Path, None, None]:
         """Create a temporary configuration file."""
         config_data = mock_config.model_dump()
@@ -421,6 +434,7 @@ class TestRequestHandlers(TestBackendService):
             "/positions",
             "/positions/{coin}",
             "/balances",
+            "/staking",
             "/order_status/{order_id}",
             "/open_orders",
             "/order_history",
@@ -668,6 +682,40 @@ class TestRequestHandlers(TestBackendService):
         mock_client.get_balances.side_effect = Exception("Network error")
 
         response = test_app.get("/balances")
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Internal server error"
+
+    def test_staking_endpoint_success(
+        self, test_app: TestClient, mock_client: Mock, sample_staking_status: StakingStatus
+    ):
+        """Test successful /staking endpoint."""
+        mock_client.get_staking_status.return_value = sample_staking_status
+
+        response = test_app.get("/staking")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_staked"] == "100.61607572"
+        assert len(data["delegations"]) == 2
+        assert data["delegations"][0]["validator"] == "validator-1"
+        assert data["delegations"][0]["amount"] == "70.50000000"
+        mock_client.get_staking_status.assert_called_once_with()
+
+    def test_staking_endpoint_exchange_error(self, test_app: TestClient, mock_client: Mock):
+        """Test /staking endpoint with exchange error."""
+        mock_client.get_staking_status.side_effect = ExchangeError("Authentication failed")
+
+        response = test_app.get("/staking")
+
+        assert response.status_code == 400
+        assert "Authentication failed" in response.json()["detail"]
+
+    def test_staking_endpoint_unexpected_error(self, test_app: TestClient, mock_client: Mock):
+        """Test /staking endpoint with unexpected error."""
+        mock_client.get_staking_status.side_effect = Exception("Network error")
+
+        response = test_app.get("/staking")
 
         assert response.status_code == 500
         assert response.json()["detail"] == "Internal server error"
@@ -1877,6 +1925,7 @@ class TestIntegration(TestBackendService):
         mock_client.get_metadata.side_effect = ExchangeError("Metadata not found")
         mock_client.get_positions.side_effect = ExchangeError("Authentication failed")
         mock_client.get_balances.side_effect = ExchangeError("Balance access denied")
+        mock_client.get_staking_status.side_effect = ExchangeError("Staking access denied")
         mock_client.modify_order.side_effect = ExchangeError("Order not found")
 
         # Test all endpoints return 400 for exchange errors
@@ -1887,6 +1936,7 @@ class TestIntegration(TestBackendService):
             "/positions",
             "/positions/BTC",
             "/balances",
+            "/staking",
         ]
 
         # Test modify_order endpoint error

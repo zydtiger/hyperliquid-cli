@@ -14,6 +14,7 @@ from models.api import (
     ExchangeError,
     LeverageType,
     PositionInfo,
+    StakingDelegation,
     Ticker,
 )
 
@@ -432,3 +433,96 @@ class TestHyperliquidClientBalances:
             ExchangeError, match="Operation failed after 4 attempts: Connection lost"
         ):
             client.get_balances()
+
+
+class TestHyperliquidClientStaking:
+    """Test cases for get_staking_status method."""
+
+    def test_get_staking_status_success(
+        self,
+        client,
+        mock_connection,
+        sample_staking_summary,
+        sample_staking_delegations,
+        expected_staking_status,
+        mock_retry_operation,
+    ):
+        """Test successful staking status retrieval."""
+        mock_info = mock_connection.info
+        mock_info.user_staking_summary.return_value = sample_staking_summary
+        mock_info.user_staking_delegations.return_value = sample_staking_delegations
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_staking_status()
+
+        assert result == expected_staking_status
+
+    def test_get_staking_status_filters_zero_amount_delegations(
+        self,
+        client,
+        mock_connection,
+        sample_staking_summary,
+        mock_retry_operation,
+    ):
+        """Test zero-amount staking delegations are excluded."""
+        mock_info = mock_connection.info
+        mock_info.user_staking_summary.return_value = sample_staking_summary
+        mock_info.user_staking_delegations.return_value = [
+            {"validator": "validator-1", "amount": "0"},
+            {"validator": "validator-2", "amount": "1.25000000"},
+        ]
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_staking_status()
+
+        assert result.total_staked == Decimal("100.61607572")
+        assert result.delegations == [
+            StakingDelegation(validator="validator-2", amount=Decimal("1.25000000"))
+        ]
+
+    def test_get_staking_status_empty(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test staking status retrieval with no active delegations."""
+        mock_info = mock_connection.info
+        mock_info.user_staking_summary.return_value = {"delegated": "0"}
+        mock_info.user_staking_delegations.return_value = []
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_staking_status()
+
+        assert result.total_staked == Decimal("0")
+        assert result.delegations == []
+
+    def test_get_staking_status_summary_failure(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test staking summary retrieval failures are wrapped."""
+        mock_info = mock_connection.info
+        mock_info.user_staking_summary.side_effect = Exception("summary failed")
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        with pytest.raises(ExchangeError, match="Failed to get staking status: summary failed"):
+            client.get_staking_status()
+
+    def test_get_staking_status_delegations_failure(
+        self,
+        client,
+        mock_connection,
+        sample_staking_summary,
+        mock_retry_operation,
+    ):
+        """Test staking delegation retrieval failures are wrapped."""
+        mock_info = mock_connection.info
+        mock_info.user_staking_summary.return_value = sample_staking_summary
+        mock_info.user_staking_delegations.side_effect = Exception("delegations failed")
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        with pytest.raises(ExchangeError, match="Failed to get staking status: delegations failed"):
+            client.get_staking_status()

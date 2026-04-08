@@ -17,7 +17,9 @@ from backend.exchange.hyperliquid_connection import HyperliquidConnection
 from models.api import (
     BalanceInfo,
     SpotBalance,
+    StakingDelegation,
     StakingInfo,
+    StakingStatus,
 )
 from models.config import Config, HyperliquidConfig, NetworkType, TradingConfig
 from models.order import (
@@ -441,6 +443,36 @@ def sample_staking_summary() -> dict[str, Any]:
         "totalPendingWithdrawal": "5.0",
         "nPendingWithdrawals": 2,
     }
+
+
+@pytest.fixture
+def sample_staking_delegations() -> list[dict[str, Any]]:
+    """Sample staking delegation rows from the exchange."""
+    return [
+        {
+            "validator": "validator-1",
+            "amount": "70.50000000",
+            "lockedUntilTimestamp": 1762271507000,
+        },
+        {
+            "validator": "validator-2",
+            "amount": "30.11607572",
+            "lockedUntilTimestamp": 1762271508000,
+        },
+        {"validator": "validator-3", "amount": "0", "lockedUntilTimestamp": 1762271509000},
+    ]
+
+
+@pytest.fixture
+def expected_staking_status() -> StakingStatus:
+    """Expected staking status object for testing."""
+    return StakingStatus(
+        total_staked=Decimal("100.61607572"),
+        delegations=[
+            StakingDelegation(validator="validator-1", amount=Decimal("70.50000000")),
+            StakingDelegation(validator="validator-2", amount=Decimal("30.11607572")),
+        ],
+    )
 
 
 @pytest.fixture
