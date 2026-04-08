@@ -464,13 +464,54 @@ def sample_staking_delegations() -> list[dict[str, Any]]:
 
 
 @pytest.fixture
+def sample_validator_summaries() -> list[dict[str, Any]]:
+    """Sample validator metadata rows from the exchange."""
+    return [
+        {
+            "validator": "validator-1",
+            "signer": "signer-1",
+            "name": "CMI",
+            "description": "Validator 1",
+            "nRecentBlocks": 100,
+            "stake": "100000000",
+            "isJailed": False,
+            "isActive": True,
+            "stats": {},
+            "commission": "0.05",
+        },
+        {
+            "validator": "validator-2",
+            "signer": "signer-2",
+            "name": "HyperStake",
+            "description": "Validator 2",
+            "nRecentBlocks": 100,
+            "stake": "100000000",
+            "isJailed": False,
+            "isActive": True,
+            "stats": {},
+            "commission": "0.1",
+        },
+    ]
+
+
+@pytest.fixture
 def expected_staking_status() -> StakingStatus:
     """Expected staking status object for testing."""
     return StakingStatus(
         total_staked=Decimal("100.61607572"),
         delegations=[
-            StakingDelegation(validator="validator-1", amount=Decimal("70.50000000")),
-            StakingDelegation(validator="validator-2", amount=Decimal("30.11607572")),
+            StakingDelegation(
+                validator="validator-1",
+                name="CMI",
+                commission=Decimal("0.05"),
+                amount=Decimal("70.50000000"),
+            ),
+            StakingDelegation(
+                validator="validator-2",
+                name="HyperStake",
+                commission=Decimal("0.1"),
+                amount=Decimal("30.11607572"),
+            ),
         ],
     )
 

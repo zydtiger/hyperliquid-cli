@@ -435,8 +435,18 @@ def test_staking_command_renders_summary_and_table(
             return StakingStatus(
                 total_staked=Decimal("100.61607572"),
                 delegations=[
-                    StakingDelegation(validator="validator-1", amount=Decimal("70.50000000")),
-                    StakingDelegation(validator="validator-2", amount=Decimal("30.11607572")),
+                    StakingDelegation(
+                        validator="validator-1",
+                        name="CMI",
+                        commission=Decimal("0.05"),
+                        amount=Decimal("70.50000000"),
+                    ),
+                    StakingDelegation(
+                        validator="validator-2",
+                        name="HyperStake",
+                        commission=Decimal("0.10"),
+                        amount=Decimal("30.11607572"),
+                    ),
                 ],
             )
 
@@ -450,6 +460,8 @@ def test_staking_command_renders_summary_and_table(
     assert "100.61607572 HYPE" in output
     assert "Active Staking Endpoints" in output
     assert "validator-1" in output
+    assert "CMI" in output
+    assert "5.00%" in output
     assert "70.50000000" in output
 
 

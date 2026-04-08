@@ -291,8 +291,18 @@ class TestBackendService:
         return StakingStatus(
             total_staked=Decimal("100.61607572"),
             delegations=[
-                StakingDelegation(validator="validator-1", amount=Decimal("70.50000000")),
-                StakingDelegation(validator="validator-2", amount=Decimal("30.11607572")),
+                StakingDelegation(
+                    validator="validator-1",
+                    name="CMI",
+                    commission=Decimal("0.05"),
+                    amount=Decimal("70.50000000"),
+                ),
+                StakingDelegation(
+                    validator="validator-2",
+                    name="HyperStake",
+                    commission=Decimal("0.10"),
+                    amount=Decimal("30.11607572"),
+                ),
             ],
         )
 
@@ -699,6 +709,8 @@ class TestRequestHandlers(TestBackendService):
         assert data["total_staked"] == "100.61607572"
         assert len(data["delegations"]) == 2
         assert data["delegations"][0]["validator"] == "validator-1"
+        assert data["delegations"][0]["name"] == "CMI"
+        assert data["delegations"][0]["commission"] == "0.05"
         assert data["delegations"][0]["amount"] == "70.50000000"
         mock_client.get_staking_status.assert_called_once_with()
 
