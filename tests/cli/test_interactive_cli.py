@@ -7,7 +7,7 @@ from decimal import Decimal
 import pytest
 
 from cli.interactive_cli import InteractiveCLI
-from models.api import LeverageType, PositionInfo
+from models.api import LeverageType, PnlHistory, PnlPoint, PositionInfo
 from models.config import Config, HyperliquidConfig, NetworkType
 from models.margin import IsolatedMarginUpdateResult
 from models.order import OrderHistoryEntry, OrderStatus
@@ -273,3 +273,124 @@ def test_order_history_rejects_invalid_args(
     output = capsys.readouterr().out
 
     assert "Usage: order_history [N]" in output
+
+
+@pytest.fixture
+def pnl_history() -> PnlHistory:
+    """Sample PnL history for CLI tests."""
+    return PnlHistory(
+        window="7d",
+        points=[
+            PnlPoint(
+                time=1741886630493,
+                total_pnl=Decimal("0.0"),
+                perp_pnl=Decimal("0.0"),
+                spot_pnl=Decimal("0.0"),
+            ),
+            PnlPoint(
+                time=1741973030493,
+                total_pnl=Decimal("10.5"),
+                perp_pnl=Decimal("7.0"),
+                spot_pnl=Decimal("3.5"),
+            ),
+            PnlPoint(
+                time=1742059430493,
+                total_pnl=Decimal("6.0"),
+                perp_pnl=Decimal("8.5"),
+                spot_pnl=Decimal("-2.5"),
+            ),
+        ],
+    )
+
+
+def test_pnl_command_renders_graph(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+    pnl_history: PnlHistory,
+):
+    """Test pnl launches the fullscreen TUI renderer."""
+    created_apis = []
+    launched_histories = []
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            self.calls = 0
+            created_apis.append(self)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_pnl_history(self) -> PnlHistory:
+            self.calls += 1
+            return pnl_history
+
+    class FakePnlTUI:
+        def __init__(self, history: PnlHistory):
+            launched_histories.append(history)
+
+        def run(self) -> None:
+            launched_histories.append("ran")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.PnlTUI", FakePnlTUI)
+
+    cli = InteractiveCLI(config)
+    cli.do_pnl("")
+    output = capsys.readouterr().out
+
+    assert created_apis[0].calls == 1
+    assert launched_histories == [pnl_history, "ran"]
+    assert output == "\n"
+
+
+def test_pnl_command_rejects_extra_args(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test pnl validates its no-argument interface."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            raise AssertionError("BackendAPI should not be created for invalid args")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_pnl("7d")
+    output = capsys.readouterr().out
+
+    assert "Usage: pnl" in output
+
+
+def test_pnl_command_handles_empty_history(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test pnl prints the empty-state message when no points are available."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_pnl_history(self) -> PnlHistory:
+            return PnlHistory(window="7d", points=[])
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_pnl("")
+    output = capsys.readouterr().out
+
+    assert "No 7-day PnL history found." in output
