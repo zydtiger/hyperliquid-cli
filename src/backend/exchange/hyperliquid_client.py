@@ -1499,7 +1499,7 @@ class HyperliquidClient:
             IsolatedMarginUpdateResult: Result of the isolated margin update operation
         """
 
-        def _update_isolated_margin() -> IsolatedMarginUpdateResult:  # noqa: PLR0911, PLR0912
+        def _update_isolated_margin() -> IsolatedMarginUpdateResult:  # noqa: PLR0911
             try:
                 if not coin or not isinstance(coin, str):
                     return IsolatedMarginUpdateResult(
@@ -1508,26 +1508,14 @@ class HyperliquidClient:
                         updated_position=None,
                     )
 
-                if not isinstance(amount, Decimal):
-                    try:
-                        parsed_amount = Decimal(str(amount))
-                    except Exception:
-                        return IsolatedMarginUpdateResult(
-                            success=False,
-                            message="Invalid amount: must be a valid decimal value",
-                            updated_position=None,
-                        )
-                else:
-                    parsed_amount = amount
-
-                if parsed_amount == 0:
+                if amount == 0:
                     return IsolatedMarginUpdateResult(
                         success=False,
                         message="Invalid amount: isolated margin update amount must be non-zero",
                         updated_position=None,
                     )
 
-                decimal_places = get_decimal_places(parsed_amount)
+                decimal_places = get_decimal_places(amount)
                 if decimal_places > MAX_DECIMALS:
                     return IsolatedMarginUpdateResult(
                         success=False,
@@ -1559,7 +1547,7 @@ class HyperliquidClient:
                         updated_position=None,
                     )
 
-                result = self.connection.exchange.update_isolated_margin(float(parsed_amount), coin)
+                result = self.connection.exchange.update_isolated_margin(float(amount), coin)
                 result_status = result.get("status")
                 response_payload = result.get("response")
 
@@ -1586,12 +1574,12 @@ class HyperliquidClient:
                     except Exception:
                         updated_position = None
 
-                    action = "added" if parsed_amount > 0 else "removed"
-                    direction = "to" if parsed_amount > 0 else "from"
+                    action = "added" if amount > 0 else "removed"
+                    direction = "to" if amount > 0 else "from"
                     return IsolatedMarginUpdateResult(
                         success=True,
                         message=(
-                            f"Successfully {action} ${abs(parsed_amount):.2f} "
+                            f"Successfully {action} ${abs(amount):.2f} "
                             f"isolated margin {direction} {coin}"
                         ),
                         updated_position=updated_position,
