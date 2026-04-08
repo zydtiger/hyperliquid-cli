@@ -16,7 +16,7 @@ from models.order import LimitOrder
 
 from .api import BackendAPI
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
-from .interactive import ModifyWizard, OrderWizard
+from .interactive import ModifyWizard, OrderWizard, PnlTUI
 
 MIN_CHANGE_LEVERAGE_ARGS = 2
 MIN_UPDATE_MARGIN_ARGS = 2
@@ -435,6 +435,36 @@ class InteractiveCLI(cmd.Cmd):
         print(f"If N is omitted, the default is {DEFAULT_ORDER_HISTORY_LIMIT}.")
         print("Only filled orders are included, ordered newest first.")
 
+    def do_pnl(self, args: str) -> None:
+        """
+        Show a fixed 7-day fullscreen PnL graph.
+
+        Usage: pnl
+        """
+        if args.strip():
+            print("❌ Error: pnl does not take any arguments")
+            print("Usage: pnl")
+            return
+
+        try:
+            with BackendAPI(self.config) as api:
+                history = api.get_pnl_history()
+                if not history.points:
+                    print("No 7-day PnL history found.")
+                else:
+                    PnlTUI(history).run()
+                print()
+        except Exception as e:
+            print(f"❌ Error fetching PnL history: {e}")
+
+    def help_pnl(self) -> None:
+        """Show help for the pnl command."""
+        print("pnl - Show a 7-day fullscreen PnL graph")
+        print("Usage: pnl")
+        print()
+        print("Launches a fullscreen TUI with fixed 7-day total, perpetual, and spot PnL charts.")
+        print("This version is hard-coded and does not accept any arguments.")
+
     def do_cancel_order(self, args: str) -> None:
         """
         Cancel a specific order or all open orders.
@@ -798,6 +828,7 @@ class InteractiveCLI(cmd.Cmd):
             "order_status",
             "open_orders",
             "order_history",
+            "pnl",
             "cancel_order",
             "modify_order",
             "change_leverage",

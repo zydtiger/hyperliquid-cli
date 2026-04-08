@@ -7,5 +7,6 @@ with tab completion support and command handling.
 
 from .modify_wizard import ModifyWizard
 from .order_wizard import OrderWizard
+from .pnl_tui import PnlTUI
 
-__all__ = ["ModifyWizard", "OrderWizard"]
+__all__ = ["ModifyWizard", "OrderWizard", "PnlTUI"]

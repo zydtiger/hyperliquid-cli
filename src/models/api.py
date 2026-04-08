@@ -137,6 +137,22 @@ class BalanceInfo(BaseModel):
     staking_info: StakingInfo | None = Field(None, description="Staking delegations and rewards")
 
 
+class PnlPoint(BaseModel):
+    """Single point in a PnL history series."""
+
+    time: int = Field(..., description="Unix timestamp in milliseconds")
+    total_pnl: Decimal = Field(..., description="Total account PnL at this time")
+    perp_pnl: Decimal = Field(..., description="Perpetuals-only PnL at this time")
+    spot_pnl: Decimal = Field(..., description="Spot-only PnL at this time")
+
+
+class PnlHistory(BaseModel):
+    """Time series of account PnL values for a fixed window."""
+
+    window: str = Field(..., description="Window label for the PnL series")
+    points: list[PnlPoint] = Field(default_factory=list, description="Ordered PnL samples")
+
+
 # ============================================================================
 # EXPORTS
 # ============================================================================
@@ -149,6 +165,8 @@ __all__ = [
     "HealthResponse",
     "HealthStatus",
     "LeverageType",
+    "PnlHistory",
+    "PnlPoint",
     "PositionInfo",
     "RootResponse",
     "SpotBalance",
