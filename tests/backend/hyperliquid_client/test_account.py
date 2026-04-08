@@ -444,6 +444,7 @@ class TestHyperliquidClientStaking:
         mock_connection,
         sample_staking_summary,
         sample_staking_delegations,
+        sample_staking_rewards,
         sample_validator_summaries,
         expected_staking_status,
         mock_retry_operation,
@@ -452,6 +453,7 @@ class TestHyperliquidClientStaking:
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = sample_staking_summary
         mock_info.user_staking_delegations.return_value = sample_staking_delegations
+        mock_info.user_staking_rewards.return_value = sample_staking_rewards
         mock_info.post.return_value = sample_validator_summaries
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
@@ -464,6 +466,7 @@ class TestHyperliquidClientStaking:
         client,
         mock_connection,
         sample_staking_summary,
+        sample_staking_rewards,
         mock_retry_operation,
     ):
         """Test zero-amount staking delegations are excluded."""
@@ -473,6 +476,7 @@ class TestHyperliquidClientStaking:
             {"validator": "validator-1", "amount": "0"},
             {"validator": "validator-2", "amount": "1.25000000"},
         ]
+        mock_info.user_staking_rewards.return_value = sample_staking_rewards
         mock_info.post.return_value = [
             {
                 "validator": "validator-2",
@@ -492,6 +496,7 @@ class TestHyperliquidClientStaking:
         result = client.get_staking_status()
 
         assert result.total_staked == Decimal("100.61607572")
+        assert result.total_reward == Decimal("2.00000000")
         assert result.delegations == [
             StakingDelegation(
                 validator="validator-2",
@@ -511,12 +516,14 @@ class TestHyperliquidClientStaking:
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = {"delegated": "0"}
         mock_info.user_staking_delegations.return_value = []
+        mock_info.user_staking_rewards.return_value = []
         mock_info.post.return_value = []
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_staking_status()
 
         assert result.total_staked == Decimal("0")
+        assert result.total_reward == Decimal("0")
         assert result.delegations == []
 
     def test_get_staking_status_summary_failure(
@@ -561,8 +568,27 @@ class TestHyperliquidClientStaking:
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = sample_staking_summary
         mock_info.user_staking_delegations.return_value = sample_staking_delegations
+        mock_info.user_staking_rewards.return_value = []
         mock_info.post.side_effect = Exception("validators failed")
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
         with pytest.raises(ExchangeError, match="Failed to get staking status: validators failed"):
+            client.get_staking_status()
+
+    def test_get_staking_status_rewards_failure(
+        self,
+        client,
+        mock_connection,
+        sample_staking_summary,
+        sample_staking_delegations,
+        mock_retry_operation,
+    ):
+        """Test staking reward retrieval failures are wrapped."""
+        mock_info = mock_connection.info
+        mock_info.user_staking_summary.return_value = sample_staking_summary
+        mock_info.user_staking_delegations.return_value = sample_staking_delegations
+        mock_info.user_staking_rewards.side_effect = Exception("rewards failed")
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        with pytest.raises(ExchangeError, match="Failed to get staking status: rewards failed"):
             client.get_staking_status()

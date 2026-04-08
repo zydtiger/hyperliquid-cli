@@ -290,6 +290,7 @@ class TestBackendService:
         """Sample staking status for testing."""
         return StakingStatus(
             total_staked=Decimal("100.61607572"),
+            total_reward=Decimal("2.00000000"),
             delegations=[
                 StakingDelegation(
                     validator="validator-1",
@@ -707,6 +708,7 @@ class TestRequestHandlers(TestBackendService):
         assert response.status_code == 200
         data = response.json()
         assert data["total_staked"] == "100.61607572"
+        assert data["total_reward"] == "2.00000000"
         assert len(data["delegations"]) == 2
         assert data["delegations"][0]["validator"] == "validator-1"
         assert data["delegations"][0]["name"] == "CMI"

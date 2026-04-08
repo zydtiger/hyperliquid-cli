@@ -434,6 +434,7 @@ def test_staking_command_renders_summary_and_table(
         def get_staking_status(self) -> StakingStatus:
             return StakingStatus(
                 total_staked=Decimal("100.61607572"),
+                total_reward=Decimal("2.00000000"),
                 delegations=[
                     StakingDelegation(
                         validator="validator-1",
@@ -458,6 +459,7 @@ def test_staking_command_renders_summary_and_table(
 
     assert "Staking Summary" in output
     assert "100.61607572 HYPE" in output
+    assert "2.00000000 HYPE" in output
     assert "Active Staking Endpoints" in output
     assert "validator-1" in output
     assert "CMI" in output
@@ -483,7 +485,9 @@ def test_staking_command_empty_state(
             return None
 
         def get_staking_status(self) -> StakingStatus:
-            return StakingStatus(total_staked=Decimal("0"), delegations=[])
+            return StakingStatus(
+                total_staked=Decimal("0"), total_reward=Decimal("0"), delegations=[]
+            )
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
 

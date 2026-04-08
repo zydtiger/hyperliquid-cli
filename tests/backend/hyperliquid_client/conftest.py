@@ -495,10 +495,20 @@ def sample_validator_summaries() -> list[dict[str, Any]]:
 
 
 @pytest.fixture
+def sample_staking_rewards() -> list[dict[str, Any]]:
+    """Sample staking rewards history from the exchange."""
+    return [
+        {"time": 1762271507000, "source": "delegation", "totalAmount": "1.25000000"},
+        {"time": 1762271508000, "source": "commission", "totalAmount": "0.75000000"},
+    ]
+
+
+@pytest.fixture
 def expected_staking_status() -> StakingStatus:
     """Expected staking status object for testing."""
     return StakingStatus(
         total_staked=Decimal("100.61607572"),
+        total_reward=Decimal("2.00000000"),
         delegations=[
             StakingDelegation(
                 validator="validator-1",
