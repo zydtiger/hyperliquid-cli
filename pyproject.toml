@@ -90,6 +90,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # S101: allow asserts
 # PLR2004: allow magic values (e.g., status codes like 200)
+"scripts/*.py" = ["ALL"]
 "tests/**/*.py" = ["S101", "PLR2004"]
 "test_*.py" = ["S101", "PLR2004"]
 
