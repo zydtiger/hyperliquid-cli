@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="99" height="20" role="img" aria-label="coverage: 40%">
-  <title>coverage: 40%</title>
+<svg xmlns="http://www.w3.org/2000/svg" width="99" height="20" role="img" aria-label="coverage: 61%">
+  <title>coverage: 61%</title>
   <defs>
     <!-- Subtle vertical gloss gradient applied over entire badge -->
     <linearGradient id="b" x2="0" y2="100%">
@@ -15,7 +15,7 @@
     <!-- Left label background -->
     <rect width="62" height="20" fill="#555"/>
     <!-- Right value background -->
-    <rect x="62" width="37" height="20" fill="#e05d44"/>
+    <rect x="62" width="37" height="20" fill="#dfb317"/>
     <!-- Gloss overlay across full width so it covers BOTH sides -->
     <rect width="99" height="20" fill="url(#b)"/>
   </g>
@@ -26,7 +26,7 @@
     <text x="7" y="15" fill="#010101" fill-opacity=".3">coverage</text>
     <text x="7" y="14" fill="#fff">coverage</text>
     <!-- Value shadow + text -->
-    <text x="67" y="15" fill="#010101" fill-opacity=".3">40%</text>
-    <text x="67" y="14" fill="#fff">40%</text>
+    <text x="67" y="15" fill="#010101" fill-opacity=".3">61%</text>
+    <text x="67" y="14" fill="#fff">61%</text>
   </g>
 </svg>
