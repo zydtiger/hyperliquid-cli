@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
 from backend.service import create_app
-from models.api import ExchangeError, PnlHistory, PnlPoint
+from models.api import DEFAULT_PNL_WINDOW, ExchangeError, PnlHistory, PnlHistoryCatalog, PnlPoint
 from models.config import Config, HyperliquidConfig, NetworkType
 
 
@@ -42,22 +42,38 @@ def test_app(mock_config: Config, mock_client: Mock) -> TestClient:
 
 
 @pytest.fixture
-def sample_pnl_history() -> PnlHistory:
-    """Sample PnL history for testing."""
-    return PnlHistory(
-        window="7d",
-        points=[
-            PnlPoint(
-                time=1741886630493,
-                total_pnl=Decimal("0.0"),
-                perp_pnl=Decimal("0.0"),
-                spot_pnl=Decimal("0.0"),
+def sample_pnl_history() -> PnlHistoryCatalog:
+    """Sample multi-window PnL history for testing."""
+    return PnlHistoryCatalog(
+        default_window=DEFAULT_PNL_WINDOW,
+        histories=[
+            PnlHistory(
+                window="1d",
+                points=[
+                    PnlPoint(
+                        time=1741886630493,
+                        total_pnl=Decimal("0.0"),
+                        perp_pnl=Decimal("0.0"),
+                        spot_pnl=Decimal("0.0"),
+                    )
+                ],
             ),
-            PnlPoint(
-                time=1741973030493,
-                total_pnl=Decimal("10.5"),
-                perp_pnl=Decimal("7.0"),
-                spot_pnl=Decimal("3.5"),
+            PnlHistory(
+                window="7d",
+                points=[
+                    PnlPoint(
+                        time=1741886630493,
+                        total_pnl=Decimal("0.0"),
+                        perp_pnl=Decimal("0.0"),
+                        spot_pnl=Decimal("0.0"),
+                    ),
+                    PnlPoint(
+                        time=1741973030493,
+                        total_pnl=Decimal("10.5"),
+                        perp_pnl=Decimal("7.0"),
+                        spot_pnl=Decimal("3.5"),
+                    ),
+                ],
             ),
         ],
     )
@@ -66,7 +82,7 @@ def sample_pnl_history() -> PnlHistory:
 def test_pnl_endpoint_success(
     test_app: TestClient,
     mock_client: Mock,
-    sample_pnl_history: PnlHistory,
+    sample_pnl_history: PnlHistoryCatalog,
 ):
     """Test successful /pnl endpoint response."""
     mock_client.get_pnl_history.return_value = sample_pnl_history
@@ -75,19 +91,35 @@ def test_pnl_endpoint_success(
 
     assert response.status_code == 200
     assert response.json() == {
-        "window": "7d",
-        "points": [
+        "default_window": "7d",
+        "histories": [
             {
-                "time": 1741886630493,
-                "total_pnl": "0.0",
-                "perp_pnl": "0.0",
-                "spot_pnl": "0.0",
+                "window": "1d",
+                "points": [
+                    {
+                        "time": 1741886630493,
+                        "total_pnl": "0.0",
+                        "perp_pnl": "0.0",
+                        "spot_pnl": "0.0",
+                    }
+                ],
             },
             {
-                "time": 1741973030493,
-                "total_pnl": "10.5",
-                "perp_pnl": "7.0",
-                "spot_pnl": "3.5",
+                "window": "7d",
+                "points": [
+                    {
+                        "time": 1741886630493,
+                        "total_pnl": "0.0",
+                        "perp_pnl": "0.0",
+                        "spot_pnl": "0.0",
+                    },
+                    {
+                        "time": 1741973030493,
+                        "total_pnl": "10.5",
+                        "perp_pnl": "7.0",
+                        "spot_pnl": "3.5",
+                    },
+                ],
             },
         ],
     }

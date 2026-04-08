@@ -4,31 +4,51 @@ Tests for the fullscreen PnL TUI renderer.
 
 from decimal import Decimal
 
-from cli.interactive.pnl_tui import PnlScreenControl, render_braille_plot
-from models.api import PnlHistory, PnlPoint
+from cli.interactive.pnl_tui import PnlScreenControl, render_braille_plot, window_label
+from models.api import DEFAULT_PNL_WINDOW, PnlHistory, PnlHistoryCatalog, PnlPoint
 
 
-def _sample_history() -> PnlHistory:
-    return PnlHistory(
-        window="7d",
-        points=[
-            PnlPoint(
-                time=1741886630493,
-                total_pnl=Decimal("0.0"),
-                perp_pnl=Decimal("0.0"),
-                spot_pnl=Decimal("0.0"),
+def _sample_history() -> PnlHistoryCatalog:
+    return PnlHistoryCatalog(
+        default_window=DEFAULT_PNL_WINDOW,
+        histories=[
+            PnlHistory(
+                window="1d",
+                points=[
+                    PnlPoint(
+                        time=1741973030493,
+                        total_pnl=Decimal("10.5"),
+                        perp_pnl=Decimal("7.0"),
+                        spot_pnl=Decimal("3.5"),
+                    )
+                ],
             ),
-            PnlPoint(
-                time=1741973030493,
-                total_pnl=Decimal("10.5"),
-                perp_pnl=Decimal("7.0"),
-                spot_pnl=Decimal("3.5"),
+            PnlHistory(
+                window="3d",
+                points=[],
             ),
-            PnlPoint(
-                time=1742059430493,
-                total_pnl=Decimal("6.0"),
-                perp_pnl=Decimal("8.5"),
-                spot_pnl=Decimal("-2.5"),
+            PnlHistory(
+                window="7d",
+                points=[
+                    PnlPoint(
+                        time=1741886630493,
+                        total_pnl=Decimal("0.0"),
+                        perp_pnl=Decimal("0.0"),
+                        spot_pnl=Decimal("0.0"),
+                    ),
+                    PnlPoint(
+                        time=1741973030493,
+                        total_pnl=Decimal("10.5"),
+                        perp_pnl=Decimal("7.0"),
+                        spot_pnl=Decimal("3.5"),
+                    ),
+                    PnlPoint(
+                        time=1742059430493,
+                        total_pnl=Decimal("6.0"),
+                        perp_pnl=Decimal("8.5"),
+                        spot_pnl=Decimal("-2.5"),
+                    ),
+                ],
             ),
         ],
     )
@@ -54,7 +74,7 @@ def test_pnl_screen_control_renders_panel_titles():
     lines = ["".join(fragment for _, fragment in content.get_line(index)) for index in range(30)]
     rendered = "\n".join(lines)
 
-    assert "Hyperliquid PnL 7D TUI" in rendered
+    assert "Hyperliquid PnL TUI - 7D" in rendered
     assert "Total PnL" in rendered
     assert "Perp PnL" in rendered
     assert "Spot PnL" in rendered
@@ -72,3 +92,33 @@ def test_pnl_screen_control_keeps_panel_borders_aligned():
     assert all(len(line) == width for line in panel_border_lines)
     assert all(line.endswith("┐") for line in panel_border_lines if line.startswith("┌"))
     assert all(line.endswith("┘") for line in panel_border_lines if line.startswith("└"))
+
+
+def test_pnl_screen_control_advances_between_windows():
+    """The control should clamp and update the active range while rendering."""
+    control = PnlScreenControl(_sample_history())
+
+    assert control.current_window() == "7d"
+    control.advance_window(1)
+    assert control.current_window() == "1m"
+    control.advance_window(10)
+    assert control.current_window() == "all"
+    control.advance_window(-10)
+    assert control.current_window() == "1d"
+
+
+def test_pnl_screen_control_renders_empty_window_message():
+    """Selecting an empty range should keep the TUI alive with an empty-state panel."""
+    control = PnlScreenControl(_sample_history())
+    control.advance_window(-1)
+    content = control.create_content(width=80, height=30)
+    lines = ["".join(fragment for _, fragment in content.get_line(index)) for index in range(30)]
+    rendered = "\n".join(lines)
+
+    assert "Hyperliquid PnL TUI - 3D" in rendered
+    assert "No PnL samples in this window" in rendered
+
+
+def test_window_label_maps_all_time():
+    """The window label helper should expose the expected display names."""
+    assert window_label("all") == "ALL-TIME"

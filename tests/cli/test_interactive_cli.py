@@ -7,7 +7,14 @@ from decimal import Decimal
 import pytest
 
 from cli.interactive_cli import InteractiveCLI
-from models.api import LeverageType, PnlHistory, PnlPoint, PositionInfo
+from models.api import (
+    DEFAULT_PNL_WINDOW,
+    LeverageType,
+    PnlHistory,
+    PnlHistoryCatalog,
+    PnlPoint,
+    PositionInfo,
+)
 from models.config import Config, HyperliquidConfig, NetworkType
 from models.margin import IsolatedMarginUpdateResult
 from models.order import OrderHistoryEntry, OrderStatus
@@ -276,28 +283,34 @@ def test_order_history_rejects_invalid_args(
 
 
 @pytest.fixture
-def pnl_history() -> PnlHistory:
-    """Sample PnL history for CLI tests."""
-    return PnlHistory(
-        window="7d",
-        points=[
-            PnlPoint(
-                time=1741886630493,
-                total_pnl=Decimal("0.0"),
-                perp_pnl=Decimal("0.0"),
-                spot_pnl=Decimal("0.0"),
-            ),
-            PnlPoint(
-                time=1741973030493,
-                total_pnl=Decimal("10.5"),
-                perp_pnl=Decimal("7.0"),
-                spot_pnl=Decimal("3.5"),
-            ),
-            PnlPoint(
-                time=1742059430493,
-                total_pnl=Decimal("6.0"),
-                perp_pnl=Decimal("8.5"),
-                spot_pnl=Decimal("-2.5"),
+def pnl_history() -> PnlHistoryCatalog:
+    """Sample multi-window PnL history for CLI tests."""
+    return PnlHistoryCatalog(
+        default_window=DEFAULT_PNL_WINDOW,
+        histories=[
+            PnlHistory(window="1d", points=[]),
+            PnlHistory(
+                window="7d",
+                points=[
+                    PnlPoint(
+                        time=1741886630493,
+                        total_pnl=Decimal("0.0"),
+                        perp_pnl=Decimal("0.0"),
+                        spot_pnl=Decimal("0.0"),
+                    ),
+                    PnlPoint(
+                        time=1741973030493,
+                        total_pnl=Decimal("10.5"),
+                        perp_pnl=Decimal("7.0"),
+                        spot_pnl=Decimal("3.5"),
+                    ),
+                    PnlPoint(
+                        time=1742059430493,
+                        total_pnl=Decimal("6.0"),
+                        perp_pnl=Decimal("8.5"),
+                        spot_pnl=Decimal("-2.5"),
+                    ),
+                ],
             ),
         ],
     )
@@ -307,7 +320,7 @@ def test_pnl_command_renders_graph(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-    pnl_history: PnlHistory,
+    pnl_history: PnlHistoryCatalog,
 ):
     """Test pnl launches the fullscreen TUI renderer."""
     created_apis = []
@@ -324,12 +337,12 @@ def test_pnl_command_renders_graph(
         def __exit__(self, exc_type, exc_val, exc_tb):
             return None
 
-        def get_pnl_history(self) -> PnlHistory:
+        def get_pnl_history(self) -> PnlHistoryCatalog:
             self.calls += 1
             return pnl_history
 
     class FakePnlTUI:
-        def __init__(self, history: PnlHistory):
+        def __init__(self, history: PnlHistoryCatalog):
             launched_histories.append(history)
 
         def run(self) -> None:
@@ -384,8 +397,11 @@ def test_pnl_command_handles_empty_history(
         def __exit__(self, exc_type, exc_val, exc_tb):
             return None
 
-        def get_pnl_history(self) -> PnlHistory:
-            return PnlHistory(window="7d", points=[])
+        def get_pnl_history(self) -> PnlHistoryCatalog:
+            return PnlHistoryCatalog(
+                default_window=DEFAULT_PNL_WINDOW,
+                histories=[PnlHistory(window="7d", points=[])],
+            )
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
 
