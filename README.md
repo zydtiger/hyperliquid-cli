@@ -1,7 +1,7 @@
 # Hyperliquid CLI
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/zydtiger/hyperliquid-cli)
-[![Python](https://img.shields.io/badge/python-3.10+-blue)](https://python.org)
+[![Python](https://img.shields.io/badge/python-3.11+-blue)](https://python.org)
 [![License](https://img.shields.io/badge/license-AGPL%20v3-green)](LICENSE)
 [![Build](https://img.shields.io/github/actions/workflow/status/zydtiger/hyperliquid-cli/ci.yml)](https://github.com/zydtiger/hyperliquid-cli/actions)
 [![Coverage](https://raw.githubusercontent.com/zydtiger/hyperliquid-cli/dev/badges/coverage.svg)](https://github.com/zydtiger/hyperliquid-cli/actions/workflows/ci.yml)
