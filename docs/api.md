@@ -313,6 +313,48 @@ curl "http://localhost:8080/order_history"
 curl "http://localhost:8080/order_history?limit=5"
 ```
 
+#### GET /pnl
+Get a fixed 7-day PnL history for the configured account.
+
+**Response:**
+```json
+{
+  "window": "7d",
+  "points": [
+    {
+      "time": 1741886630493,
+      "total_pnl": "0.0",
+      "perp_pnl": "0.0",
+      "spot_pnl": "0.0"
+    },
+    {
+      "time": 1741973030493,
+      "total_pnl": "10.5",
+      "perp_pnl": "7.0",
+      "spot_pnl": "3.5"
+    }
+  ]
+}
+```
+
+**Field Descriptions:**
+- `window`: Fixed time window label. This endpoint currently always returns `7d`.
+- `points`: Ordered PnL samples from oldest to newest.
+- `time`: Sample timestamp in Unix milliseconds.
+- `total_pnl`: Total account PnL sample from the portfolio history.
+- `perp_pnl`: Perpetuals-only PnL sample from `perpWeek` history.
+- `spot_pnl`: Derived spot PnL sample computed as `total_pnl - perp_pnl`.
+
+**Error Responses:**
+- `400 Bad Request`: Exchange error or authentication issue
+- `500 Internal Server Error`: Unexpected server error
+
+**Usage Example:**
+```bash
+# Get the fixed 7-day PnL history
+curl http://localhost:8080/pnl
+```
+
 #### POST /market_order
 Submit a market order for immediate execution at the best available price.
 

@@ -10,7 +10,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Path, Query, status
 
-from models.api import BalanceInfo, CoinMetadata, ExchangeError, PositionInfo, Ticker
+from models.api import BalanceInfo, CoinMetadata, ExchangeError, PnlHistory, PositionInfo, Ticker
 from models.leverage import LeverageResult, LeverageUpdateRequest
 from models.margin import IsolatedMarginUpdateRequest, IsolatedMarginUpdateResult
 from models.order import (
@@ -252,6 +252,26 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting order history: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            ) from e
+
+    @app.get("/pnl")
+    async def get_pnl_history() -> PnlHistory:
+        """
+        Get the last 7 days of total/perpetual/spot PnL history.
+
+        Returns:
+            PnlHistory: Fixed-window PnL time series
+        """
+        try:
+            return client.get_pnl_history()
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting PnL history: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        except Exception as e:
+            logger.error(f"Unexpected error getting PnL history: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
