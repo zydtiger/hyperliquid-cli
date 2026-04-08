@@ -8,6 +8,8 @@
 
 A comprehensive Hyperliquid trading system with both CLI and REST API interfaces. Execute smart orders, monitor positions, and manage your trading workflow with ease.
 
+![Pnl TUI](demo/pnl_tui.png)
+
 ## Quick Start
 
 ### Installation
