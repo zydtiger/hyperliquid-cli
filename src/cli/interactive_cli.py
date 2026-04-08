@@ -448,11 +448,11 @@ class InteractiveCLI(cmd.Cmd):
 
         try:
             with BackendAPI(self.config) as api:
-                history = api.get_pnl_history()
-                if not history.points:
+                history_catalog = api.get_pnl_history()
+                if not any(history.points for history in history_catalog.histories):
                     print("No 7-day PnL history found.")
                 else:
-                    PnlTUI(history).run()
+                    PnlTUI(history_catalog).run()
                 print()
         except Exception as e:
             print(f"❌ Error fetching PnL history: {e}")
@@ -462,7 +462,8 @@ class InteractiveCLI(cmd.Cmd):
         print("pnl - Show a 7-day fullscreen PnL graph")
         print("Usage: pnl")
         print()
-        print("Launches a fullscreen TUI with fixed 7-day total, perpetual, and spot PnL charts.")
+        print("Launches a fullscreen TUI with switchable 1d, 3d, 7d, 1m, 3m, 6m, 1y, and")
+        print("all-time total, perpetual, and spot PnL charts.")
         print("This version is hard-coded and does not accept any arguments.")
 
     def do_cancel_order(self, args: str) -> None:

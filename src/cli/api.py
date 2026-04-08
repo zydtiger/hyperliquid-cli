@@ -17,7 +17,7 @@ from models.api import (
     BalanceInfo,
     CoinMetadata,
     HealthResponse,
-    PnlHistory,
+    PnlHistoryCatalog,
     PositionInfo,
     RootResponse,
     Ticker,
@@ -302,12 +302,12 @@ class BackendAPI:
             logger.error(f"Failed to get order history: {e}")
             raise APIError(f"Connection error: {e!s}") from e
 
-    def get_pnl_history(self) -> PnlHistory:
+    def get_pnl_history(self) -> PnlHistoryCatalog:
         """
-        Get the fixed 7-day total/perp/spot PnL history for the account.
+        Get all supported total/perp/spot PnL history windows for the account.
 
         Returns:
-            PnlHistory: Ordered PnL series for the account
+            PnlHistoryCatalog: Ordered PnL windows for the TUI
 
         Raises:
             APIError: If the request fails
@@ -315,7 +315,7 @@ class BackendAPI:
         try:
             response = self.client.get("/pnl")
             self._handle_response_error(response)
-            return PnlHistory(**response.json())
+            return PnlHistoryCatalog(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get PnL history: {e}")
             raise APIError(f"Connection error: {e!s}") from e

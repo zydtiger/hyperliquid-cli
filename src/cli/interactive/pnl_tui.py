@@ -15,7 +15,7 @@ from prompt_toolkit.layout.containers import Window
 from prompt_toolkit.layout.controls import UIContent, UIControl
 from prompt_toolkit.styles import Style
 
-from models.api import PnlHistory, PnlPoint
+from models.api import PNL_WINDOW_ORDER, PnlHistory, PnlHistoryCatalog, PnlPoint
 
 BRAILLE_BITS = {
     (0, 0): 0x01,
@@ -34,10 +34,10 @@ FOOTER_LINES = 2
 
 
 class PnlTUI:
-    """Launch a fullscreen TUI for the 7-day PnL history."""
+    """Launch a fullscreen TUI for multi-window PnL history."""
 
-    def __init__(self, history: PnlHistory):
-        self.history = history
+    def __init__(self, history_catalog: PnlHistoryCatalog):
+        self.control = PnlScreenControl(history_catalog)
 
     def run(self) -> None:
         """Run the fullscreen TUI application."""
@@ -54,10 +54,22 @@ class PnlTUI:
         def _exit(event) -> None:  # type: ignore[no-untyped-def]
             event.app.exit()
 
+        @bindings.add("+")
+        @bindings.add("=")
+        def _next_window(event) -> None:  # type: ignore[no-untyped-def]
+            self.control.advance_window(-1)
+            event.app.invalidate()
+
+        @bindings.add("-")
+        @bindings.add("_")
+        def _previous_window(event) -> None:  # type: ignore[no-untyped-def]
+            self.control.advance_window(1)
+            event.app.invalidate()
+
         return Application(
             layout=Layout(
                 Window(
-                    content=PnlScreenControl(self.history),
+                    content=self.control,
                     always_hide_cursor=True,
                 )
             ),
@@ -82,8 +94,14 @@ class PnlTUI:
 class PnlScreenControl(UIControl):
     """Custom control that draws the full PnL screen."""
 
-    def __init__(self, history: PnlHistory):
-        self.history = history
+    def __init__(self, history_catalog: PnlHistoryCatalog):
+        self.history_catalog = history_catalog
+        self.history_by_window = {history.window: history for history in history_catalog.histories}
+        default_window = history_catalog.default_window
+        default_index = (
+            PNL_WINDOW_ORDER.index(default_window) if default_window in PNL_WINDOW_ORDER else 0
+        )
+        self.current_window_index = default_index
 
     def create_content(self, width: int, height: int) -> UIContent:
         """Render the TUI content for the current terminal size."""
@@ -100,12 +118,28 @@ class PnlScreenControl(UIControl):
         """The graph view does not take focus."""
         return False
 
+    def advance_window(self, delta: int) -> None:
+        """Move backward or forward through the supported PnL windows."""
+        next_index = self.current_window_index + delta
+        self.current_window_index = min(max(next_index, 0), len(PNL_WINDOW_ORDER) - 1)
+
+    def current_window(self) -> str:
+        """Return the active PnL window key."""
+        return PNL_WINDOW_ORDER[self.current_window_index]
+
+    def current_history(self) -> PnlHistory:
+        """Return the active PnL history, defaulting to an empty history."""
+        window = self.current_window()
+        return self.history_by_window.get(window, PnlHistory(window=window, points=[]))
+
     def _build_lines(self, width: int, height: int) -> list[list[tuple[str, str]]]:
-        latest = self.history.points[-1]
+        history = self.current_history()
+        active_label = window_label(history.window)
+        latest = history.points[-1] if history.points else None
         lines: list[list[tuple[str, str]]] = [
-            [("class:header", self._pad(" Hyperliquid PnL 7D TUI ", width))],
-            [("class:summary", self._pad(self._summary_line(latest), width))],
-            [("class:footer", self._pad(" q / Esc / Enter / Ctrl-C to exit ", width))],
+            [("class:header", self._pad(f" Hyperliquid PnL TUI - {active_label} ", width))],
+            [("class:summary", self._pad(self._summary_line(active_label, latest), width))],
+            [("class:footer", self._pad(" - prev  + next  q / Esc / Enter / Ctrl-C exit ", width))],
         ]
 
         available_height = max(height - HEADER_LINES - FOOTER_LINES, MIN_PANEL_HEIGHT * 3)
@@ -114,9 +148,9 @@ class PnlScreenControl(UIControl):
         plot_width = max(width - 2, 8)
 
         panels = [
-            ("Total PnL", [point.total_pnl for point in self.history.points], "panel-total"),
-            ("Perp PnL", [point.perp_pnl for point in self.history.points], "panel-perp"),
-            ("Spot PnL", [point.spot_pnl for point in self.history.points], "panel-spot"),
+            ("Total PnL", [point.total_pnl for point in history.points], "panel-total"),
+            ("Perp PnL", [point.perp_pnl for point in history.points], "panel-perp"),
+            ("Spot PnL", [point.spot_pnl for point in history.points], "panel-spot"),
         ]
 
         for index, (title, values, style) in enumerate(panels):
@@ -124,21 +158,14 @@ class PnlScreenControl(UIControl):
             if index < len(panels) - 1:
                 lines.append([("class:root", " " * width)])
 
+        lines.append([("class:footer", self._pad(self._time_axis_line(history, width), width))])
         lines.append(
             [
                 (
                     "class:footer",
-                    self._pad(
-                        f" {self._format_date(self.history.points[0].time)}"
-                        f"{' ' * max(width - 22, 1)}"
-                        f"{self._format_date(self.history.points[-1].time)} ",
-                        width,
-                    ),
+                    self._pad(" Perp and spot use independent y-scales per active window ", width),
                 )
             ]
-        )
-        lines.append(
-            [("class:footer", self._pad(" Perp and spot use independent y-scales ", width))]
         )
         return lines[:height]
 
@@ -151,6 +178,9 @@ class PnlScreenControl(UIControl):
         plot_width: int,
         plot_height: int,
     ) -> list[list[tuple[str, str]]]:
+        if not values:
+            return self._render_empty_panel(title, style, width, plot_width, plot_height)
+
         plot_lines = render_braille_plot(values, plot_width, plot_height)
         top_line = self._build_border_line(
             left="┌",
@@ -178,9 +208,47 @@ class PnlScreenControl(UIControl):
         panel_lines.append([("class:root", self._pad(bottom_line, width))])
         return panel_lines
 
-    def _summary_line(self, latest: PnlPoint) -> str:
+    def _render_empty_panel(
+        self,
+        title: str,
+        style: str,
+        width: int,
+        plot_width: int,
+        plot_height: int,
+    ) -> list[list[tuple[str, str]]]:
+        """Render an empty state for windows that have no points."""
+        top_line = self._build_border_line(
+            left="┌",
+            content=f" {title}  no data for selected window ",
+            right="┐",
+            width=width,
+        )
+        bottom_line = self._build_border_line(
+            left="└", content=" no samples ", right="┘", width=width
+        )
+        empty_lines = [" " * plot_width for _ in range(plot_height)]
+        message_row = plot_height // 2
+        message = "No PnL samples in this window"
+        empty_lines[message_row] = message.center(plot_width)[:plot_width].ljust(plot_width)
+
+        panel_lines = [[("class:root", self._pad(top_line, width))]]
+        for line in empty_lines:
+            panel_lines.append(
+                [
+                    ("class:root", "│"),
+                    (f"class:{style}", line),
+                    ("class:root", "│"),
+                ]
+            )
+        panel_lines.append([("class:root", self._pad(bottom_line, width))])
+        return panel_lines
+
+    def _summary_line(self, active_label: str, latest: PnlPoint | None) -> str:
+        if latest is None:
+            return f" {active_label}  no data in selected window "
+
         return (
-            f" Total {format_money(latest.total_pnl)}   "
+            f" {active_label}   Total {format_money(latest.total_pnl)}   "
             f"Perp {format_money(latest.perp_pnl)}   "
             f"Spot {format_money(latest.spot_pnl)} "
         )
@@ -197,6 +265,16 @@ class PnlScreenControl(UIControl):
 
     def _format_date(self, timestamp_ms: int) -> str:
         return datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC).strftime("%m-%d")
+
+    def _time_axis_line(self, history: PnlHistory, width: int) -> str:
+        """Render the shared time axis labels for the active window."""
+        if not history.points:
+            return " No timestamps available "
+
+        start_label = self._format_date(history.points[0].time)
+        end_label = self._format_date(history.points[-1].time)
+        spacing = max(width - len(start_label) - len(end_label) - 2, 1)
+        return f" {start_label}{' ' * spacing}{end_label} "
 
 
 def render_braille_plot(values: list[Decimal], width: int, height: int) -> list[str]:
@@ -292,4 +370,19 @@ def format_money(value: Decimal) -> str:
     return f"${value:+,.2f}"
 
 
-__all__ = ["PnlScreenControl", "PnlTUI", "format_money", "render_braille_plot"]
+def window_label(window: str) -> str:
+    """Map window keys to user-facing labels."""
+    labels = {
+        "1d": "1D",
+        "3d": "3D",
+        "7d": "7D",
+        "1m": "1M",
+        "3m": "3M",
+        "6m": "6M",
+        "1y": "1Y",
+        "all": "ALL-TIME",
+    }
+    return labels.get(window, window.upper())
+
+
+__all__ = ["PnlScreenControl", "PnlTUI", "format_money", "render_braille_plot", "window_label"]

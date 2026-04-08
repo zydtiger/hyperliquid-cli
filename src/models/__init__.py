@@ -5,6 +5,8 @@ This package provides centralized data models and types for the Hyperliquid CLI.
 """
 
 from .api import (
+    DEFAULT_PNL_WINDOW,
+    PNL_WINDOW_ORDER,
     APIError,
     BalanceInfo,
     CoinMetadata,
@@ -13,7 +15,9 @@ from .api import (
     HealthStatus,
     LeverageType,
     PnlHistory,
+    PnlHistoryCatalog,
     PnlPoint,
+    PnlWindow,
     PositionInfo,
     RootResponse,
     SpotBalance,
@@ -45,6 +49,8 @@ from .order import (
 )
 
 __all__ = [
+    "DEFAULT_PNL_WINDOW",
+    "PNL_WINDOW_ORDER",
     "APIError",
     "BackendConfig",
     "BalanceInfo",
@@ -72,7 +78,9 @@ __all__ = [
     "OrderTif",
     "OrderType",
     "PnlHistory",
+    "PnlHistoryCatalog",
     "PnlPoint",
+    "PnlWindow",
     "PositionInfo",
     "RootResponse",
     "SpotBalance",

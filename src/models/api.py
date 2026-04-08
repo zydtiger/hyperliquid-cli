@@ -7,8 +7,13 @@ API communication between the CLI frontend and backend service.
 
 from decimal import Decimal
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field
+
+PnlWindow = Literal["1d", "3d", "7d", "1m", "3m", "6m", "1y", "all"]
+PNL_WINDOW_ORDER: tuple[PnlWindow, ...] = ("1d", "3d", "7d", "1m", "3m", "6m", "1y", "all")
+DEFAULT_PNL_WINDOW: PnlWindow = "7d"
 
 # ============================================================================
 # EXCEPTIONS / ERRORS
@@ -149,8 +154,18 @@ class PnlPoint(BaseModel):
 class PnlHistory(BaseModel):
     """Time series of account PnL values for a fixed window."""
 
-    window: str = Field(..., description="Window label for the PnL series")
+    window: PnlWindow = Field(..., description="Window label for the PnL series")
     points: list[PnlPoint] = Field(default_factory=list, description="Ordered PnL samples")
+
+
+class PnlHistoryCatalog(BaseModel):
+    """Ordered collection of PnL histories for all supported windows."""
+
+    default_window: PnlWindow = Field(..., description="Initial window shown in the TUI")
+    histories: list[PnlHistory] = Field(
+        default_factory=list,
+        description="Ordered PnL history windows supported by the frontend",
+    )
 
 
 # ============================================================================
@@ -158,6 +173,8 @@ class PnlHistory(BaseModel):
 # ============================================================================
 
 __all__ = [
+    "DEFAULT_PNL_WINDOW",
+    "PNL_WINDOW_ORDER",
     "APIError",
     "BalanceInfo",
     "CoinMetadata",
@@ -166,7 +183,9 @@ __all__ = [
     "HealthStatus",
     "LeverageType",
     "PnlHistory",
+    "PnlHistoryCatalog",
     "PnlPoint",
+    "PnlWindow",
     "PositionInfo",
     "RootResponse",
     "SpotBalance",
