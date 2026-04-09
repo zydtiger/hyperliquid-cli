@@ -6,7 +6,9 @@ for managing orders, positions, and account status.
 """
 
 import cmd
+import sys
 from decimal import Decimal, InvalidOperation
+from typing import IO, cast
 
 import typer
 
@@ -15,6 +17,7 @@ from models.config import Config
 from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
 
 from .api import BackendAPI
+from .command_output_writer import TrailingNewlineNormalizingWriter
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
 from .interactive import ModifyWizard, OrderWizard, PnlTUI
 
@@ -45,6 +48,26 @@ class InteractiveCLI(cmd.Cmd):
     def _clear_screen(self) -> None:
         """Clear the active terminal screen and move the cursor home."""
         print("\033[2J\033[H", end="")
+
+    def onecmd(self, line: str) -> bool:
+        """Run one command and normalize its trailing blank line before the next prompt."""
+        if not line.strip():
+            return super().onecmd(line)
+
+        original_stdout = sys.stdout
+        original_cmd_stdout = self.stdout
+        writer = TrailingNewlineNormalizingWriter(original_stdout)
+        typed_writer = cast(IO[str], writer)
+        sys.stdout = typed_writer
+        self.stdout = typed_writer
+        try:
+            stop = super().onecmd(line)
+        finally:
+            sys.stdout = original_stdout
+            self.stdout = original_cmd_stdout
+
+        writer.finalize(add_blank_line=not stop)
+        return stop
 
     def _parse_quick_order(self, args: str) -> MarketOrder | LimitOrder:
         """Parse quick-order arguments into a market or limit order."""

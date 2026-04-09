@@ -601,3 +601,29 @@ def test_clear_commands_are_in_command_completion(config: Config):
 
     assert "clear" in cli.completenames("cl")
     assert "cls" in cli.completenames("cl")
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_text"),
+    [
+        ("help clear", "clear - Clear the terminal screen"),
+        ("clear extra", "Usage: clear"),
+        ("conditionals", "Conditionals functionality not implemented yet"),
+        ("wat", "Unknown command: wat"),
+    ],
+)
+def test_onecmd_always_ends_with_single_blank_line(
+    command: str,
+    expected_text: str,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test command output is normalized to one trailing blank line in interactive mode."""
+    cli = InteractiveCLI(config)
+
+    cli.onecmd(command)
+    output = capsys.readouterr().out
+
+    assert expected_text in output
+    assert output.endswith("\n\n")
+    assert not output.endswith("\n\n\n")
