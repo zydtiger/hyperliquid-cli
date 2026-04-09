@@ -1664,7 +1664,7 @@ class HyperliquidClient:
     def _get_trigger_market_limit_px(self, order: MarketOrder) -> float:
         slippage = float(self.config.trading.default_slippage)
         return float(
-            self.connection.exchange._slippage_price(  # type: ignore[attr-defined]
+            self.connection.exchange._slippage_price(
                 order.coin,
                 order.side == OrderSide.BUY,
                 slippage,
