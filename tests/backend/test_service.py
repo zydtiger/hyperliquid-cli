@@ -772,6 +772,7 @@ class TestRequestHandlers(TestBackendService):
             "timestamp": 1704067200000,
             "reduce_only": False,
             "time_in_force": "GTC",
+            "trigger": None,
         }
         assert response.json() == expected
         mock_client.get_order_status.assert_called_once_with(123456)
