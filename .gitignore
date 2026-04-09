@@ -38,6 +38,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info
+build/
 
 # Environment variables
 .env
