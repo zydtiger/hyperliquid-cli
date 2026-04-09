@@ -10,11 +10,12 @@ from enum import Enum
 from pathlib import Path
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .order import OrderTif
 
 PRIVATE_KEY_LENGTH = 66
+STRICT_MODEL_CONFIG = ConfigDict(extra="forbid", validate_assignment=True)
 
 
 class ConfigurationError(Exception):
@@ -30,8 +31,10 @@ class NetworkType(str, Enum):
     TESTNET = "testnet"
 
 
-class HyperliquidConfig(BaseModel, extra="forbid", validate_assignment=True):
+class HyperliquidConfig(BaseModel):
     """Configuration for Hyperliquid API connection."""
+
+    model_config = STRICT_MODEL_CONFIG
 
     account_address: str
     private_key: str
@@ -56,15 +59,19 @@ class HyperliquidConfig(BaseModel, extra="forbid", validate_assignment=True):
         return v
 
 
-class TradingConfig(BaseModel, extra="forbid", validate_assignment=True):
+class TradingConfig(BaseModel):
     """Configuration for trading parameters."""
+
+    model_config = STRICT_MODEL_CONFIG
 
     default_slippage: Decimal = Field(default_factory=lambda: Decimal("0.01"), gt=0, lt=1)
     default_time_in_force: OrderTif = OrderTif.GTC
 
 
-class LoggingConfig(BaseModel, extra="forbid", validate_assignment=True):
+class LoggingConfig(BaseModel):
     """Configuration for logging."""
+
+    model_config = STRICT_MODEL_CONFIG
 
     level: str = Field(default="INFO")
 
@@ -77,20 +84,42 @@ class LoggingConfig(BaseModel, extra="forbid", validate_assignment=True):
         return v
 
 
-class BackendConfig(BaseModel, extra="forbid", validate_assignment=True):
+class BackendConfig(BaseModel):
     """Configuration for backend WebSocket monitoring service."""
+
+    model_config = STRICT_MODEL_CONFIG
 
     host: str = Field(default="localhost")
     port: int = Field(default=8080, ge=1, le=65535)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
-class Config(BaseModel, extra="forbid", validate_assignment=True):
+class AgentConfig(BaseModel):
+    """Configuration for the frontend AI assistant."""
+
+    model_config = STRICT_MODEL_CONFIG
+
+    api_key: str = Field(default="your_openai_api_key_here")
+    openai_base_url: str = Field(default="your_openai_compatible_base_url_here")
+    model_id: str = Field(default="your_model_id_here")
+
+    @field_validator("api_key", "openai_base_url", "model_id")
+    @classmethod
+    def validate_non_empty_string(cls, v: str) -> str:
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError("agent settings must be non-empty strings")
+        return v
+
+
+class Config(BaseModel):
     """Main configuration class encompassing all sub-configurations."""
+
+    model_config = STRICT_MODEL_CONFIG
 
     hyperliquid: HyperliquidConfig
     trading: TradingConfig = Field(default_factory=TradingConfig)
     backend: BackendConfig = Field(default_factory=BackendConfig)
+    agent: AgentConfig = Field(default_factory=AgentConfig)
 
     @classmethod
     def from_file(cls, config_path: Path) -> "Config":
@@ -124,6 +153,7 @@ class Config(BaseModel, extra="forbid", validate_assignment=True):
 
 
 __all__ = [
+    "AgentConfig",
     "BackendConfig",
     "Config",
     "ConfigurationError",

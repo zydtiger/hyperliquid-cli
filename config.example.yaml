@@ -13,3 +13,8 @@ backend:
 
   logging:
     level: "INFO"
+
+agent:
+  api_key: "your_openai_api_key_here"
+  openai_base_url: "your_openai_compatible_base_url_here"
+  model_id: "your_model_id_here"

@@ -19,7 +19,8 @@ from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
 from .api import BackendAPI
 from .command_output_writer import TrailingNewlineNormalizingWriter
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
-from .interactive import ModifyWizard, OrderWizard, PnlTUI
+from .interactive import AskFrontend, ModifyWizard, OrderWizard, PnlTUI
+from .interactive.cli_manual import INTERACTIVE_COMMANDS, build_cli_manual
 
 MIN_CHANGE_LEVERAGE_ARGS = 2
 MIN_UPDATE_MARGIN_ARGS = 2
@@ -178,6 +179,36 @@ class InteractiveCLI(cmd.Cmd):
             print(f"❌ Failed to create order: {e}")
         finally:
             print()
+
+    def do_ask(self, args: str) -> None:
+        """Ask the CLI assistant a question or launch an interactive chat session."""
+        frontend = AskFrontend(self.config, manual_builder=lambda: build_cli_manual(self))
+
+        try:
+            if args.strip():
+                print(frontend.submit(args))
+                return
+
+            frontend.run_interactive()
+        except KeyboardInterrupt:
+            print("\n❌ Ask session cancelled")
+        except Exception as e:
+            print(f"❌ Ask failed: {e}")
+
+    def help_ask(self) -> None:
+        """Show help for the ask command."""
+        print("ask - Ask the CLI assistant about available commands and usage")
+        print("Usage: ask <question>")
+        print("   or: ask")
+        print()
+        print("Examples:")
+        print("  ask how do i place a limit order")
+        print("  ask")
+        print()
+        print("With a trailing prompt, ask sends one question to the CLI assistant.")
+        print("With no trailing prompt, ask starts an interactive session using the >>> prompt.")
+        print("Type /bye, /exit, or /quit to leave the interactive session.")
+        print("Responses are currently stubbed and will show a placeholder message.")
 
     def help_order(self) -> None:
         """Show help for the order command."""
@@ -351,9 +382,19 @@ class InteractiveCLI(cmd.Cmd):
         """Exit the CLI."""
         return True
 
+    def help_quit(self) -> None:
+        """Show help for the quit command."""
+        print("quit - Exit the CLI")
+        print("Usage: quit")
+
     def do_exit(self, args: str) -> bool:
         """Exit the CLI (alias for quit)."""
         return self.do_quit(args)
+
+    def help_exit(self) -> None:
+        """Show help for the exit command."""
+        print("exit - Exit the CLI")
+        print("Usage: exit")
 
     def do_EOF(self, args: str) -> bool:  # noqa: N802
         """Handle EOF (Ctrl+D) to exit gracefully."""
@@ -984,27 +1025,7 @@ class InteractiveCLI(cmd.Cmd):
 
     def completenames(self, text: str, *ignored: str) -> list[str]:
         """Override to provide custom command completion."""
-        commands = [
-            "order",
-            "order_status",
-            "open_orders",
-            "order_history",
-            "pnl",
-            "cancel_order",
-            "modify_order",
-            "change_leverage",
-            "update_margin",
-            "info",
-            "status",
-            "positions",
-            "conditionals",
-            "clear",
-            "cls",
-            "quit",
-            "exit",
-            "help",
-            "?",
-        ]
+        commands = [*INTERACTIVE_COMMANDS, "help", "?"]
         return [cmd for cmd in commands if cmd.startswith(text)]
 
     def run(self) -> None:
