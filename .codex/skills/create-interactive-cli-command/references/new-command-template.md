@@ -77,6 +77,7 @@ Files typically modified:
 ### Documentation
 
 - Verify command help text is clear.
+- Add new commands to `src/cli/cli_manual.py`.
 - Verify examples are present and tested where useful.
 
 ## Quick Commands
