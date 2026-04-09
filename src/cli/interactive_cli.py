@@ -12,7 +12,7 @@ import typer
 
 from models.api import LeverageType, PositionInfo
 from models.config import Config
-from models.order import LimitOrder
+from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
 
 from .api import BackendAPI
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
@@ -20,6 +20,7 @@ from .interactive import ModifyWizard, OrderWizard, PnlTUI
 
 MIN_CHANGE_LEVERAGE_ARGS = 2
 MIN_UPDATE_MARGIN_ARGS = 2
+QUICK_ORDER_ARGS = 3
 MIN_LEVERAGE = 1
 MAX_LEVERAGE = 250
 DEFAULT_ORDER_HISTORY_LIMIT = 10
@@ -41,41 +42,111 @@ class InteractiveCLI(cmd.Cmd):
         super().__init__()
         self.config = config
 
+    def _parse_quick_order(self, args: str) -> MarketOrder | LimitOrder:
+        """Parse quick-order arguments into a market or limit order."""
+        parts = args.strip().split()
+        if len(parts) != QUICK_ORDER_ARGS:
+            raise ValueError("Quick order requires exactly 3 arguments")
+
+        try:
+            side = OrderSide(parts[0].lower())
+        except ValueError as exc:
+            raise ValueError("Side must be 'buy' or 'sell'") from exc
+
+        coin = parts[1].upper()
+        quantity_spec = parts[2]
+
+        # A single numeric quantity means a market order, while `qty@price`
+        # selects the fast limit-order path.
+        if "@" not in quantity_spec:
+            try:
+                quantity = Decimal(quantity_spec)
+            except InvalidOperation as exc:
+                raise ValueError("Quantity must be a valid decimal value") from exc
+
+            if quantity <= 0:
+                raise ValueError("Quantity must be greater than 0")
+
+            return MarketOrder(
+                coin=coin,
+                side=side,
+                quantity=quantity,
+                reduce_only=False,
+            )
+
+        quantity_text, price_text = quantity_spec.split("@", maxsplit=1)
+        if not quantity_text or not price_text:
+            raise ValueError("Limit orders must use the format <quantity>@<price>")
+
+        try:
+            quantity = Decimal(quantity_text)
+        except InvalidOperation as exc:
+            raise ValueError("Quantity must be a valid decimal value") from exc
+
+        try:
+            price = Decimal(price_text)
+        except InvalidOperation as exc:
+            raise ValueError("Price must be a valid decimal value") from exc
+
+        if quantity <= 0:
+            raise ValueError("Quantity must be greater than 0")
+        if price <= 0:
+            raise ValueError("Price must be greater than 0")
+
+        return LimitOrder(
+            coin=coin,
+            side=side,
+            quantity=quantity,
+            price=price,
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+
+    def _submit_order(self, api: BackendAPI, order: MarketOrder | LimitOrder) -> None:
+        """Submit an order and print the formatted result."""
+        print("⏳ Submitting order...")
+
+        # Route the quick-order and wizard flows through the same submission
+        # logic so validation, formatting, and error handling stay aligned.
+        try:
+            if isinstance(order, LimitOrder):
+                result = api.submit_limit_order(order)
+            else:
+                result = api.submit_market_order(order)
+
+            formatter = OrderFormatter()
+            try:
+                print(formatter.format(result))
+            except ValueError as format_err:
+                print(format_err)
+
+        except Exception as submission_err:
+            print(f"❌ Failed to submit order: {submission_err}")
+
     def do_order(self, args: str) -> None:
         """
-        Place a new order using interactive wizard.
+        Place a new order using quick args or the interactive wizard.
 
-        This command launches an interactive wizard that guides the user
-        through creating a new order with proper validation and market data.
+        Calling `order` with no arguments launches the wizard. Supplying
+        `order <buy|sell> <coin> <quantity|quantity@price>` submits a
+        market or limit order directly.
         """
         try:
             with BackendAPI(self.config) as api:
-                wizard = OrderWizard(self.config, api)
-                order = wizard.run()
+                if args.strip():
+                    order = self._parse_quick_order(args)
+                else:
+                    wizard = OrderWizard(self.config, api)
+                    order = wizard.run()
 
-                print("⏳ Submitting order...")
-
-                # Submit order based on type
-                try:
-                    if isinstance(order, LimitOrder):
-                        # Limit order
-                        result = api.submit_limit_order(order)
-                    else:
-                        # Market order
-                        result = api.submit_market_order(order)
-
-                    # Display result using formatter
-                    formatter = OrderFormatter()
-                    try:
-                        print(formatter.format(result))
-                    except ValueError as format_err:
-                        print(format_err)
-
-                except Exception as submission_err:
-                    print(f"❌ Failed to submit order: {submission_err}")
+                self._submit_order(api, order)
 
         except KeyboardInterrupt:
             print("❌ Order creation cancelled")
+        except ValueError as e:
+            print(f"❌ Error: {e}")
+            print("Usage: order")
+            print("   or: order <buy|sell> <coin> <quantity|quantity@price>")
         except Exception as e:
             print(f"❌ Failed to create order: {e}")
         finally:
@@ -83,10 +154,18 @@ class InteractiveCLI(cmd.Cmd):
 
     def help_order(self) -> None:
         """Show help for the order command."""
-        print("order - Launch interactive order creation wizard")
+        print("order - Launch the wizard or place a quick market/limit order")
         print("Usage: order")
+        print("   or: order <buy|sell> <coin> <quantity|quantity@price>")
         print()
-        print("This command starts an interactive wizard that guides you through:")
+        print("Examples:")
+        print("  order")
+        print("  order buy ETH 0.25")
+        print("  order sell BTC 0.01@105000")
+        print()
+        print(
+            "With no arguments, this command starts an interactive wizard that guides you through:"
+        )
         print("- Selecting a trading coin")
         print("- Choosing order side (buy/sell)")
         print("- Selecting order type (market/limit)")
@@ -95,8 +174,13 @@ class InteractiveCLI(cmd.Cmd):
         print("- Configuring additional options")
         print("- Optionally adding a trigger price with STOP/TAKE selection")
         print()
+        print("Quick-order syntax:")
+        print("- `<quantity>` submits a market order")
+        print("- `<quantity>@<price>` submits a GTC limit order")
+        print("- Quick orders default to non-reduce-only and do not add triggers")
+        print()
         print("The wizard provides market data suggestions and validates all inputs.")
-        print("Orders without triggers are submitted immediately upon confirmation.")
+        print("Wizard orders are submitted upon confirmation.")
 
     def do_status(self, args: str) -> None:
         """Show account status."""
@@ -535,6 +619,7 @@ class InteractiveCLI(cmd.Cmd):
 
             if result.success:
                 print(f"✅ {result.message}")
+                print()
             else:
                 print(f"❌ Error: {result.error or result.message}")
 
