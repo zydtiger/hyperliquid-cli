@@ -139,6 +139,9 @@ class OrderFormatter(
         # Additional information
         if order.time_in_force is not None:
             lines.append(self._format_field("TIF", order.time_in_force.value))
+        if order.trigger is not None:
+            lines.append(self._format_field("Trigger Type", order.trigger.trigger_type.name))
+            lines.append(self._format_field("Trigger Px", f"${order.trigger.trigger_price}"))
         lines.append(self._format_field("Reduce Only", "Yes" if order.reduce_only else "No"))
         lines.append(self._format_field("Timestamp", order.timestamp))
 
@@ -231,6 +234,9 @@ class OrderFormatter(
             "Remaining",
             "TIF",
         ]
+        show_trigger_columns = any(order.trigger is not None for order in orders)
+        if show_trigger_columns:
+            headers.extend(["Trigger Type", "Trigger Px"])
 
         # Convert OrderInfo objects to table rows
         rows = []
@@ -253,6 +259,13 @@ class OrderFormatter(
                 str(order.remaining_quantity),
                 tif_str,
             ]
+            if show_trigger_columns:
+                row.extend(
+                    [
+                        order.trigger.trigger_type.name if order.trigger is not None else "",
+                        (f"${order.trigger.trigger_price}" if order.trigger is not None else ""),
+                    ]
+                )
             rows.append(row)
 
         # Use TableFormatter to create the table

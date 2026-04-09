@@ -47,6 +47,20 @@ class OrderType(str, Enum):
     MARKET = "market"
 
 
+class TriggerType(str, Enum):
+    """Trigger order type enumeration."""
+
+    STOP = "stop"
+    TAKE = "take"
+
+
+class OrderTrigger(BaseModel):
+    """Trigger configuration for an order."""
+
+    trigger_price: Decimal = Field(..., gt=0, description="Trigger price")
+    trigger_type: TriggerType = Field(..., description="Trigger direction semantics")
+
+
 # ============================================================================
 # ORDER MODELS
 # ============================================================================
@@ -59,6 +73,7 @@ class MarketOrder(BaseModel):
     side: OrderSide = Field(..., description="Order side (buy or sell)")
     quantity: Decimal = Field(..., gt=0, description="Order quantity")
     reduce_only: bool = Field(default=False, description="Whether the order is reduce-only")
+    trigger: OrderTrigger | None = Field(default=None, description="Optional trigger configuration")
 
 
 class LimitOrder(BaseModel):
@@ -70,6 +85,7 @@ class LimitOrder(BaseModel):
     price: Decimal = Field(..., gt=0, description="Order price")
     reduce_only: bool = Field(default=False, description="Whether the order is reduce-only")
     time_in_force: OrderTif = Field(default=OrderTif.GTC, description="Order time-in-force policy")
+    trigger: OrderTrigger | None = Field(default=None, description="Optional trigger configuration")
 
 
 class OrderResult(BaseModel):
@@ -98,6 +114,9 @@ class OrderInfo(BaseModel):
     timestamp: int = Field(..., description="Order creation timestamp")
     reduce_only: bool = Field(..., description="Whether the order is reduce-only")
     time_in_force: OrderTif | None = Field(None, description="Time-in-force policy")
+    trigger: OrderTrigger | None = Field(
+        None, description="Trigger configuration for conditional orders"
+    )
 
 
 class OrderHistoryEntry(BaseModel):
@@ -147,5 +166,7 @@ __all__ = [
     "OrderSide",
     "OrderStatus",
     "OrderTif",
+    "OrderTrigger",
     "OrderType",
+    "TriggerType",
 ]

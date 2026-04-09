@@ -69,6 +69,7 @@ class OrderWizard:
 
             # Additional options
             reduce_only = self.prompts.get_yes_no_input("\nReduce only position?", default=False)
+            trigger = self.prompts.get_trigger_input(coin)
 
             # Create limit order
             order = LimitOrder(
@@ -78,6 +79,7 @@ class OrderWizard:
                 price=price,
                 time_in_force=time_in_force,
                 reduce_only=reduce_only,
+                trigger=trigger,
             )
         else:  # market
             # Get quantity
@@ -85,9 +87,16 @@ class OrderWizard:
 
             # Additional options
             reduce_only = self.prompts.get_yes_no_input("\nReduce only position?", default=False)
+            trigger = self.prompts.get_trigger_input(coin)
 
             # Create market order
-            order = MarketOrder(coin=coin, side=side, quantity=quantity, reduce_only=reduce_only)
+            order = MarketOrder(
+                coin=coin,
+                side=side,
+                quantity=quantity,
+                reduce_only=reduce_only,
+                trigger=trigger,
+            )
 
         # Show order summary
         print()

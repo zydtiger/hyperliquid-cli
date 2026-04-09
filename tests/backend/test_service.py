@@ -49,7 +49,9 @@ from models.order import (
     OrderSide,
     OrderStatus,
     OrderTif,
+    OrderTrigger,
     OrderType,
+    TriggerType,
 )
 
 
@@ -823,6 +825,7 @@ class TestRequestHandlers(TestBackendService):
                 "timestamp": 1762271506632,
                 "reduce_only": False,
                 "time_in_force": "GTC",
+                "trigger": None,
             },
             {
                 "order_id": 987654321,
@@ -838,6 +841,7 @@ class TestRequestHandlers(TestBackendService):
                 "timestamp": 1762271506633,
                 "reduce_only": False,
                 "time_in_force": "IOC",
+                "trigger": None,
             },
             {
                 "order_id": 555666777,
@@ -853,6 +857,7 @@ class TestRequestHandlers(TestBackendService):
                 "timestamp": 1762271506634,
                 "reduce_only": False,
                 "time_in_force": None,
+                "trigger": None,
             },
         ]
         assert response.json() == expected
@@ -1132,6 +1137,62 @@ class TestRequestHandlers(TestBackendService):
 
         assert response.status_code == 422  # FastAPI validation error
 
+    def test_market_order_endpoint_with_trigger_success(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_order_result: OrderResult,
+    ):
+        """Test /market_order with nested trigger payload."""
+        mock_client.submit_market_order.return_value = sample_order_result
+
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "ETH",
+                "side": "sell",
+                "quantity": "0.02",
+                "reduce_only": True,
+                "trigger": {
+                    "trigger_price": "1000",
+                    "trigger_type": "stop",
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        call_args = mock_client.submit_market_order.call_args[0][0]
+        assert call_args == MarketOrder(
+            coin="ETH",
+            side=OrderSide.SELL,
+            quantity=Decimal("0.02"),
+            reduce_only=True,
+            trigger=OrderTrigger(
+                trigger_type=TriggerType.STOP,
+                trigger_price=Decimal("1000"),
+            ),
+        )
+
+    def test_market_order_endpoint_invalid_trigger_price(
+        self, test_app: TestClient, mock_client: Mock
+    ):
+        """Test /market_order rejects invalid trigger payload."""
+        response = test_app.post(
+            "/market_order",
+            json={
+                "coin": "ETH",
+                "side": "buy",
+                "quantity": "0.1",
+                "reduce_only": False,
+                "trigger": {
+                    "trigger_price": "0",
+                    "trigger_type": "stop",
+                },
+            },
+        )
+
+        assert response.status_code == 422
+
     def test_limit_order_endpoint_success(
         self,
         test_app: TestClient,
@@ -1293,6 +1354,46 @@ class TestRequestHandlers(TestBackendService):
         )
 
         assert response.status_code == 422  # FastAPI validation error
+
+    def test_limit_order_endpoint_with_trigger_success(
+        self,
+        test_app: TestClient,
+        mock_client: Mock,
+        sample_order_result: OrderResult,
+    ):
+        """Test /limit_order with nested trigger payload."""
+        mock_client.submit_limit_order.return_value = sample_order_result
+
+        response = test_app.post(
+            "/limit_order",
+            json={
+                "coin": "BTC",
+                "side": "buy",
+                "quantity": "0.05",
+                "price": "50000.0",
+                "reduce_only": False,
+                "time_in_force": "ALO",
+                "trigger": {
+                    "trigger_price": "55000",
+                    "trigger_type": "take",
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        call_args = mock_client.submit_limit_order.call_args[0][0]
+        assert call_args == LimitOrder(
+            coin="BTC",
+            side=OrderSide.BUY,
+            quantity=Decimal("0.05"),
+            price=Decimal("50000.0"),
+            reduce_only=False,
+            time_in_force=OrderTif.ALO,
+            trigger=OrderTrigger(
+                trigger_type=TriggerType.TAKE,
+                trigger_price=Decimal("55000"),
+            ),
+        )
 
     def test_cancel_order_endpoint_success_specific_order(
         self, test_app: TestClient, mock_client: Mock
