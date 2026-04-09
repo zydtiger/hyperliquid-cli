@@ -17,10 +17,10 @@ from models.config import Config
 from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
 
 from .api import BackendAPI
+from .cli_manual import INTERACTIVE_COMMANDS, build_cli_manual
 from .command_output_writer import TrailingNewlineNormalizingWriter
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
 from .interactive import AskFrontend, ModifyWizard, OrderWizard, PnlTUI
-from .interactive.cli_manual import INTERACTIVE_COMMANDS, build_cli_manual
 
 MIN_CHANGE_LEVERAGE_ARGS = 2
 MIN_UPDATE_MARGIN_ARGS = 2

@@ -2,8 +2,8 @@
 
 import pytest
 
+from cli.cli_manual import build_cli_manual
 from cli.interactive.ask_frontend import ASK_SESSION_PROMPT, ASK_STUB_RESPONSE, AskFrontend
-from cli.interactive.cli_manual import build_cli_manual
 from cli.interactive_cli import InteractiveCLI
 from models.config import Config, HyperliquidConfig, NetworkType
 
