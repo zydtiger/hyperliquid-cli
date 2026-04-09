@@ -208,7 +208,7 @@ class InteractiveCLI(cmd.Cmd):
         print("With a trailing prompt, ask sends one question to the CLI assistant.")
         print("With no trailing prompt, ask starts an interactive session using the >>> prompt.")
         print("Type /bye, /exit, or /quit to leave the interactive session.")
-        print("Responses are currently stubbed and will show a placeholder message.")
+        print("Responses are returned by the configured OpenAI-compatible agent endpoint.")
 
     def help_order(self) -> None:
         """Show help for the order command."""
