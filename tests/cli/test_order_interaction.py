@@ -264,3 +264,82 @@ def test_do_order_submits_trigger_market_order(capsys) -> None:
     api.submit_limit_order.assert_not_called()
     api.submit_market_order.assert_called_once()
     assert "formatted" in capsys.readouterr().out
+
+
+def test_do_order_submits_quick_market_order(capsys) -> None:
+    config = make_config()
+    cli = InteractiveCLI(config)
+    api = Mock()
+    api.submit_market_order.return_value = Mock()
+
+    backend_api = Mock()
+    backend_api.__enter__ = Mock(return_value=api)
+    backend_api.__exit__ = Mock(return_value=None)
+
+    with (
+        patch("cli.interactive_cli.BackendAPI", return_value=backend_api),
+        patch("cli.interactive_cli.OrderFormatter.format", return_value="formatted"),
+    ):
+        cli.do_order("buy eth 0.25")
+
+    api.submit_limit_order.assert_not_called()
+    api.submit_market_order.assert_called_once_with(
+        MarketOrder(
+            coin="ETH",
+            side=OrderSide.BUY,
+            quantity=Decimal("0.25"),
+            reduce_only=False,
+        )
+    )
+    assert "formatted" in capsys.readouterr().out
+
+
+def test_do_order_submits_quick_limit_order(capsys) -> None:
+    config = make_config()
+    cli = InteractiveCLI(config)
+    api = Mock()
+    api.submit_limit_order.return_value = Mock()
+
+    backend_api = Mock()
+    backend_api.__enter__ = Mock(return_value=api)
+    backend_api.__exit__ = Mock(return_value=None)
+
+    with (
+        patch("cli.interactive_cli.BackendAPI", return_value=backend_api),
+        patch("cli.interactive_cli.OrderFormatter.format", return_value="formatted"),
+    ):
+        cli.do_order("sell btc 0.01@105000")
+
+    api.submit_market_order.assert_not_called()
+    api.submit_limit_order.assert_called_once_with(
+        LimitOrder(
+            coin="BTC",
+            side=OrderSide.SELL,
+            quantity=Decimal("0.01"),
+            price=Decimal("105000"),
+            reduce_only=False,
+            time_in_force=OrderTif.GTC,
+        )
+    )
+    assert "formatted" in capsys.readouterr().out
+
+
+def test_do_order_rejects_invalid_quick_order_side(capsys) -> None:
+    cli = InteractiveCLI(make_config())
+
+    cli.do_order("long ETH 1")
+    output = capsys.readouterr().out
+
+    assert "Side must be 'buy' or 'sell'" in output
+    assert "order <buy|sell> <coin> <quantity|quantity@price>" in output
+
+
+def test_help_order_describes_quick_order_syntax(capsys) -> None:
+    cli = InteractiveCLI(make_config())
+
+    cli.help_order()
+    output = capsys.readouterr().out
+
+    assert "order <buy|sell> <coin> <quantity|quantity@price>" in output
+    assert "order buy ETH 0.25" in output
+    assert "order sell BTC 0.01@105000" in output
