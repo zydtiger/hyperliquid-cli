@@ -548,3 +548,56 @@ def test_staking_command_handles_backend_error(
 
     assert "Error fetching staking status" in output
     assert "staking unavailable" in output
+
+
+def test_clear_command_clears_screen(
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test clear emits the terminal clear sequence."""
+    cli = InteractiveCLI(config)
+
+    cli.do_clear("")
+    output = capsys.readouterr().out
+
+    assert output == "\033[2J\033[H"
+
+
+def test_cls_command_is_alias_for_clear(
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test cls emits the same terminal clear sequence as clear."""
+    cli = InteractiveCLI(config)
+
+    cli.do_cls("")
+    output = capsys.readouterr().out
+
+    assert output == "\033[2J\033[H"
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_usage"),
+    [("clear", "Usage: clear"), ("cls", "Usage: clear")],
+)
+def test_clear_commands_reject_extra_args(
+    command: str,
+    expected_usage: str,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test clear aliases reject unexpected arguments."""
+    cli = InteractiveCLI(config)
+
+    getattr(cli, f"do_{command}")("extra")
+    output = capsys.readouterr().out
+
+    assert expected_usage in output
+
+
+def test_clear_commands_are_in_command_completion(config: Config):
+    """Test clear aliases are available for command completion."""
+    cli = InteractiveCLI(config)
+
+    assert "clear" in cli.completenames("cl")
+    assert "cls" in cli.completenames("cl")
