@@ -14,6 +14,8 @@ A comprehensive Hyperliquid trading system with both CLI and REST API interfaces
 
 ### Installation
 
+Requires Python 3.11 or newer.
+
 ```bash
 # Clone the repository
 git clone https://github.com/zydtiger/hyperliquid-cli.git
@@ -130,7 +132,7 @@ backend:
 
 ## Installation Requirements
 
-- **Python**: 3.10 or higher
+- **Python**: 3.11 or higher
 - **Dependencies**: Automatically installed with the package
 - **Hyperliquid Account**: API credentials from the exchange
 
