@@ -42,6 +42,10 @@ class InteractiveCLI(cmd.Cmd):
         super().__init__()
         self.config = config
 
+    def _clear_screen(self) -> None:
+        """Clear the active terminal screen and move the cursor home."""
+        print("\033[2J\033[H", end="")
+
     def _parse_quick_order(self, args: str) -> MarketOrder | LimitOrder:
         """Parse quick-order arguments into a market or limit order."""
         parts = args.strip().split()
@@ -297,6 +301,28 @@ class InteractiveCLI(cmd.Cmd):
         print("conditionals - Manage conditional orders")
         print("Usage: conditionals <action> <parameters>")
         print("This command is currently under development")
+
+    def do_clear(self, args: str) -> None:
+        """Clear the terminal screen."""
+        if args.strip():
+            print("❌ Error: clear does not take any arguments")
+            print("Usage: clear")
+            return
+
+        self._clear_screen()
+
+    def help_clear(self) -> None:
+        """Show help for the clear command."""
+        print("clear - Clear the terminal screen")
+        print("Usage: clear")
+
+    def do_cls(self, args: str) -> None:
+        """Clear the terminal screen (alias for clear)."""
+        self.do_clear(args)
+
+    def help_cls(self) -> None:
+        """Show help for the cls command."""
+        self.help_clear()
 
     def do_quit(self, args: str) -> bool:
         """Exit the CLI."""
@@ -949,6 +975,8 @@ class InteractiveCLI(cmd.Cmd):
             "status",
             "positions",
             "conditionals",
+            "clear",
+            "cls",
             "quit",
             "exit",
             "help",
