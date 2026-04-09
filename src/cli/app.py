@@ -5,7 +5,6 @@ A command-line interface for the modular order system with support for
 market orders, limit orders, stop orders, and intelligent TP/SL management.
 """
 
-import os
 import shutil
 from pathlib import Path
 from typing import Annotated
@@ -24,23 +23,28 @@ app = typer.Typer(
 )
 
 default_config_path = Path.home() / ".hyperliquid-cli" / "config.yaml"
+config_option = typer.Option(
+    "--config",
+    "-c",
+    help="Path to configuration file",
+    exists=True,
+    file_okay=True,
+    dir_okay=False,
+    readable=True,
+)
 
 
-@app.command()
-def run(
-    config_path: Annotated[
-        Path,
-        typer.Option(
-            "--config",
-            "-c",
-            help=f"Path to configuration file (default: {default_config_path})",
-            exists=True,
-            file_okay=True,
-            dir_okay=False,
-            readable=True,
-        ),
-    ] = default_config_path,
+@app.callback(invoke_without_command=True)
+def default_run(
+    ctx: typer.Context,
+    config_path: Annotated[Path, config_option] = default_config_path,
 ) -> None:
+    """Run the interactive CLI when no subcommand is provided."""
+    if ctx.invoked_subcommand is None and not ctx.resilient_parsing:
+        launch_cli(config_path)
+
+
+def launch_cli(config_path: Path) -> None:
     # Load configuration
     config = Config.from_file(config_path)
 
@@ -78,10 +82,9 @@ def create_config() -> None:
     """Create a default configuration file."""
     try:
         example_config = Path(__file__).parent.parent.parent / "config.example.yaml"
+        default_config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        os.makedirs(default_config_path.parent, exist_ok=True)
-
-        if os.path.exists(default_config_path):
+        if default_config_path.exists():
             if not typer.confirm("⚠️  Configuration file already exists. Overwrite?"):
                 typer.echo("❌ Configuration file creation cancelled.")
                 return
