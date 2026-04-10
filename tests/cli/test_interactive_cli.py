@@ -2,20 +2,27 @@
 Tests for interactive CLI position hints and isolated margin commands.
 """
 
+import sys
 from decimal import Decimal
+from io import StringIO
 
 import pytest
 
 from cli.interactive_cli import InteractiveCLI
 from models.api import (
     DEFAULT_PNL_WINDOW,
+    CoinMetadata,
     LeverageType,
+    OrderBookLevel,
     PnlHistory,
     PnlHistoryCatalog,
     PnlPoint,
     PositionInfo,
     StakingDelegation,
     StakingStatus,
+    Ticker,
+    WatchCandle,
+    WatchSnapshot,
 )
 from models.config import Config, HyperliquidConfig, NetworkType
 from models.margin import IsolatedMarginUpdateResult
@@ -318,6 +325,31 @@ def pnl_history() -> PnlHistoryCatalog:
     )
 
 
+@pytest.fixture
+def watch_snapshot() -> WatchSnapshot:
+    """Sample watch snapshot for CLI tests."""
+    return WatchSnapshot(
+        coin="BTC",
+        interval="5m",
+        mark_price=Decimal("43250.50"),
+        open_interest=Decimal("1250.75"),
+        updated_at=1741973030493,
+        candles=[
+            WatchCandle(
+                open_time=1741972800000,
+                close_time=1741973100000,
+                open=Decimal("43210.25"),
+                high=Decimal("43250.50"),
+                low=Decimal("43200.00"),
+                close=Decimal("43250.50"),
+                is_closed=False,
+            ),
+        ],
+        bids=[OrderBookLevel(price=Decimal("43249.50"), size=Decimal("1.25"))],
+        asks=[OrderBookLevel(price=Decimal("43250.75"), size=Decimal("0.50"))],
+    )
+
+
 def test_pnl_command_renders_graph(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -412,6 +444,140 @@ def test_pnl_command_handles_empty_history(
     output = capsys.readouterr().out
 
     assert "No 7-day PnL history found." in output
+
+
+def test_watch_command_renders_graph(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+    watch_snapshot: WatchSnapshot,
+):
+    """Test watch launches the live watch TUI renderer."""
+    created_apis = []
+    launched = []
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            self.calls: list[str] = []
+            created_apis.append(self)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_watch_snapshot(self, coin: str, interval: str = "5m") -> WatchSnapshot:
+            self.calls.append(f"{coin}:{interval}")
+            return watch_snapshot
+
+    class FakeWatchTUI:
+        def __init__(self, coin: str, fetcher):
+            launched.append(coin)
+            launched.append(fetcher("BTC", "5m"))
+
+        def run(self) -> None:
+            launched.append("ran")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.WatchTUI", FakeWatchTUI)
+
+    cli = InteractiveCLI(config)
+    cli.do_watch("btc")
+    output = capsys.readouterr().out
+
+    assert created_apis[0].calls == ["BTC:5m", "BTC:5m"]
+    assert launched == ["BTC", watch_snapshot, "ran"]
+    assert output == "\n"
+
+
+@pytest.mark.parametrize("args", ["", "BTC ETH"])
+def test_watch_command_rejects_invalid_args(
+    args: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test watch validates its required single-argument interface."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            raise AssertionError("BackendAPI should not be created for invalid args")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_watch(args)
+    output = capsys.readouterr().out
+
+    assert "Usage: watch <coin>" in output
+
+
+def test_watch_command_handles_backend_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test watch prints backend errors cleanly."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_watch_snapshot(self, coin: str, interval: str = "5m") -> WatchSnapshot:
+            raise RuntimeError(f"{coin} unavailable")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_watch("BTC")
+    output = capsys.readouterr().out
+
+    assert "Error fetching watch snapshot for BTC" in output
+    assert "BTC unavailable" in output
+
+
+def test_info_command_renders_open_interest_as_usd(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test info renders open interest with a leading dollar sign."""
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_ticker(self, coin: str) -> Ticker:
+            return Ticker(
+                coin=coin,
+                mark_price=Decimal("43250.50"),
+                funding_rate=Decimal("0.0001"),
+                open_interest=Decimal("54109437.50"),
+            )
+
+        def get_metadata(self, coin: str) -> CoinMetadata:
+            return CoinMetadata(coin=coin, size_decimals=5, max_leverage=50)
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+
+    cli = InteractiveCLI(config)
+    cli.do_info("BTC")
+    output = capsys.readouterr().out
+
+    assert "$54,109,437.50" in output
 
 
 def test_staking_command_renders_summary_and_table(
@@ -601,6 +767,7 @@ def test_clear_commands_are_in_command_completion(config: Config):
 
     assert "clear" in cli.completenames("cl")
     assert "cls" in cli.completenames("cl")
+    assert "watch" in cli.completenames("wa")
 
 
 @pytest.mark.parametrize(
@@ -627,3 +794,84 @@ def test_onecmd_always_ends_with_single_blank_line(
     assert expected_text in output
     assert output.endswith("\n\n")
     assert not output.endswith("\n\n\n")
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_calls"),
+    [("pnl", ["pnl"]), ("watch BTC", ["BTC:5m", "BTC:5m"])],
+)
+def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
+    command: str,
+    expected_calls: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+    config: Config,
+    pnl_history: PnlHistoryCatalog,
+    watch_snapshot: WatchSnapshot,
+):
+    """Test fullscreen TUI commands write to and flush the original stdout."""
+
+    class TrackingStdout(StringIO):
+        def __init__(self) -> None:
+            super().__init__()
+            self.flush_count = 0
+
+        def flush(self) -> None:
+            self.flush_count += 1
+            super().flush()
+
+    tracked_stdout = TrackingStdout()
+    observed_stdouts: list[StringIO] = []
+    created_apis = []
+
+    class FakeBackendAPI:
+        def __init__(self, _config: Config):
+            self.calls: list[str] = []
+            created_apis.append(self)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def get_pnl_history(self) -> PnlHistoryCatalog:
+            self.calls.append("pnl")
+            return pnl_history
+
+        def get_watch_snapshot(self, coin: str, interval: str = "5m") -> WatchSnapshot:
+            self.calls.append(f"{coin}:{interval}")
+            return watch_snapshot
+
+    class FakePnlTUI:
+        def __init__(self, history: PnlHistoryCatalog):
+            assert history == pnl_history
+
+        def run(self) -> None:
+            observed_stdouts.append(sys.stdout)
+
+    class FakeWatchTUI:
+        def __init__(self, coin: str, fetcher):
+            assert coin == "BTC"
+            assert fetcher("BTC", "5m") == watch_snapshot
+
+        def run(self) -> None:
+            observed_stdouts.append(sys.stdout)
+
+    def fail_if_writer_used(*_args, **_kwargs):
+        raise AssertionError("TrailingNewlineNormalizingWriter should not wrap TUI commands")
+
+    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.PnlTUI", FakePnlTUI)
+    monkeypatch.setattr("cli.interactive_cli.WatchTUI", FakeWatchTUI)
+    monkeypatch.setattr("cli.interactive_cli.TrailingNewlineNormalizingWriter", fail_if_writer_used)
+    monkeypatch.setattr(sys, "stdout", tracked_stdout)
+
+    cli = InteractiveCLI(config)
+    cli.stdout = tracked_stdout
+
+    cli.onecmd(command)
+
+    assert observed_stdouts == [tracked_stdout]
+    assert created_apis[0].calls == expected_calls
+    assert tracked_stdout.getvalue() == "\n"
+    assert tracked_stdout.flush_count >= 1

@@ -39,7 +39,7 @@ class TestHyperliquidClientIntegration:
             coin="ETH",
             mark_price=Decimal("3000.0"),
             funding_rate=Decimal("-0.0002"),
-            open_interest=Decimal("5000.0"),
+            open_interest=Decimal("15000000.0"),
         )
         expected_metadata = CoinMetadata(
             coin="ETH",
@@ -115,7 +115,7 @@ class TestHyperliquidClientEdgeCases:
             coin="BTC",
             mark_price=Decimal("0.00000001"),
             funding_rate=Decimal("-0.99999999"),
-            open_interest=Decimal("999999999999.99999999"),
+            open_interest=Decimal("9999.9999999999999999"),
         )
         mock_connection.retry_operation.return_value = expected_ticker
 

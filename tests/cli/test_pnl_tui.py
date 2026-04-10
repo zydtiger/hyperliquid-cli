@@ -2,6 +2,7 @@
 Tests for the fullscreen PnL TUI renderer.
 """
 
+from datetime import datetime
 from decimal import Decimal
 
 from cli.interactive.pnl_tui import PnlScreenControl, render_braille_plot, window_label
@@ -99,8 +100,10 @@ def test_pnl_screen_control_advances_between_windows():
     control = PnlScreenControl(_sample_history())
 
     assert control.current_window() == "7d"
+    control.advance_window(-1)
+    assert control.current_window() == "3d"
     control.advance_window(1)
-    assert control.current_window() == "1m"
+    assert control.current_window() == "7d"
     control.advance_window(10)
     assert control.current_window() == "all"
     control.advance_window(-10)
@@ -122,3 +125,35 @@ def test_pnl_screen_control_renders_empty_window_message():
 def test_window_label_maps_all_time():
     """The window label helper should expose the expected display names."""
     assert window_label("all") == "ALL-TIME"
+
+
+def test_pnl_screen_control_renders_zoom_controls():
+    """The controls line should describe zooming in and out."""
+    control = PnlScreenControl(_sample_history())
+    content = control.create_content(width=80, height=30)
+    controls_line = "".join(fragment for _, fragment in content.get_line(2))
+
+    assert "+ zoom in" in controls_line
+    assert "- zoom out" in controls_line
+
+
+def test_pnl_screen_control_keeps_footer_visible_on_short_terminal():
+    """Shorter terminals should still show complete panels and both footer lines."""
+    control = PnlScreenControl(_sample_history())
+    content = control.create_content(width=40, height=20)
+    lines = ["".join(fragment for _, fragment in content.get_line(index)) for index in range(20)]
+
+    assert content.line_count == 20
+    assert lines[-2].strip().startswith("03-13")
+    assert "y-scales" in lines[-1]
+    assert lines[-1].strip()
+
+
+def test_pnl_screen_control_formats_dates_in_local_time():
+    """The PnL x-axis formatter should use local time rather than UTC."""
+    control = PnlScreenControl(_sample_history())
+    timestamp_ms = 1741973030493
+
+    assert control._format_date(timestamp_ms) == datetime.fromtimestamp(
+        timestamp_ms / 1000
+    ).strftime("%m-%d")

@@ -111,7 +111,7 @@ class TestHyperliquidClientTicker:
             coin="ETH",
             mark_price=Decimal("3000.0"),
             funding_rate=Decimal("-0.0002"),
-            open_interest=Decimal("5000.0"),
+            open_interest=Decimal("15000000.0"),
         )
         mock_connection.retry_operation.return_value = expected_ticker
 
@@ -130,10 +130,13 @@ class TestHyperliquidClientTicker:
     ):
         """Test ticker retrieval for non-existent coin."""
         mock_info = mock_connection.info
+        mock_info.meta.return_value = sample_meta_response
         mock_info.meta_and_asset_ctxs.return_value = (
             sample_meta_response,
             sample_asset_ctxs_response,
         )
+        mock_info.spot_meta.return_value = {"universe": [], "tokens": []}
+        mock_info.spot_meta_and_asset_ctxs.return_value = ({"universe": [], "tokens": []}, [])
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
         with pytest.raises(ExchangeError, match="Coin 'DOGE' not found in available trading pairs"):
@@ -147,6 +150,7 @@ class TestHyperliquidClientTicker:
     ):
         """Test ticker retrieval when meta call fails."""
         mock_info = mock_connection.info
+        mock_info.meta.return_value = None
         mock_info.meta_and_asset_ctxs.return_value = (None, [])
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
@@ -163,6 +167,57 @@ class TestHyperliquidClientTicker:
             ExchangeError, match="Operation failed after 4 attempts: Network timeout"
         ):
             client.get_ticker("BTC")
+
+    def test_get_ticker_supports_spot_pairs(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_meta_response,
+    ):
+        """Spot pairs should resolve from spot asset contexts."""
+        mock_info = mock_connection.info
+        mock_info.meta.return_value = sample_meta_response
+        mock_info.meta_and_asset_ctxs.return_value = (sample_meta_response, [])
+        mock_info.spot_meta.return_value = {
+            "universe": [{"tokens": [441, 360], "name": "@441", "index": 441, "isCanonical": True}],
+            "tokens": [{}] * 442,
+        }
+        mock_info.spot_meta.return_value["tokens"][360] = {
+            "name": "USDC",
+            "szDecimals": 6,
+            "weiDecimals": 6,
+            "index": 360,
+        }
+        mock_info.spot_meta.return_value["tokens"][441] = {
+            "name": "UBTC",
+            "szDecimals": 5,
+            "weiDecimals": 8,
+            "index": 441,
+        }
+        mock_info.spot_meta_and_asset_ctxs.return_value = (
+            mock_info.spot_meta.return_value,
+            [
+                {
+                    "coin": "@441",
+                    "markPx": "101234.5",
+                    "midPx": "101230.0",
+                    "prevDayPx": "100000.0",
+                    "dayNtlVlm": "12345.0",
+                    "circulatingSupply": "10.0",
+                }
+            ],
+        )
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_ticker("UBTC/USDC")
+
+        assert result == Ticker(
+            coin="UBTC/USDC",
+            mark_price=Decimal("101234.5"),
+            funding_rate=Decimal("0"),
+            open_interest=None,
+        )
 
 
 class TestHyperliquidClientMetadata:
@@ -199,6 +254,7 @@ class TestHyperliquidClientMetadata:
         """Test metadata retrieval for non-existent coin."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
+        mock_info.spot_meta.return_value = {"universe": [], "tokens": []}
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
         with pytest.raises(ExchangeError, match="Coin 'DOGE' not found in available trading pairs"):
@@ -226,3 +282,39 @@ class TestHyperliquidClientMetadata:
 
         with pytest.raises(ExchangeError, match="Operation failed after 4 attempts: API timeout"):
             client.get_metadata("BTC")
+
+    def test_get_metadata_supports_spot_pairs(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+        sample_meta_response,
+    ):
+        """Spot pairs should expose size precision and a 1x leverage ceiling."""
+        mock_info = mock_connection.info
+        mock_info.meta.return_value = sample_meta_response
+        mock_info.spot_meta.return_value = {
+            "universe": [{"tokens": [441, 360], "name": "@441", "index": 441, "isCanonical": True}],
+            "tokens": [{}] * 442,
+        }
+        mock_info.spot_meta.return_value["tokens"][360] = {
+            "name": "USDC",
+            "szDecimals": 6,
+            "weiDecimals": 6,
+            "index": 360,
+        }
+        mock_info.spot_meta.return_value["tokens"][441] = {
+            "name": "UBTC",
+            "szDecimals": 5,
+            "weiDecimals": 8,
+            "index": 441,
+        }
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_metadata("UBTC/USDC")
+
+        assert result == CoinMetadata(
+            coin="UBTC/USDC",
+            size_decimals=5,
+            max_leverage=1,
+        )

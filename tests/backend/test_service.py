@@ -443,6 +443,7 @@ class TestRequestHandlers(TestBackendService):
         expected_routes = [
             "/available_coins",
             "/ticker/{coin}",
+            "/watch/{coin:path}",
             "/metadata/{coin}",
             "/positions",
             "/positions/{coin}",
