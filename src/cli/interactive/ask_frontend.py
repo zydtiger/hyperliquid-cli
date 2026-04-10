@@ -1,11 +1,14 @@
 """Frontend helpers for the interactive `ask` command."""
 
+import sys
 from collections.abc import Callable
 from typing import Any
 
 import httpx
 
 from models.config import Config
+
+from ..command_output_writer import TrailingNewlineNormalizingWriter
 
 ASK_SESSION_PROMPT = ">>> "
 ASK_EXIT_COMMANDS = frozenset({"/bye", "/exit", "/quit"})
@@ -21,9 +24,8 @@ class AskFrontend:
         manual_builder: Callable[[], str],
     ) -> None:
         self.config = config
-        self._manual_builder = manual_builder
         self._history: list[dict[str, str]] = [
-            {"role": "system", "content": self.build_system_prompt()}
+            {"role": "system", "content": self.build_system_prompt(manual_builder)}
         ]
 
     @property
@@ -31,9 +33,9 @@ class AskFrontend:
         """Return a copy of the current conversation history."""
         return list(self._history)
 
-    def build_system_prompt(self) -> str:
+    def build_system_prompt(self, manual_builder: Callable[[], str]) -> str:
         """Construct the assistant system prompt from the live CLI manual."""
-        manual = self._manual_builder().strip()
+        manual = manual_builder().strip()
         return (
             "You are a helpful assistant to assist the user to navigate hyperliquid-cli, "
             "answer user's questions and construct relevant commands with the following "
@@ -57,15 +59,11 @@ class AskFrontend:
         self._history.append({"role": "assistant", "content": response})
         return response
 
-    def run_interactive(
-        self,
-        input_func: Callable[[str], str] = input,
-        output_func: Callable[[str], None] = print,
-    ) -> None:
+    def run_interactive(self) -> None:
         """Run the `>>>` interactive assistant loop until the user exits."""
         while True:
             try:
-                user_message = input_func(ASK_SESSION_PROMPT)
+                user_message = input(ASK_SESSION_PROMPT)
             except EOFError:
                 return
 
@@ -75,7 +73,13 @@ class AskFrontend:
             if stripped_message.lower() in ASK_EXIT_COMMANDS:
                 return
 
-            output_func(self.submit(user_message))
+            self._write_interactive_response(self.submit(user_message))
+
+    def _write_interactive_response(self, response: str) -> None:
+        """Write one interactive response and leave a blank line before the next prompt."""
+        writer = TrailingNewlineNormalizingWriter(sys.stdout)
+        writer.write(response)
+        writer.finalize(add_blank_line=True)
 
     def _send_chat_request(self, request: dict[str, object]) -> str:
         """Send the chat completion request to the configured agent endpoint."""

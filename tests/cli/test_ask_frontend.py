@@ -1,5 +1,9 @@
 """Tests for the interactive CLI ask frontend."""
 
+import builtins
+import sys
+from io import StringIO
+
 import pytest
 
 from cli.cli_manual import build_cli_manual
@@ -78,7 +82,10 @@ def test_submit_preserves_history_between_turns(config: Config):
     ]
 
 
-def test_run_interactive_ignores_blank_input_and_exits(config: Config):
+def test_run_interactive_ignores_blank_input_and_exits(
+    monkeypatch: pytest.MonkeyPatch,
+    config: Config,
+):
     """Test the interactive ask loop ignores blank lines and exits on /quit."""
     prompted_values: list[str] = []
     outputs: list[str] = []
@@ -93,7 +100,9 @@ def test_run_interactive_ignores_blank_input_and_exits(config: Config):
 
     frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
     frontend._send_chat_request = fake_send.__get__(frontend, AskFrontend)
-    frontend.run_interactive(input_func=input_func, output_func=outputs.append)
+    monkeypatch.setattr(builtins, "input", input_func)
+    monkeypatch.setattr(frontend, "_write_interactive_response", outputs.append)
+    frontend.run_interactive()
 
     assert prompted_values == [ASK_SESSION_PROMPT, ASK_SESSION_PROMPT, ASK_SESSION_PROMPT]
     assert outputs == [AGENT_RESPONSE]
@@ -102,6 +111,30 @@ def test_run_interactive_ignores_blank_input_and_exits(config: Config):
         {"role": "user", "content": "how do i cancel orders"},
         {"role": "assistant", "content": AGENT_RESPONSE},
     ]
+
+
+def test_run_interactive_prints_response_with_trailing_newline(
+    monkeypatch: pytest.MonkeyPatch,
+    config: Config,
+):
+    """Test interactive stdout output leaves a blank line before the next prompt."""
+    user_inputs = iter(["how do i cancel orders", "/quit"])
+    stdout = StringIO()
+
+    def fake_send(self, request: dict[str, object]) -> str:
+        return AGENT_RESPONSE
+
+    def input_func(prompt: str) -> str:
+        return next(user_inputs)
+
+    monkeypatch.setattr(builtins, "input", input_func)
+    monkeypatch.setattr(sys, "stdout", stdout)
+
+    frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
+    frontend._send_chat_request = fake_send.__get__(frontend, AskFrontend)
+    frontend.run_interactive()
+
+    assert stdout.getvalue() == f"{AGENT_RESPONSE}\n\n"
 
 
 def test_ask_command_prints_agent_response(
