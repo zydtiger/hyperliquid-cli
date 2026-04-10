@@ -668,7 +668,7 @@ class InteractiveCLI(cmd.Cmd):
         print("  watch ETH")
         print()
         print("The watch TUI shows:")
-        print("- The last 49 completed candles plus the current live candle")
+        print("- The last 99 completed candles plus the current live candle")
         print("- Current open interest next to the price header")
         print("- Top 10 asks and top 10 bids from the live order book")
         print("- `+` to switch to a shorter candle interval and `-` for a longer interval")
