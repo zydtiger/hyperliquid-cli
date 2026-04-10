@@ -65,6 +65,11 @@ def decimal_value(value: Any) -> Decimal:
     return Decimal(str(value))
 
 
+def perp_open_interest_value(mark_price: Decimal, open_interest: Any) -> Decimal:
+    """Convert perp open interest from base units into USD notional."""
+    return mark_price * decimal_value(open_interest)
+
+
 def fee_to_usdc(fee: Decimal, fee_token: str, coin: str, price: Decimal) -> Decimal:
     """Convert a fee to USDC when the exchange reports it in base units."""
     if fee_token.upper() == "USDC":
@@ -328,17 +333,31 @@ class HyperliquidClient:
                 raise ExchangeError("Failed to retrieve market metadata from exchange")
 
             available_coins = [asset["name"] for asset in meta["universe"]]
-            if coin not in available_coins:
-                raise ExchangeError(f"Coin '{coin}' not found in available trading pairs")
+            if coin in available_coins:
+                asset = asset_ctxs[available_coins.index(coin)]
+                mark_price = Decimal(str(asset["markPx"]))
+                return Ticker(
+                    coin=coin,
+                    mark_price=mark_price,
+                    funding_rate=Decimal(str(asset["funding"])),
+                    open_interest=perp_open_interest_value(mark_price, asset.get("openInterest")),
+                )
 
-            asset = asset_ctxs[available_coins.index(coin)]
+            # Fall back to spot markets
+            spot_symbol_map = self._get_spot_symbol_map()
+            raw_symbol = normalize_spot_order_symbol(coin, spot_symbol_map)
+            spot_meta, spot_ctxs = self.connection.info.spot_meta_and_asset_ctxs()
+            spot_coins = [entry["name"] for entry in spot_meta.get("universe", [])]
+            if raw_symbol in spot_coins:
+                spot_asset = spot_ctxs[spot_coins.index(raw_symbol)]
+                return Ticker(
+                    coin=coin,
+                    mark_price=Decimal(str(spot_asset["markPx"])),
+                    funding_rate=Decimal("0"),
+                    open_interest=None,
+                )
 
-            return Ticker(
-                coin=coin,
-                mark_price=Decimal(str(asset["markPx"])),
-                funding_rate=Decimal(str(asset["funding"])),
-                open_interest=Decimal(str(asset["openInterest"])),
-            )
+            raise ExchangeError(f"Coin '{coin}' not found in available trading pairs")
 
         return self.connection.retry_operation(_get_ticker)
 
@@ -390,6 +409,22 @@ class HyperliquidClient:
                         size_decimals=asset["szDecimals"],
                         max_leverage=max_leverage,
                     )
+
+            # Fall back to spot markets
+            spot_symbol_map = self._get_spot_symbol_map()
+            raw_symbol = normalize_spot_order_symbol(coin, spot_symbol_map)
+            spot_meta = self.connection.info.spot_meta()
+            tokens = spot_meta.get("tokens", [])
+            for spot_info in spot_meta.get("universe", []):
+                if spot_info.get("name") == raw_symbol:
+                    token_indexes = spot_info.get("tokens", [])
+                    if len(token_indexes) >= 1:
+                        base_info = tokens[token_indexes[0]]
+                        return CoinMetadata(
+                            coin=coin,
+                            size_decimals=base_info.get("szDecimals", 0),
+                            max_leverage=1,
+                        )
 
             raise ExchangeError(f"Coin '{coin}' not found in available trading pairs")
 

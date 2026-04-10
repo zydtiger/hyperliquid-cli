@@ -93,7 +93,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
                 detail="Internal server error",
             ) from e
 
-    @app.get("/watch/{coin}")
+    @app.get("/watch/{coin:path}")
     async def get_watch_snapshot(
         coin: str = Path(..., description="Symbol of the perpetual market"),
         interval: Annotated[

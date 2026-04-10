@@ -75,9 +75,14 @@ Get ticker information for a specific market.
   "coin": "BTC",
   "mark_price": "43250.50",
   "funding_rate": "0.0001",
-  "open_interest": "1250.75"
+  "open_interest": "54109437.50"
 }
 ```
+
+**Field Descriptions:**
+- `mark_price`: Current mark price for the market.
+- `funding_rate`: Current funding rate. Spot markets return `0`.
+- `open_interest`: Current open interest in USD notional for perps. Spot markets return `null`.
 
 **Error Responses:**
 - `400 Bad Request`: Invalid coin symbol or exchange error
@@ -99,7 +104,7 @@ Get the live watch snapshot for a supported perp or spot market.
   "coin": "BTC",
   "interval": "5m",
   "mark_price": "43250.50",
-  "open_interest": "1250.75",
+  "open_interest": "54109437.50",
   "updated_at": 1741973030493,
   "candles": [
     {
@@ -141,7 +146,8 @@ Get the live watch snapshot for a supported perp or spot market.
 **Field Descriptions:**
 - `interval`: Candle interval returned by the snapshot.
 - `mark_price`: Current live mark price for the market.
-- `open_interest`: Current live open interest for the market. Spot markets return `0`.
+- `open_interest`: Current live open interest in USD notional for the market. Spot markets
+  return `null`.
 - `updated_at`: Timestamp of the last in-memory snapshot update in Unix milliseconds.
 - `candles`: Ordered candles from oldest to newest. The backend returns the last 99 completed
   candles plus the current live candle for the requested `interval`.
