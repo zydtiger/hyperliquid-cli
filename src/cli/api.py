@@ -22,6 +22,7 @@ from models.api import (
     RootResponse,
     StakingStatus,
     Ticker,
+    WatchSnapshot,
 )
 from models.config import Config
 from models.leverage import LeverageResult, LeverageUpdateRequest
@@ -163,6 +164,32 @@ class BackendAPI:
             return Ticker(**response.json())
         except httpx.RequestError as e:
             logger.error(f"Failed to get ticker for {coin}: {e}")
+            raise APIError(f"Connection error: {e!s}") from e
+
+    def get_watch_snapshot(self, coin: str) -> WatchSnapshot:
+        """
+        Get the live watch snapshot for a specific perpetual market.
+
+        Args:
+            coin: Symbol of the perpetual market
+
+        Returns:
+            WatchSnapshot: Live snapshot data for the watch TUI
+
+        Raises:
+            APIError: If the request fails
+        """
+        try:
+            response = self.client.get(f"/watch/{coin}")
+            if response.status_code == status.HTTP_404_NOT_FOUND:
+                raise APIError(
+                    "Watch endpoint not found. Restart the backend from the updated checkout.",
+                    status_code=response.status_code,
+                )
+            self._handle_response_error(response)
+            return WatchSnapshot(**response.json())
+        except httpx.RequestError as e:
+            logger.error(f"Failed to get watch snapshot for {coin}: {e}")
             raise APIError(f"Connection error: {e!s}") from e
 
     def get_metadata(self, coin: str) -> CoinMetadata:
