@@ -135,11 +135,16 @@ class LiveWatchRegistry:
         seeded = seed_interval_state(raw_candles, interval, mark_price, now_ms)
 
         with self._lock:
-            state = self._states.get(coin)
-            if state is None:
+            current_state = self._states.get(coin)
+            if current_state is None:
                 return
-            interval_state = state.interval_states.setdefault(interval, seeded)
-            advance_interval_state(interval_state, interval, state.mark_price, self._clock_ms())
+            interval_state = current_state.interval_states.setdefault(interval, seeded)
+            advance_interval_state(
+                interval_state,
+                interval,
+                current_state.mark_price,
+                self._clock_ms(),
+            )
 
     def _seed_state(self, coin: str) -> _WatchState:
         ticker = self._ticker_fetcher(coin)
