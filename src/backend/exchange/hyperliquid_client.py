@@ -25,6 +25,7 @@ from models.api import (
     StakingInfo,
     StakingStatus,
     Ticker,
+    WatchSnapshot,
 )
 from models.config import Config
 from models.leverage import LeverageResult
@@ -45,6 +46,7 @@ from models.order import (
 
 from .hyperliquid_connection import HyperliquidConnection
 from .pnl_history import build_pnl_history_catalog
+from .watch_snapshot import LiveWatchRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -250,6 +252,7 @@ class HyperliquidClient:
         self.config = config
         self.connection = HyperliquidConnection(config)
         self._spot_symbol_map: dict[str, str] | None = None
+        self._watch_registry = LiveWatchRegistry(self.connection.info, self.get_ticker)
 
     def _get_spot_symbol_map(self) -> dict[str, str]:
         """Load and cache raw spot-id to pair-symbol mappings."""
@@ -336,6 +339,23 @@ class HyperliquidClient:
             )
 
         return self.connection.retry_operation(_get_ticker)
+
+    def get_watch_snapshot(self, coin: str) -> WatchSnapshot:
+        """
+        Get the live in-memory watch snapshot for a supported market.
+
+        Args:
+            coin: Symbol of the market
+
+        Returns:
+            WatchSnapshot: Live price history and order book snapshot
+        """
+
+        def _get_watch_snapshot() -> WatchSnapshot:
+            market_coin = self._resolve_coin_symbol(coin.upper())
+            return self._watch_registry.get_snapshot(market_coin)
+
+        return self.connection.retry_operation(_get_watch_snapshot)
 
     def get_metadata(self, coin: str) -> CoinMetadata:
         """
@@ -1758,6 +1778,11 @@ class HyperliquidClient:
             message=f"{order_label} submission failed",
             error=result.get("response", "Unknown error"),
         )
+
+    def close(self) -> None:
+        """Release watch subscriptions and the underlying exchange connection."""
+        self._watch_registry.close()
+        self.connection.close()
 
 
 __all__ = [
