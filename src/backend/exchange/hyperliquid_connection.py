@@ -113,6 +113,12 @@ class HyperliquidConnection:
         except Exception:
             return False
 
+    def close(self) -> None:
+        """Stop the websocket manager when the shared connection is torn down."""
+        ws_manager = getattr(self.info, "ws_manager", None)
+        if ws_manager is not None:
+            ws_manager.stop()
+
 
 __all__ = [
     "HyperliquidConnection",
