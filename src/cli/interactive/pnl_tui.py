@@ -5,7 +5,7 @@ Fullscreen TUI for rendering PnL history charts.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import TypeAlias
 
@@ -168,7 +168,12 @@ class PnlScreenControl(UIControl):
                 )
             ]
         )
-        return lines[:height]
+        if len(lines) <= height:
+            return lines
+
+        footer = lines[-FOOTER_LINES:]
+        body = lines[: max(height - FOOTER_LINES, 0)]
+        return body + footer
 
     def _render_panel(
         self,
@@ -265,7 +270,7 @@ class PnlScreenControl(UIControl):
         return f"{left}{trimmed_content}{fill}{right}"
 
     def _format_date(self, timestamp_ms: int) -> str:
-        return datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC).strftime("%m-%d")
+        return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%m-%d")
 
     def _time_axis_line(self, history: PnlHistory, width: int) -> str:
         """Render the shared time axis labels for the active window."""
