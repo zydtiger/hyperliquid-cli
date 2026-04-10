@@ -14,6 +14,9 @@ from pydantic import BaseModel, Field
 PnlWindow = Literal["1d", "3d", "7d", "1m", "3m", "6m", "1y", "all"]
 PNL_WINDOW_ORDER: tuple[PnlWindow, ...] = ("1d", "3d", "7d", "1m", "3m", "6m", "1y", "all")
 DEFAULT_PNL_WINDOW: PnlWindow = "7d"
+WatchWindow = Literal["1m", "5m", "15m", "1h"]
+WATCH_WINDOW_ORDER: tuple[WatchWindow, ...] = ("1m", "5m", "15m", "1h")
+DEFAULT_WATCH_WINDOW: WatchWindow = "5m"
 
 # ============================================================================
 # EXCEPTIONS / ERRORS
@@ -188,13 +191,58 @@ class PnlHistoryCatalog(BaseModel):
     )
 
 
+class PriceSample(BaseModel):
+    """Single sampled mark price for the watch TUI."""
+
+    time: int = Field(..., description="Unix timestamp in milliseconds")
+    price: Decimal = Field(..., description="Sampled mark price")
+
+
+class OrderBookLevel(BaseModel):
+    """Single order book level."""
+
+    price: Decimal = Field(..., description="Order book price level")
+    size: Decimal = Field(..., description="Aggregated size at this level")
+
+
+class WatchSnapshot(BaseModel):
+    """Normalized live watch snapshot for a single perpetual market."""
+
+    coin: str = Field(..., description="Symbol of the perpetual market")
+    mark_price: Decimal = Field(..., description="Current mark price")
+    open_interest: Decimal = Field(..., description="Current open interest")
+    updated_at: int = Field(..., description="Last snapshot update time in Unix milliseconds")
+    price_history: list[PriceSample] = Field(
+        default_factory=list,
+        description="Ordered live mark-price samples from oldest to newest",
+    )
+    bids: list[OrderBookLevel] = Field(
+        default_factory=list,
+        description="Top bid levels ordered from highest to lowest price",
+    )
+    asks: list[OrderBookLevel] = Field(
+        default_factory=list,
+        description="Top ask levels ordered from lowest to highest price",
+    )
+    default_window: WatchWindow = Field(
+        default=DEFAULT_WATCH_WINDOW,
+        description="Initial chart window shown in the watch TUI",
+    )
+    supported_windows: list[WatchWindow] = Field(
+        default_factory=lambda: list(WATCH_WINDOW_ORDER),
+        description="Supported chart windows for the watch TUI",
+    )
+
+
 # ============================================================================
 # EXPORTS
 # ============================================================================
 
 __all__ = [
     "DEFAULT_PNL_WINDOW",
+    "DEFAULT_WATCH_WINDOW",
     "PNL_WINDOW_ORDER",
+    "WATCH_WINDOW_ORDER",
     "APIError",
     "BalanceInfo",
     "CoinMetadata",
@@ -202,15 +250,19 @@ __all__ = [
     "HealthResponse",
     "HealthStatus",
     "LeverageType",
+    "OrderBookLevel",
     "PnlHistory",
     "PnlHistoryCatalog",
     "PnlPoint",
     "PnlWindow",
     "PositionInfo",
+    "PriceSample",
     "RootResponse",
     "SpotBalance",
     "StakingDelegation",
     "StakingInfo",
     "StakingStatus",
     "Ticker",
+    "WatchSnapshot",
+    "WatchWindow",
 ]
