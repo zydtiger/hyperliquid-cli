@@ -59,6 +59,7 @@ Once you start `hyperliquid-cli run`, you'll enter an interactive session with t
 hyperliquid> order              # Launch order creation wizard
 hyperliquid> positions          # Show open positions
 hyperliquid> balances           # Display account balances
+hyperliquid> watch BTC          # Launch the live watch TUI for BTC perps
 hyperliquid> open_orders        # List all open orders
 hyperliquid> cancel_order all   # Cancel all open orders
 hyperliquid> order_status 12345 # Get specific order details
@@ -74,6 +75,7 @@ hyperliquid> quit               # Exit the CLI
 
 - **Interactive Trading Wizards**: Step-by-step order creation with validation
 - **Real-time Market Data**: Access current prices, funding rates, and market depth
+- **Live Watch TUI**: Monitor mark price, open interest, and the top of book in one screen
 - **Portfolio Management**: Monitor positions, balances, and PnL
 - **Order Operations**: Create, modify, cancel, and track orders
 - **Smart Prompts**: Context-aware input with tab completion
@@ -86,6 +88,7 @@ FastAPI-based REST server providing comprehensive trading endpoints:
 
 - `GET /available_coins` - List all tradable assets
 - `GET /ticker/{coin}` - Real-time price and funding data
+- `GET /watch/{coin}` - Live mark price history and order book snapshot for perps
 - `GET /metadata/{coin}` - Trading specifications
 
 **Order Management:**
