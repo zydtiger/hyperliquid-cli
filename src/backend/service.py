@@ -6,6 +6,8 @@ functionality through HTTP endpoints.
 """
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated
 
@@ -47,11 +49,28 @@ def create_app(config: Config) -> FastAPI:
     # Setup logging
     setup_logging(config.backend.logging.level)
 
+    # Initialize Hyperliquid client
+    try:
+        client = HyperliquidClient(config)
+        logger.info("Hyperliquid client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize Hyperliquid client: {e}")
+        raise
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        """Manage shared exchange resources for the application lifetime."""
+        try:
+            yield
+        finally:
+            client.close()
+
     # Create FastAPI app
     app = FastAPI(
         title="Hyperliquid API",
         description="REST API for Hyperliquid exchange operations",
         version="1.0.0",
+        lifespan=lifespan,
     )
 
     # Add CORS middleware
@@ -62,14 +81,6 @@ def create_app(config: Config) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
-    # Initialize Hyperliquid client
-    try:
-        client = HyperliquidClient(config)
-        logger.info("Hyperliquid client initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize Hyperliquid client: {e}")
-        raise
 
     # Add request handlers
     setup_request_handlers(app, client)
