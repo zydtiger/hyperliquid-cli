@@ -5,7 +5,6 @@ Fullscreen TUI for monitoring a live perpetual market.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime
 from decimal import Decimal
 from threading import Event, Thread
 from typing import TypeAlias
@@ -30,6 +29,7 @@ from .watch_helpers import (
     candle_close_series,
     format_open_interest_header,
     format_price_header,
+    format_watch_axis_label,
 )
 
 HEADER_LINES = 3
@@ -240,8 +240,9 @@ class WatchScreenControl(UIControl):
     def _time_axis_line(self, width: int) -> str:
         if self.snapshot is None or not self.snapshot.candles:
             return " No timestamps available "
-        start_label = self._format_time(self.snapshot.candles[0].open_time)
-        end_label = self._format_time(self.snapshot.candles[-1].close_time)
+        interval = self.current_interval()
+        start_label = format_watch_axis_label(self.snapshot.candles[0].open_time, interval)
+        end_label = format_watch_axis_label(self.snapshot.candles[-1].close_time, interval)
         spacing = max(width - len(start_label) - len(end_label) - 2, 1)
         return f" {start_label}{' ' * spacing}{end_label} "
 
@@ -280,9 +281,6 @@ class WatchScreenControl(UIControl):
         if lines:
             lines[len(lines) // 2] = message.center(width)[:width].ljust(width)
         return [[("class:chart", line)] for line in lines]
-
-    def _format_time(self, timestamp_ms: int) -> str:
-        return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%H:%M:%S")
 
 
 __all__ = ["WatchScreenControl", "WatchTUI"]

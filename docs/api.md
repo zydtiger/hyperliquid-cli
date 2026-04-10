@@ -90,8 +90,8 @@ Get the live watch snapshot for a supported perp or spot market.
 - `coin` (string): Symbol of the market (e.g., "BTC", "ETH", "UBTC/USDC")
 
 **Query Parameters:**
-- `interval` (`1m` | `5m` | `15m` | `1h`, optional): Candle interval to return. Defaults to
-  `5m`.
+- `interval` (`1m` | `5m` | `15m` | `1h` | `4h` | `1d`, optional): Candle interval to return.
+  Defaults to `5m`.
 
 **Response:**
 ```json
@@ -134,7 +134,7 @@ Get the live watch snapshot for a supported perp or spot market.
     }
   ],
   "default_interval": "5m",
-  "supported_intervals": ["1m", "5m", "15m", "1h"]
+  "supported_intervals": ["1m", "5m", "15m", "1h", "4h", "1d"]
 }
 ```
 

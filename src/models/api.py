@@ -14,14 +14,16 @@ from pydantic import BaseModel, Field
 PnlWindow = Literal["1d", "3d", "7d", "1m", "3m", "6m", "1y", "all"]
 PNL_WINDOW_ORDER: tuple[PnlWindow, ...] = ("1d", "3d", "7d", "1m", "3m", "6m", "1y", "all")
 DEFAULT_PNL_WINDOW: PnlWindow = "7d"
-WatchInterval = Literal["1m", "5m", "15m", "1h"]
-WATCH_INTERVAL_ORDER: tuple[WatchInterval, ...] = ("1m", "5m", "15m", "1h")
+WatchInterval = Literal["1m", "5m", "15m", "1h", "4h", "1d"]
+WATCH_INTERVAL_ORDER: tuple[WatchInterval, ...] = ("1m", "5m", "15m", "1h", "4h", "1d")
 DEFAULT_WATCH_INTERVAL: WatchInterval = "5m"
 WATCH_INTERVAL_MS: dict[WatchInterval, int] = {
     "1m": 60_000,
     "5m": 5 * 60_000,
     "15m": 15 * 60_000,
     "1h": 60 * 60_000,
+    "4h": 4 * 60 * 60_000,
+    "1d": 24 * 60 * 60_000,
 }
 
 # ============================================================================

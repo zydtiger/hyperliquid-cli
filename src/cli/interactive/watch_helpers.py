@@ -4,6 +4,7 @@ Pure helpers for the live watch TUI.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
 from models.api import (
@@ -51,6 +52,14 @@ def format_open_interest_header(value: Decimal) -> str:
     return f"OI {value:,.2f}"
 
 
+def format_watch_axis_label(timestamp_ms: int, interval: WatchInterval) -> str:
+    """Format an x-axis label based on the active watch interval."""
+    timestamp = datetime.fromtimestamp(timestamp_ms / 1000)
+    if interval in {"1h", "4h", "1d"}:
+        return timestamp.strftime("%m-%d")
+    return timestamp.strftime("%H:%M")
+
+
 def watch_interval_index(interval: WatchInterval) -> int:
     """Return the current watch interval index."""
     return WATCH_INTERVAL_ORDER.index(interval)
@@ -62,6 +71,7 @@ __all__ = [
     "candle_price_range",
     "format_open_interest_header",
     "format_price_header",
+    "format_watch_axis_label",
     "normalize_order_book_levels",
     "watch_interval_index",
 ]
