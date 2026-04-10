@@ -339,7 +339,7 @@ class TestCreateApp(TestBackendService):
             assert app is not None
             assert app.title == "Hyperliquid API"
             assert app.description == "REST API for Hyperliquid exchange operations"
-            assert app.version == "1.0.0"
+            assert app.version == "0.2.0"
 
             # Verify client is initialized
             mock_client_cls = patch("backend.service.HyperliquidClient")
@@ -424,7 +424,7 @@ class TestCreateApp(TestBackendService):
 
         assert response.status_code == 200
         expected_response = RootResponse(
-            api="Hyperliquid API", version="1.0.0", status=HealthStatus.HEALTHY
+            api="Hyperliquid API", version="0.2.0", status=HealthStatus.HEALTHY
         )
         assert response.json() == expected_response.model_dump()
 

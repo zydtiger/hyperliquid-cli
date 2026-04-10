@@ -69,7 +69,7 @@ def create_app(config: Config) -> FastAPI:
     app = FastAPI(
         title="Hyperliquid API",
         description="REST API for Hyperliquid exchange operations",
-        version="1.0.0",
+        version="0.2.0",
         lifespan=lifespan,
     )
 
@@ -108,7 +108,7 @@ def create_app(config: Config) -> FastAPI:
             is_healthy = client.test_connection()
             return RootResponse(
                 api="Hyperliquid API",
-                version="1.0.0",
+                version="0.2.0",
                 status=HealthStatus.HEALTHY if is_healthy else HealthStatus.UNHEALTHY,
             )
         except Exception as e:

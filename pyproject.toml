@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hyperliquid-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Hyperliquid smart order trading system CLI"
 authors = [
     {name = "tigerding", email = "zhiyuanding01@gmail.com"}
