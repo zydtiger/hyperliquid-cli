@@ -5,6 +5,7 @@ Fullscreen TUI for monitoring a live perpetual market.
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
 from decimal import Decimal
 from threading import Event, Thread
 from typing import TypeAlias
@@ -253,9 +254,12 @@ class WatchScreenControl(UIControl):
             return " Polling backend every 500ms "
         candle_count = len(self.snapshot.candles)
         return (
-            f" Updated at {self.snapshot.updated_at}  "
+            f" Updated at {self._format_timestamp(self.snapshot.updated_at)}  "
             f"{candle_count} candles  Order book temporarily hidden "
         )
+
+    def _format_timestamp(self, timestamp_ms: int) -> str:
+        return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
     def _close_prices(self) -> list[Decimal]:
         if self.snapshot is None:
