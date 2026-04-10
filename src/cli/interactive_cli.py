@@ -17,7 +17,7 @@ from models.config import Config
 from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
 
 from .api import BackendAPI
-from .cli_manual import INTERACTIVE_COMMANDS, build_cli_manual
+from .cli_manual import build_cli_manual
 from .command_output_writer import TrailingNewlineNormalizingWriter
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
 from .interactive import AskFrontend, ModifyWizard, OrderWizard, PnlTUI, WatchTUI
@@ -1085,8 +1085,13 @@ class InteractiveCLI(cmd.Cmd):
 
     def completenames(self, text: str, *ignored: str) -> list[str]:
         """Override to provide custom command completion."""
-        commands = [*INTERACTIVE_COMMANDS, "help", "?"]
-        return [cmd for cmd in commands if cmd.startswith(text)]
+        command_names = {
+            attribute_name.removeprefix("do_")
+            for attribute_name in dir(self)
+            if attribute_name.startswith("do_")
+        }
+        command_names.update({"help", "?"})
+        return sorted(command for command in command_names if command.startswith(text))
 
     def run(self) -> None:
         """

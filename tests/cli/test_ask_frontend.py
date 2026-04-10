@@ -2,6 +2,7 @@
 
 import builtins
 import sys
+from cmd import Cmd
 from io import StringIO
 
 import pytest
@@ -344,3 +345,28 @@ def test_build_cli_manual_includes_ask_and_watch(config: Config):
     assert "configured OpenAI-compatible agent endpoint" in manual
     assert "## watch" in manual
     assert "Launch a live market watch TUI for a perpetual coin" in manual
+
+
+def test_build_cli_manual_discovers_project_do_methods_without_cmd_builtins() -> None:
+    """The manual generator should derive commands from project do_* methods only."""
+
+    class BaseManualCLI(Cmd):
+        def do_alpha(self, _: str) -> None:
+            """Alpha command help."""
+
+        def help_alpha(self) -> None:
+            print("alpha - Alpha help")
+
+    class DerivedManualCLI(BaseManualCLI):
+        def do_beta(self, _: str) -> None:
+            """Beta command help."""
+
+        def help_beta(self) -> None:
+            print("beta - Beta help")
+
+    manual = build_cli_manual(DerivedManualCLI())
+
+    assert "## alpha" in manual
+    assert "## beta" in manual
+    assert "## EOF" not in manual
+    assert "## help" not in manual

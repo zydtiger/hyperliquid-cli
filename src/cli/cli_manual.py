@@ -5,30 +5,6 @@ from collections.abc import Iterable
 from contextlib import redirect_stdout
 from io import StringIO
 
-INTERACTIVE_COMMANDS = (
-    "ask",
-    "order",
-    "status",
-    "positions",
-    "balances",
-    "staking",
-    "conditionals",
-    "clear",
-    "cls",
-    "quit",
-    "exit",
-    "order_status",
-    "info",
-    "open_orders",
-    "order_history",
-    "pnl",
-    "watch",
-    "cancel_order",
-    "modify_order",
-    "change_leverage",
-    "update_margin",
-)
-
 
 def _capture_help_output(cli: Cmd, command: str) -> str:
     """Capture the rendered help output for a single command."""
@@ -42,8 +18,29 @@ def _capture_help_output(cli: Cmd, command: str) -> str:
     return f"{command} - No help available"
 
 
-def build_cli_manual(cli: Cmd, commands: Iterable[str] = INTERACTIVE_COMMANDS) -> str:
+def _discover_cli_commands(cli: Cmd) -> tuple[str, ...]:
+    """Return user-facing command names from project-defined do_* methods."""
+    commands: list[str] = []
+    seen: set[str] = set()
+
+    for cls in reversed(type(cli).mro()):
+        if cls in {Cmd, object}:
+            continue
+        for attribute_name in cls.__dict__:
+            if not attribute_name.startswith("do_"):
+                continue
+            command_name = attribute_name.removeprefix("do_")
+            if command_name in seen:
+                continue
+            seen.add(command_name)
+            commands.append(command_name)
+
+    return tuple(commands)
+
+
+def build_cli_manual(cli: Cmd, commands: Iterable[str] | None = None) -> str:
     """Build the aggregate CLI manual from live help output."""
+    manual_commands = tuple(commands) if commands is not None else _discover_cli_commands(cli)
     sections = [
         "# Hyperliquid CLI Manual",
         "",
@@ -51,7 +48,7 @@ def build_cli_manual(cli: Cmd, commands: Iterable[str] = INTERACTIVE_COMMANDS) -
         "",
     ]
 
-    for command in commands:
+    for command in manual_commands:
         sections.extend(
             [
                 f"## {command}",
@@ -66,4 +63,4 @@ def build_cli_manual(cli: Cmd, commands: Iterable[str] = INTERACTIVE_COMMANDS) -
     return "\n".join(sections).rstrip() + "\n"
 
 
-__all__ = ["INTERACTIVE_COMMANDS", "build_cli_manual"]
+__all__ = ["build_cli_manual"]
