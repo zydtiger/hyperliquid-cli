@@ -8,6 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from models.api import (
+    WATCH_INTERVAL_MS,
     WATCH_INTERVAL_ORDER,
     OrderBookLevel,
     WatchCandle,
@@ -62,6 +63,12 @@ def format_watch_axis_label(timestamp_ms: int, interval: WatchInterval) -> str:
     return timestamp.strftime("%H:%M")
 
 
+def next_watch_refresh_seconds(interval: WatchInterval, now_ms: int) -> float:
+    """Return the seconds remaining until the next interval boundary."""
+    interval_ms = WATCH_INTERVAL_MS[interval]
+    return (interval_ms - (now_ms % interval_ms)) / 1000
+
+
 def watch_interval_index(interval: WatchInterval) -> int:
     """Return the current watch interval index."""
     return WATCH_INTERVAL_ORDER.index(interval)
@@ -74,6 +81,7 @@ __all__ = [
     "format_open_interest_header",
     "format_price_header",
     "format_watch_axis_label",
+    "next_watch_refresh_seconds",
     "normalize_order_book_levels",
     "watch_interval_index",
 ]

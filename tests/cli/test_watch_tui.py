@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from cli.interactive.watch_helpers import format_watch_axis_label
+from cli.interactive.watch_helpers import format_watch_axis_label, next_watch_refresh_seconds
 from cli.interactive.watch_tui import WatchScreenControl, WatchTUI
 from models.api import OrderBookLevel, WatchCandle, WatchSnapshot
 
@@ -133,6 +133,7 @@ def test_watch_screen_control_renders_loading_and_sparse_states():
 
     assert "loading live candle stream" in rendered
     assert "Loading live market data" in rendered
+    assert "Polling backend every 5m" in rendered
     assert "Order book temporarily hidden" not in rendered
 
     control.set_snapshot(
@@ -185,6 +186,17 @@ def test_watch_tui_fetches_with_current_interval_and_refetches_on_interval_chang
     tui._change_interval(10)
 
     assert calls == [("BTC", "5m"), ("BTC", "1m"), ("BTC", "1d")]
+
+
+@pytest.mark.parametrize(
+    ("interval", "now_ms", "expected"),
+    [("1m", 90_000, 30.0), ("5m", 305_000, 295.0), ("1h", 3_700_000, 3_500.0)],
+)
+def test_next_watch_refresh_seconds_tracks_active_interval(
+    interval: str, now_ms: int, expected: float
+):
+    """The watch refresh cadence should wait until the next interval boundary."""
+    assert next_watch_refresh_seconds(interval, now_ms) == expected
 
 
 @pytest.mark.parametrize(("interval", "expected"), [("5m", "11:25"), ("1h", "03-14")])

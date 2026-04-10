@@ -8,6 +8,7 @@ from collections.abc import Callable
 from datetime import datetime
 from decimal import Decimal
 from threading import Event, Thread
+from time import time
 from typing import TypeAlias
 
 from prompt_toolkit.application import Application
@@ -31,6 +32,7 @@ from .watch_helpers import (
     format_open_interest_header,
     format_price_header,
     format_watch_axis_label,
+    next_watch_refresh_seconds,
 )
 
 HEADER_LINES = 3
@@ -47,13 +49,14 @@ class WatchTUI:
         self,
         coin: str,
         snapshot_fetcher: Callable[[str, WatchInterval], WatchSnapshot],
-        poll_interval_seconds: float = 0.5,
+        poll_interval_seconds: float | None = None,
     ) -> None:
         self.coin = coin
         self.snapshot_fetcher = snapshot_fetcher
         self.poll_interval_seconds = poll_interval_seconds
         self.control = WatchScreenControl(coin)
         self._stop_event = Event()
+        self._wake_event = Event()
 
     def run(self) -> None:
         """Run the watch TUI and poll the backend until the user exits."""
@@ -65,10 +68,19 @@ class WatchTUI:
             app.run()
         finally:
             self._stop_event.set()
+            self._wake_event.set()
             poller.join(timeout=1.0)
 
     def _poll_loop(self, app: Application[None]) -> None:
-        while not self._stop_event.wait(self.poll_interval_seconds):
+        while not self._stop_event.is_set():
+            timeout = self.poll_interval_seconds
+            if timeout is None:
+                timeout = next_watch_refresh_seconds(
+                    self.control.current_interval(), int(time() * 1000)
+                )
+            if self._wake_event.wait(timeout):
+                self._wake_event.clear()
+                continue
             self._refresh_snapshot()
             app.invalidate()
 
@@ -85,6 +97,7 @@ class WatchTUI:
         self.control.advance_interval(delta)
         if self.control.current_interval() != previous_interval:
             self._refresh_snapshot()
+            self._wake_event.set()
 
     def _build_application(self) -> Application[None]:
         bindings = KeyBindings()
@@ -95,6 +108,7 @@ class WatchTUI:
         @bindings.add("c-c")
         def _exit(event) -> None:  # type: ignore[no-untyped-def]
             self._stop_event.set()
+            self._wake_event.set()
             event.app.exit()
 
         @bindings.add("+")
@@ -251,7 +265,7 @@ class WatchScreenControl(UIControl):
         if self.error_message:
             return f" Last fetch error: {self.error_message} "
         if self.snapshot is None:
-            return " Polling backend every 500ms "
+            return f" Polling backend every {self.current_interval()} "
         candle_count = len(self.snapshot.candles)
         return (
             f" Updated at {self._format_timestamp(self.snapshot.updated_at)}  "
