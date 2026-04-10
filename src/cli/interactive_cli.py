@@ -200,9 +200,9 @@ class InteractiveCLI(cmd.Cmd):
             frontend.run_interactive()
             print()
         except KeyboardInterrupt:
-            print("\n❌ Ask session cancelled")
+            print("\n❌ Ask session cancelled\n")
         except Exception as e:
-            print(f"❌ Ask failed: {e}")
+            print(f"❌ Ask failed: {e}\n")
 
     def help_ask(self) -> None:
         """Show help for the ask command."""
