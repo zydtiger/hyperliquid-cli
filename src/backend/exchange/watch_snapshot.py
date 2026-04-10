@@ -4,7 +4,6 @@ Live watch snapshot registry backed by Hyperliquid websocket subscriptions.
 
 from __future__ import annotations
 
-from collections import deque
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -14,17 +13,26 @@ from time import time
 from typing import Any
 
 from models.api import (
-    DEFAULT_WATCH_WINDOW,
-    WATCH_WINDOW_ORDER,
+    DEFAULT_WATCH_INTERVAL,
+    WATCH_INTERVAL_MS,
+    WATCH_INTERVAL_ORDER,
     OrderBookLevel,
-    PriceSample,
     Ticker,
+    WatchInterval,
     WatchSnapshot,
 )
 
-ORDER_BOOK_DEPTH = 10
-PRICE_SAMPLE_INTERVAL_MS = 1_000
-PRICE_HISTORY_RETENTION_MS = 60 * 60_000
+from .watch_candles import (
+    SNAPSHOT_LOOKBACK_CANDLES,
+    IntervalState,
+    advance_interval_state,
+    interval_open_time,
+    parse_l2_book,
+    seed_interval_state,
+)
+
+ACTIVE_ASSET_CTX_TYPE = "activeAssetCtx"
+L2_BOOK_TYPE = "l2Book"
 
 
 @dataclass(slots=True)
@@ -33,7 +41,7 @@ class _WatchState:
     mark_price: Decimal
     open_interest: Decimal
     updated_at: int
-    price_history: deque[PriceSample] = field(default_factory=deque)
+    interval_states: dict[WatchInterval, IntervalState] = field(default_factory=dict)
     bids: list[OrderBookLevel] = field(default_factory=list)
     asks: list[OrderBookLevel] = field(default_factory=list)
     asset_ctx_subscription_id: int | None = None
@@ -55,20 +63,30 @@ class LiveWatchRegistry:
         self._lock = Lock()
         self._states: dict[str, _WatchState] = {}
 
-    def get_snapshot(self, coin: str) -> WatchSnapshot:
+    def get_snapshot(
+        self,
+        coin: str,
+        interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+    ) -> WatchSnapshot:
         """Return the current watch snapshot, creating subscriptions on first access."""
         state = self._ensure_state(coin)
+        self._ensure_interval_state(state.coin, interval)
+        now_ms = self._clock_ms()
         with self._lock:
+            current = self._states[state.coin]
+            interval_state = current.interval_states[interval]
+            advance_interval_state(interval_state, interval, current.mark_price, now_ms)
             return WatchSnapshot(
-                coin=state.coin,
-                mark_price=state.mark_price,
-                open_interest=state.open_interest,
-                updated_at=state.updated_at,
-                price_history=list(state.price_history),
-                bids=list(state.bids),
-                asks=list(state.asks),
-                default_window=DEFAULT_WATCH_WINDOW,
-                supported_windows=list(WATCH_WINDOW_ORDER),
+                coin=current.coin,
+                interval=interval,
+                mark_price=current.mark_price,
+                open_interest=current.open_interest,
+                updated_at=current.updated_at,
+                candles=list(interval_state.candles),
+                bids=list(current.bids),
+                asks=list(current.asks),
+                default_interval=DEFAULT_WATCH_INTERVAL,
+                supported_intervals=list(WATCH_INTERVAL_ORDER),
             )
 
     def close(self) -> None:
@@ -79,9 +97,9 @@ class LiveWatchRegistry:
 
         for state in states:
             if state.asset_ctx_subscription_id is not None:
-                self._unsubscribe({"type": "activeAssetCtx", "coin": state.coin}, state)
+                self._unsubscribe({"type": ACTIVE_ASSET_CTX_TYPE, "coin": state.coin}, state)
             if state.l2_book_subscription_id is not None:
-                self._unsubscribe({"type": "l2Book", "coin": state.coin}, state)
+                self._unsubscribe({"type": L2_BOOK_TYPE, "coin": state.coin}, state)
 
     def _ensure_state(self, coin: str) -> _WatchState:
         with self._lock:
@@ -98,12 +116,32 @@ class LiveWatchRegistry:
         self._subscribe(seeded)
         return seeded
 
+    def _ensure_interval_state(self, coin: str, interval: WatchInterval) -> None:
+        with self._lock:
+            state = self._states[coin]
+            if interval in state.interval_states:
+                return
+            mark_price = state.mark_price
+
+        now_ms = self._clock_ms()
+        current_open_time = interval_open_time(now_ms, interval)
+        start_time = current_open_time - (SNAPSHOT_LOOKBACK_CANDLES * WATCH_INTERVAL_MS[interval])
+        raw_candles = self._info.candles_snapshot(coin, interval, start_time, now_ms)
+        seeded = seed_interval_state(raw_candles, interval, mark_price, now_ms)
+
+        with self._lock:
+            state = self._states.get(coin)
+            if state is None:
+                return
+            interval_state = state.interval_states.setdefault(interval, seeded)
+            advance_interval_state(interval_state, interval, state.mark_price, self._clock_ms())
+
     def _seed_state(self, coin: str) -> _WatchState:
         ticker = self._ticker_fetcher(coin)
         book = self._info.l2_snapshot(coin)
         now_ms = self._clock_ms()
-        bids, asks = _parse_l2_book(book)
-        state = _WatchState(
+        bids, asks = parse_l2_book(book)
+        return _WatchState(
             coin=coin,
             mark_price=ticker.mark_price,
             open_interest=ticker.open_interest,
@@ -111,12 +149,10 @@ class LiveWatchRegistry:
             bids=bids,
             asks=asks,
         )
-        _append_price_sample(state.price_history, ticker.mark_price, now_ms)
-        return state
 
     def _subscribe(self, state: _WatchState) -> None:
-        asset_ctx_subscription = {"type": "activeAssetCtx", "coin": state.coin}
-        l2_book_subscription = {"type": "l2Book", "coin": state.coin}
+        asset_ctx_subscription = {"type": ACTIVE_ASSET_CTX_TYPE, "coin": state.coin}
+        l2_book_subscription = {"type": L2_BOOK_TYPE, "coin": state.coin}
         asset_ctx_id = self._info.subscribe(
             asset_ctx_subscription,
             lambda message: self._handle_asset_ctx(state.coin, message),
@@ -125,7 +161,6 @@ class LiveWatchRegistry:
             l2_book_subscription,
             lambda message: self._handle_l2_book(state.coin, message),
         )
-
         with self._lock:
             current = self._states.get(state.coin)
             if current is None:
@@ -137,7 +172,6 @@ class LiveWatchRegistry:
         ctx = message["data"]["ctx"]
         mark_price = Decimal(str(ctx["markPx"]))
         updated_at = self._clock_ms()
-
         with self._lock:
             state = self._states.get(coin)
             if state is None:
@@ -146,12 +180,12 @@ class LiveWatchRegistry:
             if "openInterest" in ctx:
                 state.open_interest = Decimal(str(ctx["openInterest"]))
             state.updated_at = updated_at
-            _append_price_sample(state.price_history, mark_price, updated_at)
+            for interval, interval_state in state.interval_states.items():
+                advance_interval_state(interval_state, interval, mark_price, updated_at)
 
     def _handle_l2_book(self, coin: str, message: Any) -> None:
-        bids, asks = _parse_l2_book(message["data"])
+        bids, asks = parse_l2_book(message["data"])
         updated_at = int(message["data"].get("time", self._clock_ms()))
-
         with self._lock:
             state = self._states.get(coin)
             if state is None:
@@ -163,52 +197,13 @@ class LiveWatchRegistry:
     def _unsubscribe(self, subscription: dict[str, str], state: _WatchState) -> None:
         subscription_id = (
             state.asset_ctx_subscription_id
-            if subscription["type"] == "activeAssetCtx"
+            if subscription["type"] == ACTIVE_ASSET_CTX_TYPE
             else state.l2_book_subscription_id
         )
         if subscription_id is None:
             return
-
         with suppress(Exception):
             self._info.unsubscribe(subscription, subscription_id)
-
-
-def _append_price_sample(
-    history: deque[PriceSample],
-    price: Decimal,
-    timestamp_ms: int,
-) -> None:
-    bucket_time = timestamp_ms - (timestamp_ms % PRICE_SAMPLE_INTERVAL_MS)
-    sample = PriceSample(time=bucket_time, price=price)
-    if history and history[-1].time == bucket_time:
-        history[-1] = sample
-    else:
-        history.append(sample)
-
-    cutoff = bucket_time - PRICE_HISTORY_RETENTION_MS
-    while history and history[0].time < cutoff:
-        history.popleft()
-
-
-def _parse_l2_book(book: Any) -> tuple[list[OrderBookLevel], list[OrderBookLevel]]:
-    levels = book.get("levels", [[], []])
-    raw_bids = levels[0] if len(levels) > 0 else []
-    raw_asks = levels[1] if len(levels) > 1 else []
-    bids = _parse_levels(raw_bids, descending=True)
-    asks = _parse_levels(raw_asks, descending=False)
-    return bids, asks
-
-
-def _parse_levels(levels: list[dict[str, Any]], descending: bool) -> list[OrderBookLevel]:
-    parsed = [
-        OrderBookLevel(
-            price=Decimal(str(level["px"])),
-            size=Decimal(str(level["sz"])),
-        )
-        for level in levels
-    ]
-    parsed.sort(key=lambda level: level.price, reverse=descending)
-    return parsed[:ORDER_BOOK_DEPTH]
 
 
 def _current_time_ms() -> int:

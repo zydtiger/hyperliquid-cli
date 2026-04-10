@@ -11,6 +11,7 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Path, Query, status
 
 from models.api import (
+    DEFAULT_WATCH_INTERVAL,
     BalanceInfo,
     CoinMetadata,
     ExchangeError,
@@ -18,6 +19,7 @@ from models.api import (
     PositionInfo,
     StakingStatus,
     Ticker,
+    WatchInterval,
     WatchSnapshot,
 )
 from models.leverage import LeverageResult, LeverageUpdateRequest
@@ -94,18 +96,23 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
     @app.get("/watch/{coin}")
     async def get_watch_snapshot(
         coin: str = Path(..., description="Symbol of the perpetual market"),
+        interval: Annotated[
+            WatchInterval,
+            Query(description="Candle interval to return for the watch snapshot"),
+        ] = DEFAULT_WATCH_INTERVAL,
     ) -> WatchSnapshot:
         """
         Get the live watch snapshot for a perpetual market.
 
         Args:
             coin: Symbol of the perpetual market
+            interval: Candle interval to return for the watch snapshot
 
         Returns:
-            WatchSnapshot: Live snapshot including price history and order book levels
+            WatchSnapshot: Live snapshot including candles and order book levels
         """
         try:
-            return client.get_watch_snapshot(coin)
+            return client.get_watch_snapshot(coin, interval)
         except ExchangeError as e:
             logger.error(f"Exchange error getting watch snapshot for {coin}: {e}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

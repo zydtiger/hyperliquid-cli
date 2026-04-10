@@ -89,21 +89,36 @@ Get the live watch snapshot for a supported perp or spot market.
 **Path Parameters:**
 - `coin` (string): Symbol of the market (e.g., "BTC", "ETH", "UBTC/USDC")
 
+**Query Parameters:**
+- `interval` (`1m` | `5m` | `15m` | `1h`, optional): Candle interval to return. Defaults to
+  `5m`.
+
 **Response:**
 ```json
 {
   "coin": "BTC",
+  "interval": "5m",
   "mark_price": "43250.50",
   "open_interest": "1250.75",
   "updated_at": 1741973030493,
-  "price_history": [
+  "candles": [
     {
-      "time": 1741973030000,
-      "price": "43210.25"
+      "open_time": 1741972800000,
+      "close_time": 1741973100000,
+      "open": "43210.25",
+      "high": "43240.50",
+      "low": "43205.10",
+      "close": "43230.40",
+      "is_closed": true
     },
     {
-      "time": 1741973031000,
-      "price": "43250.50"
+      "open_time": 1741973100000,
+      "close_time": 1741973400000,
+      "open": "43230.40",
+      "high": "43260.00",
+      "low": "43220.25",
+      "close": "43250.50",
+      "is_closed": false
     }
   ],
   "bids": [
@@ -118,20 +133,22 @@ Get the live watch snapshot for a supported perp or spot market.
       "size": "0.50"
     }
   ],
-  "default_window": "5m",
-  "supported_windows": ["1m", "5m", "15m", "1h"]
+  "default_interval": "5m",
+  "supported_intervals": ["1m", "5m", "15m", "1h"]
 }
 ```
 
 **Field Descriptions:**
+- `interval`: Candle interval returned by the snapshot.
 - `mark_price`: Current live mark price for the market.
 - `open_interest`: Current live open interest for the market. Spot markets return `0`.
 - `updated_at`: Timestamp of the last in-memory snapshot update in Unix milliseconds.
-- `price_history`: Ordered live mark-price samples from oldest to newest.
+- `candles`: Ordered candles from oldest to newest. The backend returns the last 49 completed
+  candles plus the current live candle for the requested `interval`.
 - `bids`: Top bid levels ordered from highest to lowest price.
 - `asks`: Top ask levels ordered from lowest to highest price.
-- `default_window`: Initial chart window shown in the watch TUI.
-- `supported_windows`: Supported chart windows for the live watch TUI.
+- `default_interval`: Initial candle interval shown in the watch TUI.
+- `supported_intervals`: Supported candle intervals for the live watch TUI.
 
 **Error Responses:**
 - `400 Bad Request`: Invalid market symbol or exchange error
