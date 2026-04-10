@@ -88,24 +88,19 @@ def test_run_interactive_ignores_blank_input_and_exits(
 ):
     """Test the interactive ask loop ignores blank lines and exits on /quit."""
     prompted_values: list[str] = []
-    outputs: list[str] = []
     user_inputs = iter(["", "how do i cancel orders", "/quit"])
-
-    def fake_send(self, request: dict[str, object]) -> str:
-        return AGENT_RESPONSE
 
     def input_func(prompt: str) -> str:
         prompted_values.append(prompt)
         return next(user_inputs)
 
     frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
-    frontend._send_chat_request = fake_send.__get__(frontend, AskFrontend)
     monkeypatch.setattr(builtins, "input", input_func)
-    monkeypatch.setattr(frontend, "_write_interactive_response", outputs.append)
+    monkeypatch.setattr(frontend, "_stream_chat_request", lambda request: AGENT_RESPONSE)
+    monkeypatch.setattr(sys, "stdout", StringIO())
     frontend.run_interactive()
 
     assert prompted_values == [ASK_SESSION_PROMPT, ASK_SESSION_PROMPT, ASK_SESSION_PROMPT]
-    assert outputs == [AGENT_RESPONSE]
     assert frontend.history[0]["role"] == "system"
     assert frontend.history[1:] == [
         {"role": "user", "content": "how do i cancel orders"},
@@ -121,9 +116,6 @@ def test_run_interactive_prints_response_with_trailing_newline(
     user_inputs = iter(["how do i cancel orders", "/quit"])
     stdout = StringIO()
 
-    def fake_send(self, request: dict[str, object]) -> str:
-        return AGENT_RESPONSE
-
     def input_func(prompt: str) -> str:
         return next(user_inputs)
 
@@ -131,10 +123,79 @@ def test_run_interactive_prints_response_with_trailing_newline(
     monkeypatch.setattr(sys, "stdout", stdout)
 
     frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
-    frontend._send_chat_request = fake_send.__get__(frontend, AskFrontend)
+    monkeypatch.setattr(
+        frontend,
+        "_stream_interactive_response",
+        lambda user_message: print(AGENT_RESPONSE, end="\n\n", flush=True),
+    )
     frontend.run_interactive()
 
     assert stdout.getvalue() == f"{AGENT_RESPONSE}\n\n"
+
+
+def test_stream_chat_request_uses_streaming_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    config: Config,
+):
+    """Test the interactive ask flow requests streamed chat completions."""
+    captured_calls: list[dict[str, object]] = []
+
+    class FakeStreamResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def iter_lines(self):
+            return iter(
+                [
+                    'data: {"choices":[{"delta":{"content":"Use: "}}]}',
+                    'data: {"choices":[{"delta":{"content":"order buy ETH 0.25"}}]}',
+                    "data: [DONE]",
+                ]
+            )
+
+    class FakeClient:
+        def __init__(self, timeout: float):
+            self.timeout = timeout
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            return None
+
+        def stream(
+            self,
+            method: str,
+            url: str,
+            headers: dict[str, str],
+            json: dict[str, object],
+        ) -> FakeStreamResponse:
+            captured_calls.append({"method": method, "url": url, "headers": headers, "json": json})
+            return FakeStreamResponse()
+
+    monkeypatch.setattr("cli.interactive.ask_frontend.httpx.Client", FakeClient)
+    monkeypatch.setattr(sys, "stdout", StringIO())
+
+    frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
+    response = frontend._stream_chat_request(
+        {
+            "model": config.agent.model_id,
+            "messages": [{"role": "user", "content": "how do i place an order"}],
+            "stream": True,
+        }
+    )
+
+    assert response == AGENT_RESPONSE
+    assert captured_calls[0]["method"] == "POST"
+    assert captured_calls[0]["url"] == "your_openai_compatible_base_url_here/chat/completions"
+    assert captured_calls[0]["headers"]["Authorization"] == "Bearer your_openai_api_key_here"
+    assert captured_calls[0]["json"]["stream"] is True
 
 
 def test_ask_command_prints_agent_response(

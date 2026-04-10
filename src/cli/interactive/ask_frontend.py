@@ -1,14 +1,12 @@
 """Frontend helpers for the interactive `ask` command."""
 
-import sys
+import json
 from collections.abc import Callable
 from typing import Any
 
 import httpx
 
 from models.config import Config
-
-from ..command_output_writer import TrailingNewlineNormalizingWriter
 
 ASK_SESSION_PROMPT = ">>> "
 ASK_EXIT_COMMANDS = frozenset({"/bye", "/exit", "/quit"})
@@ -73,13 +71,48 @@ class AskFrontend:
             if stripped_message.lower() in ASK_EXIT_COMMANDS:
                 return
 
-            self._write_interactive_response(self.submit(user_message))
+            self._stream_interactive_response(user_message)
 
-    def _write_interactive_response(self, response: str) -> None:
-        """Write one interactive response and leave a blank line before the next prompt."""
-        writer = TrailingNewlineNormalizingWriter(sys.stdout)
-        writer.write(response)
-        writer.finalize(add_blank_line=True)
+    def _stream_interactive_response(self, user_message: str) -> None:
+        """Stream one interactive response to stdout and persist the completed turn."""
+        request = self.build_chat_request(user_message)
+        request["stream"] = True
+        response = self._stream_chat_request(request)
+        self._history.append({"role": "user", "content": user_message})
+        self._history.append({"role": "assistant", "content": response})
+
+    def _stream_chat_request(self, request: dict[str, object]) -> str:
+        """Stream the chat completion response and return the combined text."""
+        text_parts: list[str] = []
+
+        try:
+            with httpx.Client(timeout=ASK_TIMEOUT_SECONDS) as client:
+                with client.stream(
+                    "POST",
+                    self._build_chat_completions_url(),
+                    headers=self._build_headers(),
+                    json=request,
+                ) as response:
+                    response.raise_for_status()
+                    for line in response.iter_lines():
+                        chunk = self._extract_stream_chunk(line)
+                        if not chunk:
+                            continue
+                        text_parts.append(chunk)
+                        print(chunk, end="", flush=True)
+        except httpx.HTTPStatusError as exc:
+            message = self._extract_error_message(exc.response)
+            raise RuntimeError(f"Agent request failed: {message}") from exc
+        except httpx.HTTPError as exc:
+            raise RuntimeError(f"Agent request failed: {exc}") from exc
+
+        response_text = "".join(text_parts).strip()
+        if response_text:
+            print("", flush=True)
+            print("", flush=True)
+            return response_text
+
+        raise RuntimeError("Agent response did not include any text content")
 
     def _send_chat_request(self, request: dict[str, object]) -> str:
         """Send the chat completion request to the configured agent endpoint."""
@@ -139,6 +172,44 @@ class AskFrontend:
                 return combined_text
 
         raise RuntimeError("Agent response did not include any text content")
+
+    def _extract_stream_chunk(self, line: str) -> str:
+        """Extract assistant text from one streamed SSE line."""
+        stripped_line = line.strip()
+        result = ""
+        if not stripped_line or not stripped_line.startswith("data:"):
+            return result
+
+        payload_text = stripped_line.removeprefix("data:").strip()
+        if not payload_text or payload_text == "[DONE]":
+            return result
+
+        try:
+            payload = json.loads(payload_text)
+        except ValueError as exc:
+            raise RuntimeError("Agent stream event was malformed") from exc
+
+        if not isinstance(payload, dict):
+            raise RuntimeError("Agent stream event was malformed")
+
+        choices = payload.get("choices")
+        if isinstance(choices, list) and choices:
+            first_choice = choices[0]
+            if isinstance(first_choice, dict):
+                delta = first_choice.get("delta")
+                if isinstance(delta, dict):
+                    content = delta.get("content")
+                    if isinstance(content, str):
+                        result = content
+                    elif isinstance(content, list):
+                        text_parts = [
+                            item.get("text", "")
+                            for item in content
+                            if isinstance(item, dict) and isinstance(item.get("text"), str)
+                        ]
+                        result = "".join(text_parts)
+
+        return result
 
     def _extract_error_message(self, response: httpx.Response) -> str:
         """Extract a readable error from a failed agent response."""
