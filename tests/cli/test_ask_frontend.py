@@ -43,6 +43,7 @@ def test_submit_builds_prompt_from_cli_manual(config: Config):
     assert "Use order for trades." in messages[0]["content"]
     assert "no markdown, plain text" in messages[0]["content"]
     assert messages[-1] == {"role": "user", "content": "how do i place an order"}
+    assert frontend.history[0]["role"] == "system"
 
 
 def test_submit_preserves_history_between_turns(config: Config):
@@ -68,7 +69,8 @@ def test_submit_preserves_history_between_turns(config: Config):
         {"role": "assistant", "content": AGENT_RESPONSE},
         {"role": "user", "content": "second question"},
     ]
-    assert frontend.history == [
+    assert frontend.history[0]["role"] == "system"
+    assert frontend.history[1:] == [
         {"role": "user", "content": "first question"},
         {"role": "assistant", "content": AGENT_RESPONSE},
         {"role": "user", "content": "second question"},
@@ -95,7 +97,8 @@ def test_run_interactive_ignores_blank_input_and_exits(config: Config):
 
     assert prompted_values == [ASK_SESSION_PROMPT, ASK_SESSION_PROMPT, ASK_SESSION_PROMPT]
     assert outputs == [AGENT_RESPONSE]
-    assert frontend.history == [
+    assert frontend.history[0]["role"] == "system"
+    assert frontend.history[1:] == [
         {"role": "user", "content": "how do i cancel orders"},
         {"role": "assistant", "content": AGENT_RESPONSE},
     ]

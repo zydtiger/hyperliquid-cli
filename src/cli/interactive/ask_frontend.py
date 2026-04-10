@@ -22,7 +22,9 @@ class AskFrontend:
     ) -> None:
         self.config = config
         self._manual_builder = manual_builder
-        self._history: list[dict[str, str]] = []
+        self._history: list[dict[str, str]] = [
+            {"role": "system", "content": self.build_system_prompt()}
+        ]
 
     @property
     def history(self) -> list[dict[str, str]]:
@@ -41,11 +43,7 @@ class AskFrontend:
 
     def build_chat_request(self, user_message: str) -> dict[str, object]:
         """Build the OpenAI-compatible chat-completions payload."""
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": self.build_system_prompt()},
-            *self._history,
-            {"role": "user", "content": user_message},
-        ]
+        messages: list[dict[str, str]] = [*self._history, {"role": "user", "content": user_message}]
         return {
             "model": self.config.agent.model_id,
             "messages": messages,
