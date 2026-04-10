@@ -28,7 +28,6 @@ from models.api import (
 from .charting import render_braille_plot
 from .watch_helpers import (
     candle_close_series,
-    candle_price_range,
     format_open_interest_header,
     format_price_header,
 )
@@ -201,19 +200,18 @@ class WatchScreenControl(UIControl):
         )
         top_line = self._border_line("┌", title, "┐", width)
         bottom_line = self._border_line("└", self._chart_bottom_line(), "┘", width)
-        closes = self._close_prices()
         if self.snapshot is None:
             plot_lines = self._empty_lines(plot_width, plot_height, "Loading live market data")
-        elif closes:
-            plot_lines = render_braille_plot(closes, plot_width, plot_height)
+        elif self.snapshot.candles:
+            plot_lines = [
+                [("class:chart", line)]
+                for line in render_braille_plot(self._close_prices(), plot_width, plot_height)
+            ]
         else:
             plot_lines = self._empty_lines(plot_width, plot_height, "No live candles yet")
 
         panel_lines: list[DisplayLine] = [[("class:root", self._pad(top_line, width))]]
-        panel_lines.extend(
-            [("class:root", "│"), ("class:chart", line.ljust(plot_width)), ("class:root", "│")]
-            for line in plot_lines
-        )
+        panel_lines.extend([("class:root", "│"), *line, ("class:root", "│")] for line in plot_lines)
         panel_lines.append([("class:root", self._pad(bottom_line, width))])
         return panel_lines
 
@@ -264,9 +262,10 @@ class WatchScreenControl(UIControl):
         return candle_close_series(self.snapshot.candles)
 
     def _price_range(self) -> tuple[Decimal, Decimal] | None:
-        if self.snapshot is None:
+        closes = self._close_prices()
+        if not closes:
             return None
-        return candle_price_range(self.snapshot.candles)
+        return min(closes), max(closes)
 
     def _pad(self, value: str, width: int) -> str:
         return value[:width].ljust(width)
@@ -276,11 +275,11 @@ class WatchScreenControl(UIControl):
         trimmed = content[:inner_width]
         return f"{left}{trimmed}{'─' * max(inner_width - len(trimmed), 0)}{right}"
 
-    def _empty_lines(self, width: int, height: int, message: str) -> list[str]:
+    def _empty_lines(self, width: int, height: int, message: str) -> list[DisplayLine]:
         lines = [" " * width for _ in range(height)]
         if lines:
             lines[len(lines) // 2] = message.center(width)[:width].ljust(width)
-        return lines
+        return [[("class:chart", line)] for line in lines]
 
     def _format_time(self, timestamp_ms: int) -> str:
         return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%H:%M:%S")
