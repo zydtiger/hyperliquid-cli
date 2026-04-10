@@ -35,11 +35,16 @@ ACTIVE_ASSET_CTX_TYPE = "activeAssetCtx"
 L2_BOOK_TYPE = "l2Book"
 
 
+def _perp_open_interest_value(mark_price: Decimal, open_interest: Any) -> Decimal:
+    """Convert perp open interest from base units into USD notional."""
+    return mark_price * Decimal(str(open_interest))
+
+
 @dataclass(slots=True)
 class _WatchState:
     coin: str
     mark_price: Decimal
-    open_interest: Decimal
+    open_interest: Decimal | None
     updated_at: int
     interval_states: dict[WatchInterval, IntervalState] = field(default_factory=dict)
     bids: list[OrderBookLevel] = field(default_factory=list)
@@ -178,7 +183,7 @@ class LiveWatchRegistry:
                 return
             state.mark_price = mark_price
             if "openInterest" in ctx:
-                state.open_interest = Decimal(str(ctx["openInterest"]))
+                state.open_interest = _perp_open_interest_value(mark_price, ctx["openInterest"])
             state.updated_at = updated_at
             for interval, interval_state in state.interval_states.items():
                 advance_interval_state(interval_state, interval, mark_price, updated_at)
