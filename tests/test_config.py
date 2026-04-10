@@ -13,6 +13,7 @@ import yaml
 from pydantic import ValidationError
 
 from models.config import (
+    AgentConfig,
     BackendConfig,
     Config,
     ConfigurationError,
@@ -377,6 +378,47 @@ class TestBackendConfig:
             config.logging.level = "INVALID"
 
 
+class TestAgentConfig:
+    """Test AgentConfig model."""
+
+    def test_valid_config_creation(self):
+        """Test creating valid AgentConfig."""
+        config = AgentConfig(
+            api_key="test-key",
+            openai_base_url="https://example.com/v1",
+            model_id="gpt-test",
+        )
+        assert config.api_key == "test-key"
+        assert config.openai_base_url == "https://example.com/v1"
+        assert config.model_id == "gpt-test"
+
+    def test_default_values(self):
+        """Test default agent values are applied."""
+        config = AgentConfig()
+        assert config.api_key == "your_openai_api_key_here"
+        assert config.openai_base_url == "your_openai_compatible_base_url_here"
+        assert config.model_id == "your_model_id_here"
+
+    @pytest.mark.parametrize("field_name", ["api_key", "openai_base_url", "model_id"])
+    def test_empty_values_are_rejected(self, field_name: str):
+        """Test agent settings must be non-empty strings."""
+        with pytest.raises(ValueError, match="agent settings must be non-empty strings"):
+            AgentConfig.model_validate(
+                {
+                    "api_key": "test-key",
+                    "openai_base_url": "https://example.com/v1",
+                    "model_id": "gpt-test",
+                    field_name: "   ",
+                }
+            )
+
+    def test_extra_fields_forbidden(self):
+        """Test extra fields are rejected."""
+        with pytest.raises(Exception) as exc_info:
+            AgentConfig.model_validate({"unknown_field": "value"})
+        assert "Extra inputs are not permitted" in str(exc_info.value)
+
+
 class TestConfig:
     """Test main Config class."""
 
@@ -397,6 +439,11 @@ class TestConfig:
                 "port": 9000,
                 "logging": {"level": "DEBUG"},
             },
+            "agent": {
+                "api_key": "test-key",
+                "openai_base_url": "https://example.com/v1",
+                "model_id": "gpt-test",
+            },
         }
         config = Config.model_validate(config_data)
 
@@ -407,6 +454,9 @@ class TestConfig:
         assert config.backend.host == "127.0.0.1"
         assert config.backend.port == 9000
         assert config.backend.logging.level == "DEBUG"
+        assert config.agent.api_key == "test-key"
+        assert config.agent.openai_base_url == "https://example.com/v1"
+        assert config.agent.model_id == "gpt-test"
 
     def test_minimal_config_creation(self):
         """Test creating config with only required hyperliquid section."""
@@ -424,6 +474,9 @@ class TestConfig:
         assert config.backend.host == "localhost"  # Default
         assert config.backend.port == 8080  # Default
         assert config.backend.logging.level == "INFO"  # Default
+        assert config.agent.api_key == "your_openai_api_key_here"  # Default
+        assert config.agent.openai_base_url == "your_openai_compatible_base_url_here"
+        assert config.agent.model_id == "your_model_id_here"
 
     def test_missing_hyperliquid_section(self):
         """Test validation fails when hyperliquid section is missing."""

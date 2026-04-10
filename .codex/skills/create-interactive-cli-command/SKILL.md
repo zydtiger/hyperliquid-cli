@@ -18,7 +18,8 @@ Use the command implementation checklist in `references/new-command-template.md`
 4. If the command needs new exchange or API capability, complete that work with `create-backend-feature` before wiring the interactive command.
 5. Reuse existing formatters, command helpers, and test helpers before creating new ones.
 6. Keep fixture sharing in `conftest.py` when fixtures are reused across test files. Keep fixtures inside a single test class only when they are truly local to that class.
-7. Run formatting and the relevant pytest scopes listed in the template before concluding.
+7. Whenever adding a new interactive CLI command, add it to `src/cli/cli_manual.py`.
+8. Run formatting and the relevant pytest scopes listed in the template before concluding.
 
 ## Implementation Notes
 

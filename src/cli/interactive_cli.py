@@ -17,9 +17,10 @@ from models.config import Config
 from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
 
 from .api import BackendAPI
+from .cli_manual import INTERACTIVE_COMMANDS, build_cli_manual
 from .command_output_writer import TrailingNewlineNormalizingWriter
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
-from .interactive import ModifyWizard, OrderWizard, PnlTUI, WatchTUI
+from .interactive import AskFrontend, ModifyWizard, OrderWizard, PnlTUI, WatchTUI
 
 MIN_CHANGE_LEVERAGE_ARGS = 2
 MIN_UPDATE_MARGIN_ARGS = 2
@@ -74,8 +75,16 @@ class InteractiveCLI(cmd.Cmd):
             sys.stdout = original_stdout
             self.stdout = original_cmd_stdout
 
-        writer.finalize(add_blank_line=not stop)
+        writer.finalize(add_blank_line=self._should_add_blank_line(line, stop))
         return stop
+
+    def _should_add_blank_line(self, line: str, stop: bool) -> bool:
+        """Return whether a command should end with a normalized blank line."""
+        if stop:
+            return False
+
+        command_name = line.strip().split(maxsplit=1)[0].lower()
+        return command_name != "ask"
 
     def _parse_quick_order(self, args: str) -> MarketOrder | LimitOrder:
         """Parse quick-order arguments into a market or limit order."""
@@ -186,6 +195,37 @@ class InteractiveCLI(cmd.Cmd):
             print(f"❌ Failed to create order: {e}")
         finally:
             print()
+
+    def do_ask(self, args: str) -> None:
+        """Ask the CLI assistant a question or launch an interactive chat session."""
+        frontend = AskFrontend(self.config, manual_builder=lambda: build_cli_manual(self))
+
+        try:
+            if args.strip():
+                print(frontend.submit(args))
+                return
+
+            frontend.run_interactive()
+            print()
+        except KeyboardInterrupt:
+            print("\n❌ Ask session cancelled\n")
+        except Exception as e:
+            print(f"❌ Ask failed: {e}\n")
+
+    def help_ask(self) -> None:
+        """Show help for the ask command."""
+        print("ask - Ask the CLI assistant about available commands and usage")
+        print("Usage: ask <question>")
+        print("   or: ask")
+        print()
+        print("Examples:")
+        print("  ask how do i place a limit order")
+        print("  ask")
+        print()
+        print("With a trailing prompt, ask sends one question to the CLI assistant.")
+        print("With no trailing prompt, ask starts an interactive session using the >>> prompt.")
+        print("Type /bye, /exit, or /quit to leave the interactive session.")
+        print("Responses are returned by the configured OpenAI-compatible agent endpoint.")
 
     def help_order(self) -> None:
         """Show help for the order command."""
@@ -359,9 +399,19 @@ class InteractiveCLI(cmd.Cmd):
         """Exit the CLI."""
         return True
 
+    def help_quit(self) -> None:
+        """Show help for the quit command."""
+        print("quit - Exit the CLI")
+        print("Usage: quit")
+
     def do_exit(self, args: str) -> bool:
         """Exit the CLI (alias for quit)."""
         return self.do_quit(args)
+
+    def help_exit(self) -> None:
+        """Show help for the exit command."""
+        print("exit - Exit the CLI")
+        print("Usage: exit")
 
     def do_EOF(self, args: str) -> bool:  # noqa: N802
         """Handle EOF (Ctrl+D) to exit gracefully."""
@@ -1035,28 +1085,7 @@ class InteractiveCLI(cmd.Cmd):
 
     def completenames(self, text: str, *ignored: str) -> list[str]:
         """Override to provide custom command completion."""
-        commands = [
-            "order",
-            "order_status",
-            "open_orders",
-            "order_history",
-            "pnl",
-            "watch",
-            "cancel_order",
-            "modify_order",
-            "change_leverage",
-            "update_margin",
-            "info",
-            "status",
-            "positions",
-            "conditionals",
-            "clear",
-            "cls",
-            "quit",
-            "exit",
-            "help",
-            "?",
-        ]
+        commands = [*INTERACTIVE_COMMANDS, "help", "?"]
         return [cmd for cmd in commands if cmd.startswith(text)]
 
     def run(self) -> None:
