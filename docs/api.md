@@ -143,7 +143,7 @@ Get the live watch snapshot for a supported perp or spot market.
 - `mark_price`: Current live mark price for the market.
 - `open_interest`: Current live open interest for the market. Spot markets return `0`.
 - `updated_at`: Timestamp of the last in-memory snapshot update in Unix milliseconds.
-- `candles`: Ordered candles from oldest to newest. The backend returns the last 49 completed
+- `candles`: Ordered candles from oldest to newest. The backend returns the last 99 completed
   candles plus the current live candle for the requested `interval`.
 - `bids`: Top bid levels ordered from highest to lowest price.
 - `asks`: Top ask levels ordered from lowest to highest price.
