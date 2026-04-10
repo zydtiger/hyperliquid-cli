@@ -67,8 +67,16 @@ class InteractiveCLI(cmd.Cmd):
             sys.stdout = original_stdout
             self.stdout = original_cmd_stdout
 
-        writer.finalize(add_blank_line=not stop)
+        writer.finalize(add_blank_line=self._should_add_blank_line(line, stop))
         return stop
+
+    def _should_add_blank_line(self, line: str, stop: bool) -> bool:
+        """Return whether a command should end with a normalized blank line."""
+        if stop:
+            return False
+
+        command_name = line.strip().split(maxsplit=1)[0].lower()
+        return command_name != "ask"
 
     def _parse_quick_order(self, args: str) -> MarketOrder | LimitOrder:
         """Parse quick-order arguments into a market or limit order."""
@@ -190,6 +198,7 @@ class InteractiveCLI(cmd.Cmd):
                 return
 
             frontend.run_interactive()
+            print()
         except KeyboardInterrupt:
             print("\n❌ Ask session cancelled")
         except Exception as e:
