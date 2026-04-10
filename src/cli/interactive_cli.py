@@ -19,7 +19,7 @@ from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
 from .api import BackendAPI
 from .command_output_writer import TrailingNewlineNormalizingWriter
 from .formatters import AccountFormatter, OrderFormatter, TableFormatter
-from .interactive import ModifyWizard, OrderWizard, PnlTUI
+from .interactive import ModifyWizard, OrderWizard, PnlTUI, WatchTUI
 
 MIN_CHANGE_LEVERAGE_ARGS = 2
 MIN_UPDATE_MARGIN_ARGS = 2
@@ -49,9 +49,17 @@ class InteractiveCLI(cmd.Cmd):
         """Clear the active terminal screen and move the cursor home."""
         print("\033[2J\033[H", end="")
 
+    def _should_normalize_output(self, line: str) -> bool:
+        """Return whether a command should use trailing blank-line normalization."""
+        command, _, _ = self.parseline(line)
+        return command not in {"pnl", "watch"}
+
     def onecmd(self, line: str) -> bool:
         """Run one command and normalize its trailing blank line before the next prompt."""
         if not line.strip():
+            return super().onecmd(line)
+
+        if not self._should_normalize_output(line):
             return super().onecmd(line)
 
         original_stdout = sys.stdout
@@ -612,7 +620,7 @@ class InteractiveCLI(cmd.Cmd):
                     print("No 7-day PnL history found.")
                 else:
                     PnlTUI(history_catalog).run()
-                print()
+                print(flush=True)
         except Exception as e:
             print(f"❌ Error fetching PnL history: {e}")
 
@@ -624,6 +632,46 @@ class InteractiveCLI(cmd.Cmd):
         print("Launches a fullscreen TUI with switchable 1d, 3d, 7d, 1m, 3m, 6m, 1y, and")
         print("all-time total, perpetual, and spot PnL charts.")
         print("This version is hard-coded and does not accept any arguments.")
+
+    def do_watch(self, args: str) -> None:
+        """
+        Launch the live watch TUI for a perpetual market.
+
+        Usage: watch <coin>
+        """
+        parts = args.strip().split()
+        if len(parts) != 1:
+            print("❌ Error: watch requires exactly one coin symbol")
+            print("Usage: watch <coin>")
+            return
+
+        coin = parts[0].upper()
+
+        try:
+            with BackendAPI(self.config) as api:
+                api.get_watch_snapshot(coin)
+                WatchTUI(coin, api.get_watch_snapshot).run()
+                print(flush=True)
+        except Exception as e:
+            print(f"❌ Error fetching watch snapshot for {coin}: {e}")
+
+    def help_watch(self) -> None:
+        """Show help for the watch command."""
+        print("watch - Launch a live market watch TUI for a perpetual coin")
+        print("Usage: watch <coin>")
+        print()
+        print("Arguments:")
+        print("  coin        Perpetual market symbol (e.g. BTC, ETH)")
+        print()
+        print("Examples:")
+        print("  watch BTC")
+        print("  watch ETH")
+        print()
+        print("The watch TUI shows:")
+        print("- A live mark-price line chart")
+        print("- Current open interest next to the price header")
+        print("- Top 10 asks and top 10 bids from the live order book")
+        print("- `+` to switch to a shorter chart window and `-` for a longer window")
 
     def do_cancel_order(self, args: str) -> None:
         """
@@ -990,6 +1038,7 @@ class InteractiveCLI(cmd.Cmd):
             "open_orders",
             "order_history",
             "pnl",
+            "watch",
             "cancel_order",
             "modify_order",
             "change_leverage",
