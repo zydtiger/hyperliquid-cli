@@ -12,7 +12,7 @@ from typing import Annotated
 import typer
 
 from models.api import HealthStatus
-from models.config import Config
+from models.config import Config, ConfigurationError
 
 from .api import BackendAPI
 from .interactive_cli import InteractiveCLI
@@ -27,10 +27,8 @@ config_option = typer.Option(
     "--config",
     "-c",
     help="Path to configuration file",
-    exists=True,
     file_okay=True,
     dir_okay=False,
-    readable=True,
 )
 
 
@@ -45,8 +43,11 @@ def default_run(
 
 
 def launch_cli(config_path: Path) -> None:
-    # Load configuration
-    config = Config.from_file(config_path)
+    try:
+        config = Config.from_file(config_path)
+    except ConfigurationError as e:
+        typer.echo(f"❌ Failed to load configuration: {e}", err=True)
+        raise typer.Exit(1) from e
 
     # Test connections before starting CLI
     typer.echo("🔌 Checking connections...")

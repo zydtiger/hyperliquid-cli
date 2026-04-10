@@ -1,10 +1,17 @@
+import re
 from pathlib import Path
 
+import typer
 from typer.testing import CliRunner
 
 import cli.app as app_module
 
 runner = CliRunner()
+ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def strip_ansi(value: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", value)
 
 
 def test_cli_defaults_to_run_without_subcommand(
@@ -42,7 +49,21 @@ def test_cli_subcommands_do_not_trigger_default_run(monkeypatch) -> None:
 
 
 def test_run_is_not_available_as_subcommand() -> None:
-    result = runner.invoke(app_module.app, ["run"])
+    result = runner.invoke(app_module.app, ["run"], color=True)
 
     assert result.exit_code != 0
-    assert "No such command 'run'" in result.output
+    assert "No such command 'run'" in strip_ansi(result.output)
+
+
+def test_cli_missing_default_config_exits_cleanly(tmp_path: Path) -> None:
+    missing_config = tmp_path / "missing.yaml"
+    test_app = typer.Typer()
+
+    @test_app.command()
+    def run() -> None:
+        app_module.launch_cli(missing_config)
+
+    result = runner.invoke(test_app, [])
+
+    assert result.exit_code == 1
+    assert "Failed to load configuration" in strip_ansi(result.output)
