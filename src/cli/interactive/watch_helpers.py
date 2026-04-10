@@ -6,29 +6,26 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from models.api import WATCH_WINDOW_ORDER, OrderBookLevel, PriceSample, WatchWindow
+from models.api import (
+    WATCH_INTERVAL_ORDER,
+    OrderBookLevel,
+    WatchCandle,
+    WatchInterval,
+)
 
 ORDER_BOOK_DEPTH = 10
-WATCH_WINDOW_MS: dict[WatchWindow, int] = {
-    "1m": 60_000,
-    "5m": 5 * 60_000,
-    "15m": 15 * 60_000,
-    "1h": 60 * 60_000,
-}
 
 
-def slice_price_history(
-    samples: list[PriceSample],
-    window: WatchWindow,
-) -> list[PriceSample]:
-    """Return the most recent samples that fall within the selected window."""
-    if not samples:
-        return []
+def candle_close_series(candles: list[WatchCandle]) -> list[Decimal]:
+    """Extract ordered candle close prices for chart rendering."""
+    return [candle.close for candle in candles]
 
-    latest_time = samples[-1].time
-    cutoff = latest_time - WATCH_WINDOW_MS[window]
-    sliced = [sample for sample in samples if sample.time >= cutoff]
-    return sliced or [samples[-1]]
+
+def candle_price_range(candles: list[WatchCandle]) -> tuple[Decimal, Decimal] | None:
+    """Return the min low and max high across a candle list."""
+    if not candles:
+        return None
+    return min(candle.low for candle in candles), max(candle.high for candle in candles)
 
 
 def normalize_order_book_levels(
@@ -54,17 +51,17 @@ def format_open_interest_header(value: Decimal) -> str:
     return f"OI {value:,.2f}"
 
 
-def watch_window_index(window: WatchWindow) -> int:
-    """Return the current watch window index."""
-    return WATCH_WINDOW_ORDER.index(window)
+def watch_interval_index(interval: WatchInterval) -> int:
+    """Return the current watch interval index."""
+    return WATCH_INTERVAL_ORDER.index(interval)
 
 
 __all__ = [
     "ORDER_BOOK_DEPTH",
-    "WATCH_WINDOW_MS",
+    "candle_close_series",
+    "candle_price_range",
     "format_open_interest_header",
     "format_price_header",
     "normalize_order_book_levels",
-    "slice_price_history",
-    "watch_window_index",
+    "watch_interval_index",
 ]

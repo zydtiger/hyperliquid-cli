@@ -5,7 +5,8 @@ Fullscreen TUI for monitoring a live perpetual market.
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import datetime
+from decimal import Decimal
 from threading import Event, Thread
 from typing import TypeAlias
 
@@ -17,10 +18,20 @@ from prompt_toolkit.layout.controls import UIContent, UIControl
 from prompt_toolkit.mouse_events import MouseEvent
 from prompt_toolkit.styles import Style
 
-from models.api import DEFAULT_WATCH_WINDOW, WATCH_WINDOW_ORDER, WatchSnapshot, WatchWindow
+from models.api import (
+    DEFAULT_WATCH_INTERVAL,
+    WATCH_INTERVAL_ORDER,
+    WatchInterval,
+    WatchSnapshot,
+)
 
 from .charting import render_braille_plot
-from .watch_helpers import format_open_interest_header, format_price_header, slice_price_history
+from .watch_helpers import (
+    candle_close_series,
+    candle_price_range,
+    format_open_interest_header,
+    format_price_header,
+)
 
 HEADER_LINES = 3
 FOOTER_LINES = 2
@@ -35,7 +46,7 @@ class WatchTUI:
     def __init__(
         self,
         coin: str,
-        snapshot_fetcher: Callable[[str], WatchSnapshot],
+        snapshot_fetcher: Callable[[str, WatchInterval], WatchSnapshot],
         poll_interval_seconds: float = 0.5,
     ) -> None:
         self.coin = coin
@@ -63,9 +74,17 @@ class WatchTUI:
 
     def _refresh_snapshot(self) -> None:
         try:
-            self.control.set_snapshot(self.snapshot_fetcher(self.coin))
+            self.control.set_snapshot(
+                self.snapshot_fetcher(self.coin, self.control.current_interval())
+            )
         except Exception as exc:
             self.control.set_error(str(exc))
+
+    def _change_interval(self, delta: int) -> None:
+        previous_interval = self.control.current_interval()
+        self.control.advance_interval(delta)
+        if self.control.current_interval() != previous_interval:
+            self._refresh_snapshot()
 
     def _build_application(self) -> Application[None]:
         bindings = KeyBindings()
@@ -80,14 +99,14 @@ class WatchTUI:
 
         @bindings.add("+")
         @bindings.add("=")
-        def _shorter_window(event) -> None:  # type: ignore[no-untyped-def]
-            self.control.advance_window(-1)
+        def _shorter_interval(event) -> None:  # type: ignore[no-untyped-def]
+            self._change_interval(-1)
             event.app.invalidate()
 
         @bindings.add("-")
         @bindings.add("_")
-        def _longer_window(event) -> None:  # type: ignore[no-untyped-def]
-            self.control.advance_window(1)
+        def _longer_interval(event) -> None:  # type: ignore[no-untyped-def]
+            self._change_interval(1)
             event.app.invalidate()
 
         return Application(
@@ -119,7 +138,7 @@ class WatchScreenControl(UIControl):
         self.coin = coin
         self.snapshot: WatchSnapshot | None = None
         self.error_message: str | None = None
-        self.current_window_index = WATCH_WINDOW_ORDER.index(DEFAULT_WATCH_WINDOW)
+        self.current_interval_index = WATCH_INTERVAL_ORDER.index(DEFAULT_WATCH_INTERVAL)
 
     def create_content(self, width: int, height: int) -> UIContent:
         lines = self._build_lines(max(width, 1), max(height, 12))
@@ -134,12 +153,12 @@ class WatchScreenControl(UIControl):
     def is_focusable(self) -> bool:
         return False
 
-    def current_window(self) -> WatchWindow:
-        return WATCH_WINDOW_ORDER[self.current_window_index]
+    def current_interval(self) -> WatchInterval:
+        return WATCH_INTERVAL_ORDER[self.current_interval_index]
 
-    def advance_window(self, delta: int) -> None:
-        next_index = self.current_window_index + delta
-        self.current_window_index = min(max(next_index, 0), len(WATCH_WINDOW_ORDER) - 1)
+    def advance_interval(self, delta: int) -> None:
+        next_index = self.current_interval_index + delta
+        self.current_interval_index = min(max(next_index, 0), len(WATCH_INTERVAL_ORDER) - 1)
 
     def set_snapshot(self, snapshot: WatchSnapshot) -> None:
         self.snapshot = snapshot
@@ -155,7 +174,10 @@ class WatchScreenControl(UIControl):
             [
                 (
                     "class:footer",
-                    self._pad(" + shorter  - longer  q / Esc / Enter / Ctrl-C exit ", width),
+                    self._pad(
+                        " + shorter interval  - longer interval  q / Esc / Enter / Ctrl-C exit ",
+                        width,
+                    ),
                 )
             ],
         ]
@@ -174,22 +196,18 @@ class WatchScreenControl(UIControl):
         plot_width: int,
         plot_height: int,
     ) -> list[DisplayLine]:
-        title = f" Price Chart - {self.current_window().upper()}  {self._chart_footer()} "
+        title = (
+            f" Price Chart - {self.current_interval().upper()} Interval  {self._chart_footer()} "
+        )
         top_line = self._border_line("┌", title, "┐", width)
         bottom_line = self._border_line("└", self._chart_bottom_line(), "┘", width)
+        closes = self._close_prices()
         if self.snapshot is None:
             plot_lines = self._empty_lines(plot_width, plot_height, "Loading live market data")
+        elif closes:
+            plot_lines = render_braille_plot(closes, plot_width, plot_height)
         else:
-            prices = [
-                sample.price
-                for sample in slice_price_history(
-                    self.snapshot.price_history, self.current_window()
-                )
-            ]
-            if prices:
-                plot_lines = render_braille_plot(prices, plot_width, plot_height)
-            else:
-                plot_lines = self._empty_lines(plot_width, plot_height, "No live prices yet")
+            plot_lines = self._empty_lines(plot_width, plot_height, "No live candles yet")
 
         panel_lines: list[DisplayLine] = [[("class:root", self._pad(top_line, width))]]
         panel_lines.extend(
@@ -201,7 +219,7 @@ class WatchScreenControl(UIControl):
 
     def _header_summary(self) -> str:
         if self.snapshot is None:
-            return f" {self.coin}  loading live price stream "
+            return f" {self.coin}  loading live candle stream "
         if self.error_message:
             return f" {format_price_header(self.snapshot.mark_price)}   {self.error_message} "
         return (
@@ -210,35 +228,22 @@ class WatchScreenControl(UIControl):
         )
 
     def _chart_footer(self) -> str:
-        if self.snapshot is None:
-            return "awaiting first live samples"
-        prices = [
-            sample.price
-            for sample in slice_price_history(self.snapshot.price_history, self.current_window())
-        ]
-        if not prices:
-            return "awaiting first live samples"
-        return f"last {prices[-1]:,.4f}  max {max(prices):,.4f}"
+        closes = self._close_prices()
+        if not closes:
+            return "awaiting first live candles"
+        return f"last {closes[-1]:,.4f}  max {max(closes):,.4f}"
 
     def _chart_bottom_line(self) -> str:
-        if self.snapshot is None:
+        price_range = self._price_range()
+        if price_range is None:
             return " min n/a "
-        prices = [
-            sample.price
-            for sample in slice_price_history(self.snapshot.price_history, self.current_window())
-        ]
-        if not prices:
-            return " min n/a "
-        return f" min {min(prices):,.4f} "
+        return f" min {price_range[0]:,.4f} "
 
     def _time_axis_line(self, width: int) -> str:
-        if self.snapshot is None or not self.snapshot.price_history:
+        if self.snapshot is None or not self.snapshot.candles:
             return " No timestamps available "
-        samples = slice_price_history(self.snapshot.price_history, self.current_window())
-        if not samples:
-            return " No timestamps available "
-        start_label = self._format_time(samples[0].time)
-        end_label = self._format_time(samples[-1].time)
+        start_label = self._format_time(self.snapshot.candles[0].open_time)
+        end_label = self._format_time(self.snapshot.candles[-1].close_time)
         spacing = max(width - len(start_label) - len(end_label) - 2, 1)
         return f" {start_label}{' ' * spacing}{end_label} "
 
@@ -247,7 +252,21 @@ class WatchScreenControl(UIControl):
             return f" Last fetch error: {self.error_message} "
         if self.snapshot is None:
             return " Polling backend every 500ms "
-        return f" Updated at {self.snapshot.updated_at}  Order book temporarily hidden "
+        candle_count = len(self.snapshot.candles)
+        return (
+            f" Updated at {self.snapshot.updated_at}  "
+            f"{candle_count} candles  Order book temporarily hidden "
+        )
+
+    def _close_prices(self) -> list[Decimal]:
+        if self.snapshot is None:
+            return []
+        return candle_close_series(self.snapshot.candles)
+
+    def _price_range(self) -> tuple[Decimal, Decimal] | None:
+        if self.snapshot is None:
+            return None
+        return candle_price_range(self.snapshot.candles)
 
     def _pad(self, value: str, width: int) -> str:
         return value[:width].ljust(width)
@@ -264,7 +283,7 @@ class WatchScreenControl(UIControl):
         return lines
 
     def _format_time(self, timestamp_ms: int) -> str:
-        return datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC).strftime("%H:%M:%S")
+        return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%H:%M:%S")
 
 
 __all__ = ["WatchScreenControl", "WatchTUI"]

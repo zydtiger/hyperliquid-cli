@@ -6,9 +6,10 @@ This package provides centralized data models and types for the Hyperliquid CLI.
 
 from .api import (
     DEFAULT_PNL_WINDOW,
-    DEFAULT_WATCH_WINDOW,
+    DEFAULT_WATCH_INTERVAL,
     PNL_WINDOW_ORDER,
-    WATCH_WINDOW_ORDER,
+    WATCH_INTERVAL_MS,
+    WATCH_INTERVAL_ORDER,
     APIError,
     BalanceInfo,
     CoinMetadata,
@@ -22,13 +23,13 @@ from .api import (
     PnlPoint,
     PnlWindow,
     PositionInfo,
-    PriceSample,
     RootResponse,
     SpotBalance,
     StakingInfo,
     Ticker,
+    WatchCandle,
+    WatchInterval,
     WatchSnapshot,
-    WatchWindow,
 )
 from .config import (
     BackendConfig,
@@ -58,9 +59,10 @@ from .order import (
 
 __all__ = [
     "DEFAULT_PNL_WINDOW",
-    "DEFAULT_WATCH_WINDOW",
+    "DEFAULT_WATCH_INTERVAL",
     "PNL_WINDOW_ORDER",
-    "WATCH_WINDOW_ORDER",
+    "WATCH_INTERVAL_MS",
+    "WATCH_INTERVAL_ORDER",
     "APIError",
     "BackendConfig",
     "BalanceInfo",
@@ -94,13 +96,13 @@ __all__ = [
     "PnlPoint",
     "PnlWindow",
     "PositionInfo",
-    "PriceSample",
     "RootResponse",
     "SpotBalance",
     "StakingInfo",
     "Ticker",
     "TradingConfig",
     "TriggerType",
+    "WatchCandle",
+    "WatchInterval",
     "WatchSnapshot",
-    "WatchWindow",
 ]

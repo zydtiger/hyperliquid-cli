@@ -14,9 +14,15 @@ from pydantic import BaseModel, Field
 PnlWindow = Literal["1d", "3d", "7d", "1m", "3m", "6m", "1y", "all"]
 PNL_WINDOW_ORDER: tuple[PnlWindow, ...] = ("1d", "3d", "7d", "1m", "3m", "6m", "1y", "all")
 DEFAULT_PNL_WINDOW: PnlWindow = "7d"
-WatchWindow = Literal["1m", "5m", "15m", "1h"]
-WATCH_WINDOW_ORDER: tuple[WatchWindow, ...] = ("1m", "5m", "15m", "1h")
-DEFAULT_WATCH_WINDOW: WatchWindow = "5m"
+WatchInterval = Literal["1m", "5m", "15m", "1h"]
+WATCH_INTERVAL_ORDER: tuple[WatchInterval, ...] = ("1m", "5m", "15m", "1h")
+DEFAULT_WATCH_INTERVAL: WatchInterval = "5m"
+WATCH_INTERVAL_MS: dict[WatchInterval, int] = {
+    "1m": 60_000,
+    "5m": 5 * 60_000,
+    "15m": 15 * 60_000,
+    "1h": 60 * 60_000,
+}
 
 # ============================================================================
 # EXCEPTIONS / ERRORS
@@ -191,13 +197,6 @@ class PnlHistoryCatalog(BaseModel):
     )
 
 
-class PriceSample(BaseModel):
-    """Single sampled mark price for the watch TUI."""
-
-    time: int = Field(..., description="Unix timestamp in milliseconds")
-    price: Decimal = Field(..., description="Sampled mark price")
-
-
 class OrderBookLevel(BaseModel):
     """Single order book level."""
 
@@ -205,16 +204,29 @@ class OrderBookLevel(BaseModel):
     size: Decimal = Field(..., description="Aggregated size at this level")
 
 
+class WatchCandle(BaseModel):
+    """Single OHLC candle for the watch TUI."""
+
+    open_time: int = Field(..., description="Candle open time in Unix milliseconds")
+    close_time: int = Field(..., description="Candle close time in Unix milliseconds")
+    open: Decimal = Field(..., description="Candle open price")
+    high: Decimal = Field(..., description="Candle high price")
+    low: Decimal = Field(..., description="Candle low price")
+    close: Decimal = Field(..., description="Candle close price")
+    is_closed: bool = Field(..., description="Whether the candle is finalized")
+
+
 class WatchSnapshot(BaseModel):
     """Normalized live watch snapshot for a single perpetual market."""
 
     coin: str = Field(..., description="Symbol of the perpetual market")
+    interval: WatchInterval = Field(..., description="Requested candle interval")
     mark_price: Decimal = Field(..., description="Current mark price")
     open_interest: Decimal = Field(..., description="Current open interest")
     updated_at: int = Field(..., description="Last snapshot update time in Unix milliseconds")
-    price_history: list[PriceSample] = Field(
+    candles: list[WatchCandle] = Field(
         default_factory=list,
-        description="Ordered live mark-price samples from oldest to newest",
+        description="Ordered watch candles from oldest to newest",
     )
     bids: list[OrderBookLevel] = Field(
         default_factory=list,
@@ -224,13 +236,13 @@ class WatchSnapshot(BaseModel):
         default_factory=list,
         description="Top ask levels ordered from lowest to highest price",
     )
-    default_window: WatchWindow = Field(
-        default=DEFAULT_WATCH_WINDOW,
-        description="Initial chart window shown in the watch TUI",
+    default_interval: WatchInterval = Field(
+        default=DEFAULT_WATCH_INTERVAL,
+        description="Initial candle interval shown in the watch TUI",
     )
-    supported_windows: list[WatchWindow] = Field(
-        default_factory=lambda: list(WATCH_WINDOW_ORDER),
-        description="Supported chart windows for the watch TUI",
+    supported_intervals: list[WatchInterval] = Field(
+        default_factory=lambda: list(WATCH_INTERVAL_ORDER),
+        description="Supported candle intervals for the watch TUI",
     )
 
 
@@ -240,9 +252,10 @@ class WatchSnapshot(BaseModel):
 
 __all__ = [
     "DEFAULT_PNL_WINDOW",
-    "DEFAULT_WATCH_WINDOW",
+    "DEFAULT_WATCH_INTERVAL",
     "PNL_WINDOW_ORDER",
-    "WATCH_WINDOW_ORDER",
+    "WATCH_INTERVAL_MS",
+    "WATCH_INTERVAL_ORDER",
     "APIError",
     "BalanceInfo",
     "CoinMetadata",
@@ -256,13 +269,13 @@ __all__ = [
     "PnlPoint",
     "PnlWindow",
     "PositionInfo",
-    "PriceSample",
     "RootResponse",
     "SpotBalance",
     "StakingDelegation",
     "StakingInfo",
     "StakingStatus",
     "Ticker",
+    "WatchCandle",
+    "WatchInterval",
     "WatchSnapshot",
-    "WatchWindow",
 ]

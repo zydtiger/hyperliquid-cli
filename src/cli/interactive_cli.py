@@ -668,10 +668,10 @@ class InteractiveCLI(cmd.Cmd):
         print("  watch ETH")
         print()
         print("The watch TUI shows:")
-        print("- A live mark-price line chart")
+        print("- The last 49 completed candles plus the current live candle")
         print("- Current open interest next to the price header")
         print("- Top 10 asks and top 10 bids from the live order book")
-        print("- `+` to switch to a shorter chart window and `-` for a longer window")
+        print("- `+` to switch to a shorter candle interval and `-` for a longer interval")
 
     def do_cancel_order(self, args: str) -> None:
         """

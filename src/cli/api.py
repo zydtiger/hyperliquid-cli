@@ -13,6 +13,7 @@ import httpx
 from fastapi import status
 
 from models.api import (
+    DEFAULT_WATCH_INTERVAL,
     APIError,
     BalanceInfo,
     CoinMetadata,
@@ -22,6 +23,7 @@ from models.api import (
     RootResponse,
     StakingStatus,
     Ticker,
+    WatchInterval,
     WatchSnapshot,
 )
 from models.config import Config
@@ -166,12 +168,17 @@ class BackendAPI:
             logger.error(f"Failed to get ticker for {coin}: {e}")
             raise APIError(f"Connection error: {e!s}") from e
 
-    def get_watch_snapshot(self, coin: str) -> WatchSnapshot:
+    def get_watch_snapshot(
+        self,
+        coin: str,
+        interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+    ) -> WatchSnapshot:
         """
         Get the live watch snapshot for a specific perpetual market.
 
         Args:
             coin: Symbol of the perpetual market
+            interval: Candle interval to request from the backend
 
         Returns:
             WatchSnapshot: Live snapshot data for the watch TUI
@@ -180,7 +187,7 @@ class BackendAPI:
             APIError: If the request fails
         """
         try:
-            response = self.client.get(f"/watch/{coin}")
+            response = self.client.get(f"/watch/{coin}", params={"interval": interval})
             if response.status_code == status.HTTP_404_NOT_FOUND:
                 raise APIError(
                     "Watch endpoint not found. Restart the backend from the updated checkout.",
