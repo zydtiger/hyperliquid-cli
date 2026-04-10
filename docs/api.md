@@ -64,10 +64,10 @@ Get list of all available trading coins from the exchange.
 - `500 Internal Server Error`: Unexpected server error
 
 #### GET /ticker/{coin}
-Get ticker information for a specific cryptocurrency.
+Get ticker information for a specific market.
 
 **Path Parameters:**
-- `coin` (string): Symbol of the cryptocurrency (e.g., "BTC", "ETH")
+- `coin` (string): Symbol of the market (e.g., "BTC", "ETH", "UBTC/USDC")
 
 **Response:**
 ```json
@@ -81,6 +81,60 @@ Get ticker information for a specific cryptocurrency.
 
 **Error Responses:**
 - `400 Bad Request`: Invalid coin symbol or exchange error
+- `500 Internal Server Error`: Unexpected server error
+
+#### GET /watch/{coin}
+Get the live watch snapshot for a supported perp or spot market.
+
+**Path Parameters:**
+- `coin` (string): Symbol of the market (e.g., "BTC", "ETH", "UBTC/USDC")
+
+**Response:**
+```json
+{
+  "coin": "BTC",
+  "mark_price": "43250.50",
+  "open_interest": "1250.75",
+  "updated_at": 1741973030493,
+  "price_history": [
+    {
+      "time": 1741973030000,
+      "price": "43210.25"
+    },
+    {
+      "time": 1741973031000,
+      "price": "43250.50"
+    }
+  ],
+  "bids": [
+    {
+      "price": "43249.50",
+      "size": "1.25"
+    }
+  ],
+  "asks": [
+    {
+      "price": "43250.75",
+      "size": "0.50"
+    }
+  ],
+  "default_window": "5m",
+  "supported_windows": ["1m", "5m", "15m", "1h"]
+}
+```
+
+**Field Descriptions:**
+- `mark_price`: Current live mark price for the market.
+- `open_interest`: Current live open interest for the market. Spot markets return `0`.
+- `updated_at`: Timestamp of the last in-memory snapshot update in Unix milliseconds.
+- `price_history`: Ordered live mark-price samples from oldest to newest.
+- `bids`: Top bid levels ordered from highest to lowest price.
+- `asks`: Top ask levels ordered from lowest to highest price.
+- `default_window`: Initial chart window shown in the watch TUI.
+- `supported_windows`: Supported chart windows for the live watch TUI.
+
+**Error Responses:**
+- `400 Bad Request`: Invalid market symbol or exchange error
 - `500 Internal Server Error`: Unexpected server error
 
 #### GET /metadata/{coin}

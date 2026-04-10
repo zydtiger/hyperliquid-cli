@@ -18,6 +18,7 @@ from models.api import (
     PositionInfo,
     StakingStatus,
     Ticker,
+    WatchSnapshot,
 )
 from models.leverage import LeverageResult, LeverageUpdateRequest
 from models.margin import IsolatedMarginUpdateRequest, IsolatedMarginUpdateResult
@@ -85,6 +86,31 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         except Exception as e:
             logger.error(f"Unexpected error getting ticker for {coin}: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal server error",
+            ) from e
+
+    @app.get("/watch/{coin}")
+    async def get_watch_snapshot(
+        coin: str = Path(..., description="Symbol of the perpetual market"),
+    ) -> WatchSnapshot:
+        """
+        Get the live watch snapshot for a perpetual market.
+
+        Args:
+            coin: Symbol of the perpetual market
+
+        Returns:
+            WatchSnapshot: Live snapshot including price history and order book levels
+        """
+        try:
+            return client.get_watch_snapshot(coin)
+        except ExchangeError as e:
+            logger.error(f"Exchange error getting watch snapshot for {coin}: {e}")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        except Exception as e:
+            logger.error(f"Unexpected error getting watch snapshot for {coin}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Internal server error",
