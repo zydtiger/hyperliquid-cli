@@ -47,9 +47,11 @@ def format_price_header(value: Decimal) -> str:
     return f"Price ${value:,.4f}"
 
 
-def format_open_interest_header(value: Decimal) -> str:
+def format_open_interest_header(value: Decimal | None) -> str:
     """Format the live open interest for the watch header."""
-    return f"OI {value:,.2f}"
+    if value is None:
+        return ""
+    return f"OI ${value:,.2f}"
 
 
 def format_watch_axis_label(timestamp_ms: int, interval: WatchInterval) -> str:

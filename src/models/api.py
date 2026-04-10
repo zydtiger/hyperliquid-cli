@@ -88,7 +88,10 @@ class Ticker(BaseModel):
     coin: str = Field(..., description="Symbol of the cryptocurrency")
     mark_price: Decimal = Field(..., description="Current mark price")
     funding_rate: Decimal = Field(..., description="Current funding rate")
-    open_interest: Decimal = Field(..., description="Current open interest")
+    open_interest: Decimal | None = Field(
+        ...,
+        description="Current open interest in USD notional for perps, null for spot markets",
+    )
 
 
 class CoinMetadata(BaseModel):
@@ -224,7 +227,10 @@ class WatchSnapshot(BaseModel):
     coin: str = Field(..., description="Symbol of the perpetual market")
     interval: WatchInterval = Field(..., description="Requested candle interval")
     mark_price: Decimal = Field(..., description="Current mark price")
-    open_interest: Decimal = Field(..., description="Current open interest")
+    open_interest: Decimal | None = Field(
+        ...,
+        description="Current open interest in USD notional for perps, null for spot markets",
+    )
     updated_at: int = Field(..., description="Last snapshot update time in Unix milliseconds")
     candles: list[WatchCandle] = Field(
         default_factory=list,

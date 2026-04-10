@@ -463,7 +463,10 @@ class InteractiveCLI(cmd.Cmd):
                     ["Coin", ticker.coin],
                     ["Mark Price", f"${ticker.mark_price:,.4f}"],
                     ["Funding Rate", f"{ticker.funding_rate * 100:.4f}%"],
-                    ["Open Interest", f"{ticker.open_interest:,.2f}"],
+                    [
+                        "Open Interest",
+                        "n/a" if ticker.open_interest is None else f"${ticker.open_interest:,.2f}",
+                    ],
                 ]
 
                 # Prepare metadata information
