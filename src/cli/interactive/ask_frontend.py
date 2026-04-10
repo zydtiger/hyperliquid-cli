@@ -1,6 +1,7 @@
 """Frontend helpers for the interactive `ask` command."""
 
 import json
+import threading
 from collections.abc import Callable
 from typing import Any
 
@@ -11,6 +12,7 @@ from models.config import Config
 ASK_SESSION_PROMPT = ">>> "
 ASK_EXIT_COMMANDS = frozenset({"/bye", "/exit", "/quit"})
 ASK_TIMEOUT_SECONDS = 30.0
+ASK_LOADING_FRAMES = ("|", "/", "-", "\\")
 
 
 class AskFrontend:
@@ -84,6 +86,14 @@ class AskFrontend:
     def _stream_chat_request(self, request: dict[str, object]) -> str:
         """Stream the chat completion response and return the combined text."""
         text_parts: list[str] = []
+        stop_spinner = threading.Event()
+        spinner_thread = threading.Thread(
+            target=self._show_loading_indicator,
+            args=(stop_spinner,),
+            daemon=True,
+        )
+        spinner_thread.start()
+        spinner_active = True
 
         try:
             with httpx.Client(timeout=ASK_TIMEOUT_SECONDS) as client:
@@ -98,6 +108,11 @@ class AskFrontend:
                         chunk = self._extract_stream_chunk(line)
                         if not chunk:
                             continue
+                        if spinner_active:
+                            stop_spinner.set()
+                            spinner_thread.join()
+                            self._clear_loading_indicator()
+                            spinner_active = False
                         text_parts.append(chunk)
                         print(chunk, end="", flush=True)
         except httpx.HTTPStatusError as exc:
@@ -105,6 +120,11 @@ class AskFrontend:
             raise RuntimeError(f"Agent request failed: {message}") from exc
         except httpx.HTTPError as exc:
             raise RuntimeError(f"Agent request failed: {exc}") from exc
+        finally:
+            if spinner_active:
+                stop_spinner.set()
+                spinner_thread.join()
+                self._clear_loading_indicator()
 
         response_text = "".join(text_parts).strip()
         if response_text:
@@ -113,6 +133,19 @@ class AskFrontend:
             return response_text
 
         raise RuntimeError("Agent response did not include any text content")
+
+    def _show_loading_indicator(self, stop_spinner: threading.Event) -> None:
+        """Render a rotating in-place loading indicator until streaming begins."""
+        while not stop_spinner.is_set():
+            for frame in ASK_LOADING_FRAMES:
+                print(f"\r{frame}", end="", flush=True)
+                if stop_spinner.wait(0.1):
+                    return
+
+    def _clear_loading_indicator(self) -> None:
+        """Clear the loading indicator from the current terminal line."""
+        padding = " "
+        print(f"\r{padding}\r", end="", flush=True)
 
     def _send_chat_request(self, request: dict[str, object]) -> str:
         """Send the chat completion request to the configured agent endpoint."""

@@ -112,7 +112,7 @@ def test_run_interactive_prints_response_with_trailing_newline(
     monkeypatch: pytest.MonkeyPatch,
     config: Config,
 ):
-    """Test interactive stdout output leaves a blank line before the next prompt."""
+    """Test interactive stdout output ends with one blank line."""
     user_inputs = iter(["how do i cancel orders", "/quit"])
     stdout = StringIO()
 
@@ -139,6 +139,7 @@ def test_stream_chat_request_uses_streaming_endpoint(
 ):
     """Test the interactive ask flow requests streamed chat completions."""
     captured_calls: list[dict[str, object]] = []
+    stdout = StringIO()
 
     class FakeStreamResponse:
         def __enter__(self):
@@ -180,7 +181,7 @@ def test_stream_chat_request_uses_streaming_endpoint(
             return FakeStreamResponse()
 
     monkeypatch.setattr("cli.interactive.ask_frontend.httpx.Client", FakeClient)
-    monkeypatch.setattr(sys, "stdout", StringIO())
+    monkeypatch.setattr(sys, "stdout", stdout)
 
     frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
     response = frontend._stream_chat_request(
@@ -196,6 +197,8 @@ def test_stream_chat_request_uses_streaming_endpoint(
     assert captured_calls[0]["url"] == "your_openai_compatible_base_url_here/chat/completions"
     assert captured_calls[0]["headers"]["Authorization"] == "Bearer your_openai_api_key_here"
     assert captured_calls[0]["json"]["stream"] is True
+    assert "\r" in stdout.getvalue()
+    assert stdout.getvalue().endswith(f"{AGENT_RESPONSE}\n\n")
 
 
 def test_ask_command_prints_agent_response(
@@ -240,6 +243,27 @@ def test_ask_command_runs_interactive_session(
 
     assert launched_sessions == [config, config]
     assert "## ask" in captured_manual[0]
+
+
+def test_onecmd_ask_exit_ends_with_single_newline(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+):
+    """Test interactive ask exit leaves a blank line before the main prompt."""
+
+    def fake_input(prompt: str) -> str:
+        print(f"{prompt}/bye")
+        return "/bye"
+
+    monkeypatch.setattr(builtins, "input", fake_input)
+
+    cli = InteractiveCLI(config)
+    cli.onecmd("ask")
+    output = capsys.readouterr().out
+
+    assert output.endswith("\n\n")
+    assert not output.endswith("\n\n\n")
 
 
 def test_send_chat_request_uses_configured_endpoint(
