@@ -14,6 +14,7 @@ from fastapi import status
 
 from models.api import (
     DEFAULT_WATCH_INTERVAL,
+    DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     APIError,
     BalanceInfo,
     CoinMetadata,
@@ -172,6 +173,7 @@ class BackendAPI:
         self,
         coin: str,
         interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+        depth: int = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     ) -> WatchSnapshot:
         """
         Get the live watch snapshot for a specific perpetual market.
@@ -179,6 +181,7 @@ class BackendAPI:
         Args:
             coin: Symbol of the perpetual market
             interval: Candle interval to request from the backend
+            depth: Per-side order book depth to request from the backend
 
         Returns:
             WatchSnapshot: Live snapshot data for the watch TUI
@@ -187,7 +190,10 @@ class BackendAPI:
             APIError: If the request fails
         """
         try:
-            response = self.client.get(f"/watch/{coin}", params={"interval": interval})
+            response = self.client.get(
+                f"/watch/{coin}",
+                params={"interval": interval, "depth": depth},
+            )
             if response.status_code == status.HTTP_404_NOT_FOUND:
                 raise APIError(
                     "Watch endpoint not found. Restart the backend from the updated checkout.",

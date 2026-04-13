@@ -25,6 +25,9 @@ WATCH_INTERVAL_MS: dict[WatchInterval, int] = {
     "4h": 4 * 60 * 60_000,
     "1d": 24 * 60 * 60_000,
 }
+DEFAULT_WATCH_ORDER_BOOK_DEPTH = 10
+MIN_WATCH_ORDER_BOOK_DEPTH = 1
+MAX_WATCH_ORDER_BOOK_DEPTH = 50
 
 # ============================================================================
 # EXCEPTIONS / ERRORS
@@ -244,6 +247,10 @@ class WatchSnapshot(BaseModel):
         default_factory=list,
         description="Top ask levels ordered from lowest to highest price",
     )
+    order_book_depth: int = Field(
+        default=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
+        description="Effective per-side order book depth returned in this snapshot",
+    )
     default_interval: WatchInterval = Field(
         default=DEFAULT_WATCH_INTERVAL,
         description="Initial candle interval shown in the watch TUI",
@@ -261,6 +268,9 @@ class WatchSnapshot(BaseModel):
 __all__ = [
     "DEFAULT_PNL_WINDOW",
     "DEFAULT_WATCH_INTERVAL",
+    "DEFAULT_WATCH_ORDER_BOOK_DEPTH",
+    "MAX_WATCH_ORDER_BOOK_DEPTH",
+    "MIN_WATCH_ORDER_BOOK_DEPTH",
     "PNL_WINDOW_ORDER",
     "WATCH_INTERVAL_MS",
     "WATCH_INTERVAL_ORDER",
