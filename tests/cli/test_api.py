@@ -29,6 +29,7 @@ def test_backend_api_get_watch_snapshot_parses_response():
 
     def handler(incoming: httpx.Request) -> httpx.Response:
         seen_query["interval"] = incoming.url.params.get("interval")
+        seen_query["depth"] = incoming.url.params.get("depth")
         return httpx.Response(
             200,
             json={
@@ -59,6 +60,7 @@ def test_backend_api_get_watch_snapshot_parses_response():
                 ],
                 "bids": [{"price": "43249.50", "size": "1.25"}],
                 "asks": [{"price": "43250.75", "size": "0.50"}],
+                "order_book_depth": 12,
                 "default_interval": "5m",
                 "supported_intervals": ["1m", "5m", "15m", "1h", "4h", "1d"],
             },
@@ -70,7 +72,7 @@ def test_backend_api_get_watch_snapshot_parses_response():
         base_url="http://localhost:8080",
     )
 
-    snapshot = api.get_watch_snapshot("BTC", "1h")
+    snapshot = api.get_watch_snapshot("BTC", "1h", 12)
 
     assert snapshot.coin == "BTC"
     assert snapshot.interval == "1h"
@@ -78,7 +80,9 @@ def test_backend_api_get_watch_snapshot_parses_response():
     assert snapshot.open_interest == Decimal("1250.75")
     assert snapshot.candles[-1].close == Decimal("43250.50")
     assert snapshot.bids[0].price == Decimal("43249.50")
+    assert snapshot.order_book_depth == 12
     assert seen_query["interval"] == "1h"
+    assert seen_query["depth"] == "12"
     api.client.close()
 
 
@@ -125,6 +129,7 @@ def test_backend_api_get_watch_snapshot_parses_null_open_interest_for_spot():
                     "candles": [],
                     "bids": [],
                     "asks": [],
+                    "order_book_depth": 10,
                     "default_interval": "5m",
                     "supported_intervals": ["1m", "5m", "15m", "1h", "4h", "1d"],
                 },

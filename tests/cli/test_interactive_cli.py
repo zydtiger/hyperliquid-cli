@@ -467,14 +467,16 @@ def test_watch_command_renders_graph(
         def __exit__(self, exc_type, exc_val, exc_tb):
             return None
 
-        def get_watch_snapshot(self, coin: str, interval: str = "5m") -> WatchSnapshot:
-            self.calls.append(f"{coin}:{interval}")
+        def get_watch_snapshot(
+            self, coin: str, interval: str = "5m", depth: int = 10
+        ) -> WatchSnapshot:
+            self.calls.append(f"{coin}:{interval}:{depth}")
             return watch_snapshot
 
     class FakeWatchTUI:
         def __init__(self, coin: str, fetcher):
             launched.append(coin)
-            launched.append(fetcher("BTC", "5m"))
+            launched.append(fetcher("BTC", "5m", 10))
 
         def run(self) -> None:
             launched.append("ran")
@@ -486,7 +488,7 @@ def test_watch_command_renders_graph(
     cli.do_watch("btc")
     output = capsys.readouterr().out
 
-    assert created_apis[0].calls == ["BTC:5m", "BTC:5m"]
+    assert created_apis[0].calls == ["BTC:5m:10", "BTC:5m:10"]
     assert launched == ["BTC", watch_snapshot, "ran"]
     assert output == "\n"
 
@@ -530,7 +532,9 @@ def test_watch_command_handles_backend_error(
         def __exit__(self, exc_type, exc_val, exc_tb):
             return None
 
-        def get_watch_snapshot(self, coin: str, interval: str = "5m") -> WatchSnapshot:
+        def get_watch_snapshot(
+            self, coin: str, interval: str = "5m", depth: int = 10
+        ) -> WatchSnapshot:
             raise RuntimeError(f"{coin} unavailable")
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
@@ -798,7 +802,7 @@ def test_onecmd_always_ends_with_single_blank_line(
 
 @pytest.mark.parametrize(
     ("command", "expected_calls"),
-    [("pnl", ["pnl"]), ("watch BTC", ["BTC:5m", "BTC:5m"])],
+    [("pnl", ["pnl"]), ("watch BTC", ["BTC:5m:10", "BTC:5m:10"])],
 )
 def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
     command: str,
@@ -838,8 +842,10 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
             self.calls.append("pnl")
             return pnl_history
 
-        def get_watch_snapshot(self, coin: str, interval: str = "5m") -> WatchSnapshot:
-            self.calls.append(f"{coin}:{interval}")
+        def get_watch_snapshot(
+            self, coin: str, interval: str = "5m", depth: int = 10
+        ) -> WatchSnapshot:
+            self.calls.append(f"{coin}:{interval}:{depth}")
             return watch_snapshot
 
     class FakePnlTUI:
@@ -852,7 +858,7 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
     class FakeWatchTUI:
         def __init__(self, coin: str, fetcher):
             assert coin == "BTC"
-            assert fetcher("BTC", "5m") == watch_snapshot
+            assert fetcher("BTC", "5m", 10) == watch_snapshot
 
         def run(self) -> None:
             observed_stdouts.append(sys.stdout)

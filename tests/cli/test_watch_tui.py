@@ -4,12 +4,17 @@ Tests for the live watch TUI renderer.
 
 from datetime import datetime
 from decimal import Decimal
+from threading import Event, Thread
 
 import pytest
 
-from cli.interactive.watch_helpers import format_watch_axis_label, next_watch_refresh_seconds
+from cli.interactive.watch_helpers import (
+    format_watch_axis_label,
+    visible_order_book_depth,
+    watch_panel_widths,
+)
 from cli.interactive.watch_tui import WatchScreenControl, WatchTUI
-from models.api import OrderBookLevel, WatchCandle, WatchSnapshot
+from models.api import DEFAULT_WATCH_ORDER_BOOK_DEPTH, OrderBookLevel, WatchCandle, WatchSnapshot
 
 
 def _sample_snapshot() -> WatchSnapshot:
@@ -56,6 +61,7 @@ def _sample_snapshot() -> WatchSnapshot:
             OrderBookLevel(price=Decimal("43249.50"), size=Decimal("1.25")),
             OrderBookLevel(price=Decimal("43249.00"), size=Decimal("0.75")),
         ],
+        order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     )
 
 
@@ -83,8 +89,8 @@ def test_watch_screen_control_keeps_lines_within_terminal_width(width: int):
     assert all(len(line) == width for line in lines)
 
 
-def test_watch_screen_control_renders_single_price_chart_panel():
-    """The watch screen should render a close-price braille chart and hide the order book."""
+def test_watch_screen_control_renders_chart_and_order_book_panels():
+    """The watch screen should render a close-price chart beside the live order book."""
     control = WatchScreenControl("BTC")
     control.set_snapshot(_sample_snapshot())
     content = control.create_content(width=100, height=30)
@@ -93,8 +99,11 @@ def test_watch_screen_control_renders_single_price_chart_panel():
 
     assert "Price Chart - 5M Interval" in rendered
     assert "last 43,250.5000  max 43,250.5000" in rendered
-    assert "Order book temporarily hidden" in rendered
-    assert "Order Book" not in rendered
+    assert "Order Book" in rendered
+    assert "43,251.00" in rendered
+    assert "43,249.50" in rendered
+    assert "#" in rendered
+    assert "Mid 43,250.50" in rendered
     assert any(ord(char) >= 0x2800 for char in rendered if char.strip())
 
 
@@ -133,8 +142,8 @@ def test_watch_screen_control_renders_loading_and_sparse_states():
 
     assert "loading live candle stream" in rendered
     assert "Loading live market data" in rendered
-    assert "Polling backend every 5m" in rendered
-    assert "Order book temporarily hidden" not in rendered
+    assert "Polling backend every 500ms" in rendered
+    assert "Loading book" in rendered
 
     control.set_snapshot(
         WatchSnapshot(
@@ -153,7 +162,7 @@ def test_watch_screen_control_renders_loading_and_sparse_states():
     rendered = "\n".join(lines)
 
     assert "No live candles yet" in rendered
-    assert "Order book temporarily hidden" in rendered
+    assert "Order Book" in rendered
 
 
 def test_watch_screen_control_renders_na_open_interest_for_spot():
@@ -175,28 +184,54 @@ def test_watch_tui_fetches_with_current_interval_and_refetches_on_interval_chang
     """The watch TUI should request the currently selected backend interval."""
     calls = []
 
-    def fetcher(coin: str, interval: str) -> WatchSnapshot:
-        calls.append((coin, interval))
+    def fetcher(coin: str, interval: str, depth: int) -> WatchSnapshot:
+        calls.append((coin, interval, depth))
         return _sample_snapshot()
 
     tui = WatchTUI("BTC", fetcher)
 
     tui._refresh_snapshot()
+    tui.control.create_content(width=100, height=30)
     tui._change_interval(-1)
     tui._change_interval(10)
 
-    assert calls == [("BTC", "5m"), ("BTC", "1m"), ("BTC", "1d")]
+    assert calls == [("BTC", "5m", 10), ("BTC", "1m", 11), ("BTC", "1d", 11)]
 
 
-@pytest.mark.parametrize(
-    ("interval", "now_ms", "expected"),
-    [("1m", 90_000, 30.0), ("5m", 305_000, 295.0), ("1h", 3_700_000, 3_500.0)],
-)
-def test_next_watch_refresh_seconds_tracks_active_interval(
-    interval: str, now_ms: int, expected: float
-):
-    """The watch refresh cadence should wait until the next interval boundary."""
-    assert next_watch_refresh_seconds(interval, now_ms) == expected
+def test_watch_tui_refetches_immediately_when_resize_changes_visible_depth():
+    """A resize that changes visible order book depth should trigger an immediate refetch."""
+    calls = []
+    refetched = Event()
+
+    def fetcher(coin: str, interval: str, depth: int) -> WatchSnapshot:
+        calls.append((coin, interval, depth))
+        if len(calls) == 2:
+            refetched.set()
+        return _sample_snapshot().model_copy(update={"order_book_depth": depth})
+
+    class DummyApp:
+        def __init__(self) -> None:
+            self.invalidations = 0
+
+        def invalidate(self) -> None:
+            self.invalidations += 1
+
+    tui = WatchTUI("BTC", fetcher, poll_interval_seconds=60.0)
+    app = DummyApp()
+    tui._refresh_snapshot()
+    poller = Thread(target=tui._poll_loop, args=(app,), daemon=True)
+    poller.start()
+
+    try:
+        tui.control.create_content(width=100, height=30)
+        assert refetched.wait(timeout=1.0)
+    finally:
+        tui._stop_event.set()
+        tui._wake_event.set()
+        poller.join(timeout=1.0)
+
+    assert calls == [("BTC", "5m", 10), ("BTC", "5m", 11)]
+    assert app.invalidations == 1
 
 
 @pytest.mark.parametrize(("interval", "expected"), [("5m", "11:25"), ("1h", "03-14")])
@@ -220,3 +255,16 @@ def test_watch_screen_control_uses_date_labels_for_daily_style_intervals():
     rendered = control._time_axis_line(60)
 
     assert "03-14" in rendered
+
+
+def test_watch_screen_control_prefers_roughly_eighty_twenty_split():
+    """The watch body should reserve roughly 20 percent of the width for the order book."""
+    chart_width, order_book_width = watch_panel_widths(100)
+
+    assert chart_width == 80
+    assert order_book_width == 20
+
+
+def test_visible_order_book_depth_matches_panel_capacity():
+    """Visible order book depth should follow the rendered per-side row capacity."""
+    assert visible_order_book_depth(23) == 11

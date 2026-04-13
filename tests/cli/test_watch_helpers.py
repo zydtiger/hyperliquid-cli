@@ -8,6 +8,7 @@ from cli.interactive.charting import render_braille_plot
 from cli.interactive.watch_helpers import (
     candle_close_series,
     candle_price_range,
+    format_order_book_row,
     normalize_order_book_levels,
 )
 from models.api import OrderBookLevel, WatchCandle
@@ -83,3 +84,17 @@ def test_normalize_order_book_levels_sorts_truncates_and_pads():
     assert len(normalized_bids) == 10
     assert normalized_asks[-1] is None
     assert normalized_bids[-1] is None
+
+
+def test_format_order_book_row_renders_proportional_size_bars():
+    """Order book rows should keep the price text and scale the size as an ASCII bar."""
+    small = OrderBookLevel(price=Decimal("100"), size=Decimal("1"))
+    large = OrderBookLevel(price=Decimal("101"), size=Decimal("4"))
+
+    small_row = format_order_book_row(small, width=18, max_size=Decimal("4"))
+    large_row = format_order_book_row(large, width=18, max_size=Decimal("4"))
+
+    assert "100.00" in small_row
+    assert "101.00" in large_row
+    assert small_row.count("#") < large_row.count("#")
+    assert large_row.count("#") > 0

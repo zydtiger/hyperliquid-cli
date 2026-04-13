@@ -6,7 +6,12 @@ from decimal import Decimal
 from unittest.mock import Mock
 
 from backend.exchange.watch_snapshot import LiveWatchRegistry
-from models.api import Ticker, WatchSnapshot
+from models.api import (
+    DEFAULT_WATCH_ORDER_BOOK_DEPTH,
+    MAX_WATCH_ORDER_BOOK_DEPTH,
+    Ticker,
+    WatchSnapshot,
+)
 
 
 def _raw_candle(
@@ -70,6 +75,7 @@ def test_watch_registry_builds_seeded_snapshot_from_ticker_l2_book_and_candles()
     assert snapshot.candles[-1].is_closed is False
     assert [level.price for level in snapshot.bids] == [Decimal("99"), Decimal("98")]
     assert [level.price for level in snapshot.asks] == [Decimal("101"), Decimal("102")]
+    assert snapshot.order_book_depth == DEFAULT_WATCH_ORDER_BOOK_DEPTH
     assert set(callbacks) == {"activeAssetCtx", "l2Book"}
 
 
@@ -187,6 +193,68 @@ def test_watch_registry_truncates_to_99_historical_candles_plus_live_candle():
     assert snapshot.candles[-1].is_closed is False
 
 
+def test_watch_registry_returns_requested_order_book_depth():
+    """Snapshots should return only the requested number of levels per side."""
+    info = Mock()
+    info.l2_snapshot.return_value = {
+        "time": 1_000,
+        "levels": [
+            [{"px": str(100 - index), "sz": "1"} for index in range(20)],
+            [{"px": str(101 + index), "sz": "1"} for index in range(20)],
+        ],
+    }
+    info.candles_snapshot.return_value = []
+    info.subscribe.side_effect = lambda subscription, callback: 1
+    registry = LiveWatchRegistry(
+        info,
+        lambda coin: Ticker(
+            coin=coin,
+            mark_price=Decimal("101"),
+            funding_rate=Decimal("0"),
+            open_interest=Decimal("10"),
+        ),
+        clock_ms=lambda: 1_000,
+    )
+
+    snapshot = registry.get_snapshot("BTC", "5m", 12)
+
+    assert len(snapshot.bids) == 12
+    assert len(snapshot.asks) == 12
+    assert snapshot.order_book_depth == 12
+    assert snapshot.bids[0].price == Decimal("100")
+    assert snapshot.asks[0].price == Decimal("101")
+
+
+def test_watch_registry_caps_stored_order_book_depth_to_maximum():
+    """Snapshots should never store or return more than the configured maximum depth."""
+    info = Mock()
+    info.l2_snapshot.return_value = {
+        "time": 1_000,
+        "levels": [
+            [{"px": str(100 - index), "sz": "1"} for index in range(80)],
+            [{"px": str(101 + index), "sz": "1"} for index in range(80)],
+        ],
+    }
+    info.candles_snapshot.return_value = []
+    info.subscribe.side_effect = lambda subscription, callback: 1
+    registry = LiveWatchRegistry(
+        info,
+        lambda coin: Ticker(
+            coin=coin,
+            mark_price=Decimal("101"),
+            funding_rate=Decimal("0"),
+            open_interest=Decimal("10"),
+        ),
+        clock_ms=lambda: 1_000,
+    )
+
+    snapshot = registry.get_snapshot("BTC", "5m", MAX_WATCH_ORDER_BOOK_DEPTH + 10)
+
+    assert len(snapshot.bids) == MAX_WATCH_ORDER_BOOK_DEPTH
+    assert len(snapshot.asks) == MAX_WATCH_ORDER_BOOK_DEPTH
+    assert snapshot.order_book_depth == MAX_WATCH_ORDER_BOOK_DEPTH
+
+
 def test_get_watch_snapshot_supports_spot_markets(
     client,
     mock_connection,
@@ -220,6 +288,7 @@ def test_get_watch_snapshot_supports_spot_markets(
         candles=[],
         bids=[],
         asks=[],
+        order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     )
     client._watch_registry = Mock()
     client._watch_registry.get_snapshot.return_value = expected
@@ -227,7 +296,7 @@ def test_get_watch_snapshot_supports_spot_markets(
     result = client.get_watch_snapshot("UBTC/USDC")
 
     assert result == expected
-    client._watch_registry.get_snapshot.assert_called_once_with("UBTC/USDC", "5m")
+    client._watch_registry.get_snapshot.assert_called_once_with("UBTC/USDC", "5m", 10)
 
 
 def test_get_watch_snapshot_returns_registry_snapshot(
@@ -247,6 +316,7 @@ def test_get_watch_snapshot_returns_registry_snapshot(
         candles=[],
         bids=[],
         asks=[],
+        order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     )
     client._watch_registry = Mock()
     client._watch_registry.get_snapshot.return_value = expected
@@ -254,7 +324,7 @@ def test_get_watch_snapshot_returns_registry_snapshot(
     result = client.get_watch_snapshot("BTC")
 
     assert result == expected
-    client._watch_registry.get_snapshot.assert_called_once_with("BTC", "5m")
+    client._watch_registry.get_snapshot.assert_called_once_with("BTC", "5m", 10)
 
 
 def test_get_watch_snapshot_passes_requested_interval(
@@ -275,11 +345,12 @@ def test_get_watch_snapshot_passes_requested_interval(
         candles=[],
         bids=[],
         asks=[],
+        order_book_depth=12,
     )
 
-    client.get_watch_snapshot("BTC", "1h")
+    client.get_watch_snapshot("BTC", "1h", 12)
 
-    client._watch_registry.get_snapshot.assert_called_once_with("BTC", "1h")
+    client._watch_registry.get_snapshot.assert_called_once_with("BTC", "1h", 12)
 
 
 def test_watch_registry_exposes_extended_supported_intervals():
