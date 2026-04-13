@@ -12,6 +12,9 @@ from fastapi import FastAPI, HTTPException, Path, Query, status
 
 from models.api import (
     DEFAULT_WATCH_INTERVAL,
+    DEFAULT_WATCH_ORDER_BOOK_DEPTH,
+    MAX_WATCH_ORDER_BOOK_DEPTH,
+    MIN_WATCH_ORDER_BOOK_DEPTH,
     BalanceInfo,
     CoinMetadata,
     ExchangeError,
@@ -100,6 +103,14 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
             WatchInterval,
             Query(description="Candle interval to return for the watch snapshot"),
         ] = DEFAULT_WATCH_INTERVAL,
+        depth: Annotated[
+            int,
+            Query(
+                description="Per-side order book depth to return for the watch snapshot",
+                ge=MIN_WATCH_ORDER_BOOK_DEPTH,
+                le=MAX_WATCH_ORDER_BOOK_DEPTH,
+            ),
+        ] = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     ) -> WatchSnapshot:
         """
         Get the live watch snapshot for a perpetual market.
@@ -107,12 +118,13 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
         Args:
             coin: Symbol of the perpetual market
             interval: Candle interval to return for the watch snapshot
+            depth: Per-side order book depth to return for the watch snapshot
 
         Returns:
             WatchSnapshot: Live snapshot including candles and order book levels
         """
         try:
-            return client.get_watch_snapshot(coin, interval)
+            return client.get_watch_snapshot(coin, interval, depth)
         except ExchangeError as e:
             logger.error(f"Exchange error getting watch snapshot for {coin}: {e}")
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

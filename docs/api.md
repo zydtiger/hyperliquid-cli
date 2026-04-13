@@ -97,6 +97,8 @@ Get the live watch snapshot for a supported perp or spot market.
 **Query Parameters:**
 - `interval` (`1m` | `5m` | `15m` | `1h` | `4h` | `1d`, optional): Candle interval to return.
   Defaults to `5m`.
+- `depth` (integer, optional): Per-side order book depth to return. Must be between `1` and `50`.
+  Defaults to `10`.
 
 **Response:**
 ```json
@@ -138,6 +140,7 @@ Get the live watch snapshot for a supported perp or spot market.
       "size": "0.50"
     }
   ],
+  "order_book_depth": 10,
   "default_interval": "5m",
   "supported_intervals": ["1m", "5m", "15m", "1h", "4h", "1d"]
 }
@@ -153,6 +156,7 @@ Get the live watch snapshot for a supported perp or spot market.
   candles plus the current live candle for the requested `interval`.
 - `bids`: Top bid levels ordered from highest to lowest price.
 - `asks`: Top ask levels ordered from lowest to highest price.
+- `order_book_depth`: Effective per-side order book depth returned in this snapshot.
 - `default_interval`: Initial candle interval shown in the watch TUI.
 - `supported_intervals`: Supported candle intervals for the live watch TUI.
 

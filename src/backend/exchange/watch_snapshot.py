@@ -14,6 +14,9 @@ from typing import Any
 
 from models.api import (
     DEFAULT_WATCH_INTERVAL,
+    DEFAULT_WATCH_ORDER_BOOK_DEPTH,
+    MAX_WATCH_ORDER_BOOK_DEPTH,
+    MIN_WATCH_ORDER_BOOK_DEPTH,
     WATCH_INTERVAL_MS,
     WATCH_INTERVAL_ORDER,
     OrderBookLevel,
@@ -72,11 +75,13 @@ class LiveWatchRegistry:
         self,
         coin: str,
         interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+        depth: int = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     ) -> WatchSnapshot:
         """Return the current watch snapshot, creating subscriptions on first access."""
         state = self._ensure_state(coin)
         self._ensure_interval_state(state.coin, interval)
         now_ms = self._clock_ms()
+        effective_depth = max(min(depth, MAX_WATCH_ORDER_BOOK_DEPTH), MIN_WATCH_ORDER_BOOK_DEPTH)
         with self._lock:
             current = self._states[state.coin]
             interval_state = current.interval_states[interval]
@@ -88,8 +93,9 @@ class LiveWatchRegistry:
                 open_interest=current.open_interest,
                 updated_at=current.updated_at,
                 candles=list(interval_state.candles),
-                bids=list(current.bids),
-                asks=list(current.asks),
+                bids=list(current.bids[:effective_depth]),
+                asks=list(current.asks[:effective_depth]),
+                order_book_depth=effective_depth,
                 default_interval=DEFAULT_WATCH_INTERVAL,
                 supported_intervals=list(WATCH_INTERVAL_ORDER),
             )

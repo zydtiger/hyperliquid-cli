@@ -9,12 +9,17 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
 
-from models.api import WATCH_INTERVAL_MS, OrderBookLevel, WatchCandle, WatchInterval
+from models.api import (
+    MAX_WATCH_ORDER_BOOK_DEPTH,
+    WATCH_INTERVAL_MS,
+    OrderBookLevel,
+    WatchCandle,
+    WatchInterval,
+)
 
 HISTORICAL_CANDLE_COUNT = 99
 WATCH_CANDLE_COUNT = HISTORICAL_CANDLE_COUNT + 1
 SNAPSHOT_LOOKBACK_CANDLES = WATCH_CANDLE_COUNT + 10
-ORDER_BOOK_DEPTH = 10
 
 
 @dataclass(slots=True)
@@ -199,7 +204,7 @@ def parse_levels(levels: list[dict[str, Any]], descending: bool) -> list[OrderBo
         for level in levels
     ]
     parsed.sort(key=lambda level: level.price, reverse=descending)
-    return parsed[:ORDER_BOOK_DEPTH]
+    return parsed[:MAX_WATCH_ORDER_BOOK_DEPTH]
 
 
 __all__ = [

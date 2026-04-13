@@ -15,6 +15,7 @@ from hyperliquid.utils.signing import Tif
 
 from models.api import (
     DEFAULT_WATCH_INTERVAL,
+    DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     BalanceInfo,
     CoinMetadata,
     ExchangeError,
@@ -365,6 +366,7 @@ class HyperliquidClient:
         self,
         coin: str,
         interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+        depth: int = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     ) -> WatchSnapshot:
         """
         Get the live in-memory watch snapshot for a supported market.
@@ -372,6 +374,7 @@ class HyperliquidClient:
         Args:
             coin: Symbol of the market
             interval: Candle interval to return in the watch snapshot
+            depth: Per-side order book depth to return in the watch snapshot
 
         Returns:
             WatchSnapshot: Live price history and order book snapshot
@@ -379,7 +382,7 @@ class HyperliquidClient:
 
         def _get_watch_snapshot() -> WatchSnapshot:
             market_coin = self._resolve_coin_symbol(coin.upper())
-            return self._watch_registry.get_snapshot(market_coin, interval)
+            return self._watch_registry.get_snapshot(market_coin, interval, depth)
 
         return self.connection.retry_operation(_get_watch_snapshot)
 
