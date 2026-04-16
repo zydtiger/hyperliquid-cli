@@ -22,6 +22,7 @@ Hyperliquid smart order trading system with structured architecture.
 - Reuse existing code, models, functions
 - Search codebase before creating new
 - Clean up imports when removing files
+- Define `__all__` only in `__init__.py` files; do not add `__all__` to other modules
 - Maintain test coverage
 - Use `pytest-suite-generator` agent for unit tests
 
