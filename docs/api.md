@@ -419,6 +419,12 @@ Get all supported PnL history windows for the configured account.
       "window": "7d",
       "points": [
         {
+          "time": 1741886630493,
+          "total_pnl": "0.0",
+          "perp_pnl": "0.0",
+          "spot_pnl": "0.0"
+        },
+        {
           "time": 1741973030493,
           "total_pnl": "10.5",
           "perp_pnl": "7.0",
@@ -434,11 +440,11 @@ Get all supported PnL history windows for the configured account.
 - `default_window`: Initial window the frontend should show. This endpoint currently returns `7d`.
 - `histories`: Ordered supported windows for the PnL TUI.
 - `window`: Window identifier. Supported values are `1d`, `3d`, `7d`, `1m`, `3m`, `6m`, `1y`, `all`.
-- `points`: Ordered PnL samples from oldest to newest for that window.
+- `points`: Ordered PnL change samples from oldest to newest for that window, rebased so the first returned point starts at `0`.
 - `time`: Sample timestamp in Unix milliseconds.
-- `total_pnl`: Total account PnL sample from the portfolio history.
-- `perp_pnl`: Perpetuals-only PnL sample from the corresponding perpetual history bucket.
-- `spot_pnl`: Derived spot PnL sample computed as `total_pnl - perp_pnl`.
+- `total_pnl`: Total account PnL change within the selected window, relative to the first point in that window.
+- `perp_pnl`: Perpetuals-only PnL change within the selected window, relative to the first point in that window.
+- `spot_pnl`: Derived spot PnL change computed as `total_pnl - perp_pnl`, also rebased to the first point in the window.
 
 **Error Responses:**
 - `400 Bad Request`: Exchange error or authentication issue

@@ -104,6 +104,48 @@ def _filter_samples_by_duration(
     return [sample for sample in samples if sample[0] >= earliest_time]
 
 
+def _samples_with_start_context(samples: list[PnlSample], start_time: int) -> list[PnlSample]:
+    """Keep the latest sample at or before the start time for carry-forward alignment."""
+    if not samples:
+        return []
+
+    latest_before_start: PnlSample | None = None
+    aligned: list[PnlSample] = []
+    for sample in samples:
+        if sample[0] <= start_time:
+            latest_before_start = sample
+            continue
+        aligned.append(sample)
+
+    if latest_before_start is not None:
+        return [latest_before_start, *aligned]
+    return aligned
+
+
+def _rebase_points(points: list[PnlPoint]) -> list[PnlPoint]:
+    """Rebase a window so its first returned sample starts at zero."""
+    if not points:
+        return []
+
+    base_total = points[0].total_pnl
+    base_perp = points[0].perp_pnl
+
+    rebased: list[PnlPoint] = []
+    for point in points:
+        total_pnl = point.total_pnl - base_total
+        perp_pnl = point.perp_pnl - base_perp
+        rebased.append(
+            PnlPoint(
+                time=point.time,
+                total_pnl=total_pnl,
+                perp_pnl=perp_pnl,
+                spot_pnl=total_pnl - perp_pnl,
+            )
+        )
+
+    return rebased
+
+
 def _build_history(
     window: PnlWindow, total_samples: list[PnlSample], perp_samples: list[PnlSample]
 ) -> PnlHistory:
@@ -129,7 +171,7 @@ def _build_history(
             )
         )
 
-    return PnlHistory(window=window, points=points)
+    return PnlHistory(window=window, points=_rebase_points(points))
 
 
 def build_pnl_history_catalog(portfolio_data: Any) -> PnlHistoryCatalog:
@@ -149,11 +191,14 @@ def build_pnl_history_catalog(portfolio_data: Any) -> PnlHistoryCatalog:
         duration_ms = DURATION_MS_BY_WINDOW[window]
         total_bucket = parsed_total_buckets[TOTAL_BUCKET_BY_WINDOW[window]]
         perp_bucket = parsed_perp_buckets[PERP_BUCKET_BY_WINDOW[window]]
+        filtered_total = _filter_samples_by_duration(total_bucket, duration_ms)
         histories.append(
             _build_history(
                 window,
-                _filter_samples_by_duration(total_bucket, duration_ms),
-                _filter_samples_by_duration(perp_bucket, duration_ms),
+                filtered_total,
+                _samples_with_start_context(perp_bucket, filtered_total[0][0])
+                if filtered_total
+                else [],
             )
         )
 

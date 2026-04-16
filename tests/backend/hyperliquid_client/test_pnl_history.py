@@ -128,14 +128,30 @@ class TestHyperliquidClientGetPnlHistory:
 
         assert [point.time for point in by_window["1d"].points] == [1735603200000, 1735689600000]
         assert [point.perp_pnl for point in by_window["1d"].points] == [
-            Decimal("4.0"),
-            Decimal("5.5"),
+            Decimal("0.0"),
+            Decimal("1.5"),
+        ]
+        assert [point.total_pnl for point in by_window["1d"].points] == [
+            Decimal("0.0"),
+            Decimal("1.5"),
         ]
         assert [point.time for point in by_window["3d"].points] == [
             1735430400000,
             1735516800000,
             1735603200000,
             1735689600000,
+        ]
+        assert [point.perp_pnl for point in by_window["3d"].points] == [
+            Decimal("0.0"),
+            Decimal("2.0"),
+            Decimal("3.0"),
+            Decimal("4.0"),
+        ]
+        assert [point.spot_pnl for point in by_window["3d"].points] == [
+            Decimal("0.0"),
+            Decimal("-1.0"),
+            Decimal("-1.0"),
+            Decimal("-1.0"),
         ]
         assert [point.time for point in by_window["7d"].points] == [
             1735257600000,
@@ -144,6 +160,14 @@ class TestHyperliquidClientGetPnlHistory:
             1735516800000,
             1735603200000,
             1735689600000,
+        ]
+        assert [point.total_pnl for point in by_window["7d"].points] == [
+            Decimal("0.0"),
+            Decimal("1.0"),
+            Decimal("2.0"),
+            Decimal("3.0"),
+            Decimal("4.0"),
+            Decimal("5.0"),
         ]
         assert [point.time for point in by_window["3m"].points] == [
             1730419200000,
@@ -173,12 +197,12 @@ class TestHyperliquidClientGetPnlHistory:
             1735689600000,
         ]
         assert [point.spot_pnl for point in by_window["7d"].points] == [
-            Decimal("0.5"),
-            Decimal("1.5"),
-            Decimal("2.5"),
-            Decimal("1.5"),
-            Decimal("1.5"),
-            Decimal("1.5"),
+            Decimal("0.0"),
+            Decimal("1.0"),
+            Decimal("2.0"),
+            Decimal("1.0"),
+            Decimal("1.0"),
+            Decimal("1.0"),
         ]
         mock_connection.info.portfolio.assert_called_once_with(
             "0x1234567890123456789012345678901234567890"
@@ -201,8 +225,8 @@ class TestHyperliquidClientGetPnlHistory:
 
         assert [point.perp_pnl for point in by_window["7d"].points] == [Decimal("0"), Decimal("0")]
         assert [point.spot_pnl for point in by_window["7d"].points] == [
-            Decimal("1.5"),
-            Decimal("2.5"),
+            Decimal("0.0"),
+            Decimal("1.0"),
         ]
 
     def test_get_pnl_history_returns_empty_when_source_bucket_missing(
