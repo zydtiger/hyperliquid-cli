@@ -26,7 +26,6 @@ from .watch_helpers import (
     candle_close_series,
     candle_price_range,
     format_open_interest_header,
-    format_order_book_footer,
     format_price_header,
     format_watch_axis_label,
     render_order_book_text,
@@ -179,7 +178,6 @@ class WatchApp(App[None]):
                 yield Static("Order Book", classes="panel-title")
                 yield Static(" ", classes="panel-summary", id="book-summary")
                 yield OrderBookView(widget_id="order-book")
-                yield Static("", classes="footer", id="book-footer")
         yield Static("", classes="footer", id="status")
 
     def on_mount(self) -> None:
@@ -223,9 +221,6 @@ class WatchApp(App[None]):
         self.query_one("#status", Static).update(control.status_line())
         book = self.query_one(OrderBookView)
         book.set_state(control.snapshot, control.current_order_book_depth())
-        self.query_one("#book-footer", Static).update(
-            format_order_book_footer(control.snapshot, max(book.size.width, 1)).strip()
-        )
         plot = self.query_one("#watch-plot", BrailleChart)
         values = control.close_prices()
         if not values:

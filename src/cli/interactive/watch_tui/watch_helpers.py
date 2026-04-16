@@ -20,7 +20,7 @@ from models.api import (
 
 ASK_STYLE = "#f7768e"
 BID_STYLE = "#9ece6a"
-MID_STYLE = "#e0af68"
+SPREAD_STYLE = "#e0af68"
 EMPTY_STYLE = "#7f8c8d"
 
 
@@ -80,17 +80,12 @@ def format_order_book_row(level: OrderBookLevel | None, width: int, max_size: De
     return f"{price_text} {bar}".ljust(width)
 
 
-def format_order_book_midline(mark_price: Decimal, width: int) -> str:
-    """Format the order book mid-price separator."""
-    return f" Mid {mark_price:,.2f} ".center(width)[:width].ljust(width)
-
-
-def format_order_book_footer(snapshot: WatchSnapshot | None, width: int) -> str:
-    """Format the order book footer with the top-of-book spread."""
+def format_order_book_spreadline(snapshot: WatchSnapshot | None, width: int) -> str:
+    """Format the order book spread separator."""
     if snapshot is None or not snapshot.asks or not snapshot.bids:
-        return " spread n/a "[:width].ljust(width)
+        return " Spread n/a ".center(width)[:width].ljust(width)
     spread = snapshot.asks[0].price - snapshot.bids[0].price
-    return f" spread {spread:,.2f} "[:width].ljust(width)
+    return f" Spread {spread:,.2f} ".center(width)[:width].ljust(width)
 
 
 def render_order_book_lines(
@@ -105,7 +100,7 @@ def render_order_book_lines(
     visible_levels = [level for level in [*asks, *bids] if level is not None]
     max_size = max((level.size for level in visible_levels), default=Decimal("0"))
     lines = [format_order_book_row(level, width, max_size) for level in asks]
-    lines.append(format_order_book_midline(snapshot.mark_price, width))
+    lines.append(format_order_book_spreadline(snapshot, width))
     lines.extend(format_order_book_row(level, width, max_size) for level in bids)
     padding = max(height - len(lines), 0)
     top_padding = padding // 2
@@ -127,7 +122,7 @@ def render_order_book_text(
     visible_levels = [level for level in [*asks, *bids] if level is not None]
     max_size = max((level.size for level in visible_levels), default=Decimal("0"))
     rows = [(format_order_book_row(level, width, max_size), ASK_STYLE) for level in asks]
-    rows.append((format_order_book_midline(snapshot.mark_price, width), MID_STYLE))
+    rows.append((format_order_book_spreadline(snapshot, width), SPREAD_STYLE))
     rows.extend((format_order_book_row(level, width, max_size), BID_STYLE) for level in bids)
     padding = max(height - len(rows), 0)
     top_padding = padding // 2
@@ -139,18 +134,22 @@ def render_order_book_text(
     )
 
     rendered = Text()
-    mid_price = f"{snapshot.mark_price:,.2f}"
+    spread_value = (
+        "n/a"
+        if not snapshot.asks or not snapshot.bids
+        else f"{snapshot.asks[0].price - snapshot.bids[0].price:,.2f}"
+    )
     for index, (line, style) in enumerate(styled_rows):
         if index:
             rendered.append("\n")
         rendered.append(line, style)
-        if style == MID_STYLE:
-            start = line.find(mid_price)
+        if style == SPREAD_STYLE:
+            start = line.find(spread_value)
             if start >= 0:
                 rendered.stylize(
-                    f"bold {MID_STYLE}",
+                    f"bold {SPREAD_STYLE}",
                     len(rendered.plain) - len(line) + start,
-                    len(rendered.plain) - len(line) + start + len(mid_price),
+                    len(rendered.plain) - len(line) + start + len(spread_value),
                 )
     return rendered
 
