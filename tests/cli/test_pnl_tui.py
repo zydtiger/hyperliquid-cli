@@ -58,6 +58,31 @@ def _sample_history() -> PnlHistoryCatalog:
     )
 
 
+def _mixed_axis_width_history() -> PnlHistoryCatalog:
+    return PnlHistoryCatalog(
+        default_window="1d",
+        histories=[
+            PnlHistory(
+                window="1d",
+                points=[
+                    PnlPoint(
+                        time=1741886630493,
+                        total_pnl=Decimal("200"),
+                        perp_pnl=Decimal("25"),
+                        spot_pnl=Decimal("-3"),
+                    ),
+                    PnlPoint(
+                        time=1741973030493,
+                        total_pnl=Decimal("10000"),
+                        perp_pnl=Decimal("175"),
+                        spot_pnl=Decimal("12"),
+                    ),
+                ],
+            )
+        ],
+    )
+
+
 def test_pnl_screen_control_formats_header_and_summary():
     """The PnL control should expose the active window title and latest totals."""
     control = PnlScreenControl(_sample_history())
@@ -138,6 +163,29 @@ def test_pnl_textual_app_keeps_empty_window_message():
             summary = str(app.query_one("#total-summary").render())
 
             assert summary == "No PnL samples in this window"
+
+    asyncio.run(scenario())
+
+
+def test_pnl_textual_app_aligns_left_y_axes_for_mixed_currency_widths():
+    """All PnL panels should share the same left-axis offset for mixed tick widths."""
+
+    async def scenario() -> None:
+        tui = PnlTUI(_mixed_axis_width_history())
+        app = tui._build_app()
+
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            total_lines = app.query_one("#total-plot", BrailleChart).render().plain.splitlines()
+            perp_lines = app.query_one("#perp-plot", BrailleChart).render().plain.splitlines()
+            spot_lines = app.query_one("#spot-plot", BrailleChart).render().plain.splitlines()
+
+            offsets = {lines[0].index("┌") for lines in (total_lines, perp_lines, spot_lines)}
+
+            assert offsets == {10}
+            assert total_lines[1][:10].strip() == "$10,000.00"
+            assert perp_lines[1][:10].strip() == "$200.00"
+            assert spot_lines[1][:10].strip() == "$15.00"
 
     asyncio.run(scenario())
 

@@ -12,7 +12,7 @@ from textual.widgets import Static
 
 from models.api import PNL_WINDOW_ORDER, PnlHistory, PnlHistoryCatalog, PnlWindow
 
-from ..plotting import BrailleChart, build_time_ticks
+from ..plotting import BrailleChart, build_time_ticks, measure_y_axis_width
 from .pnl_helpers import (
     format_axis_money,
     format_money,
@@ -129,6 +129,7 @@ class PnlApp(App[None]):
         self.query_one("#header-summary", Static).update(control.header_summary())
         panel_values = control.panel_values()
         timestamps = control.panel_times()
+        shared_y_axis_width = self._shared_y_axis_width(panel_values)
         x_tick_indices, x_tick_labels = (
             build_time_ticks(timestamps, format_pnl_date) if timestamps else ([], [])
         )
@@ -141,6 +142,7 @@ class PnlApp(App[None]):
                 x_tick_indices=x_tick_indices,
                 x_tick_labels=x_tick_labels,
                 empty_message="No PnL samples in this window",
+                y_axis_width=shared_y_axis_width,
             )
 
     def _panel_summary(self, values: list[Decimal]) -> str:
@@ -154,6 +156,14 @@ class PnlApp(App[None]):
 
     def _line_style(self, panel_id: str) -> str:
         return {"total": "#50fa7b", "perp": "#ffb86c", "spot": "#bd93f9"}[panel_id]
+
+    def _shared_y_axis_width(self, panel_values: dict[str, list[Decimal]]) -> int | None:
+        widths = [
+            measure_y_axis_width(min(values), max(values), format_axis_money)
+            for values in panel_values.values()
+            if values
+        ]
+        return max(widths, default=None)
 
 
 class PnlTUI:

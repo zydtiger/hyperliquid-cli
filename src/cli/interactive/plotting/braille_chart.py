@@ -45,6 +45,7 @@ class BrailleChart(Widget):
         self._x_tick_indices: list[int] = []
         self._x_tick_labels: list[str] = []
         self._empty_message = ""
+        self._y_axis_width: int | None = None
 
     def set_data(
         self,
@@ -53,11 +54,13 @@ class BrailleChart(Widget):
         x_tick_indices: list[int] | None = None,
         x_tick_labels: list[str] | None = None,
         empty_message: str = "",
+        y_axis_width: int | None = None,
     ) -> None:
         self._values = values
         self._x_tick_indices = x_tick_indices or []
         self._x_tick_labels = x_tick_labels or []
         self._empty_message = empty_message
+        self._y_axis_width = y_axis_width
         self.refresh()
 
     def render(self) -> Text:
@@ -75,6 +78,8 @@ class BrailleChart(Widget):
             self._y_label_formatter,
         )
         axis_width = len(axis_labels[0]) if axis_labels else 0
+        if self._y_axis_width is not None:
+            axis_width = max(axis_width, self._y_axis_width)
         axis_width = min(axis_width, max(width - 3, 0))
         plot_offset = axis_width + 1
         plot_width = max(width - axis_width - 2, 1)

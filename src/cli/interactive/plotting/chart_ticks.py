@@ -10,6 +10,17 @@ DEFAULT_AXIS_TICK_COUNT = 5
 DEFAULT_X_TICK_COUNT = 3
 
 
+def measure_y_axis_width(
+    min_value: Decimal,
+    max_value: Decimal,
+    formatter: Callable[[Decimal], str],
+    max_ticks: int = DEFAULT_AXIS_TICK_COUNT,
+) -> int:
+    """Return the widest rendered y-axis tick label for a value range."""
+    _, _, ticks = _build_axis_ticks(min_value, max_value, max_ticks)
+    return max((len(formatter(tick)) for tick in ticks), default=0)
+
+
 def build_y_axis_labels(
     min_value: Decimal,
     max_value: Decimal,
