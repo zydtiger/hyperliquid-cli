@@ -7,6 +7,8 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
+from rich.text import Text
+
 from models.api import (
     DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     MAX_WATCH_ORDER_BOOK_DEPTH,
@@ -15,6 +17,11 @@ from models.api import (
     WatchInterval,
     WatchSnapshot,
 )
+
+ASK_STYLE = "#f7768e"
+BID_STYLE = "#9ece6a"
+MID_STYLE = "#e0af68"
+EMPTY_STYLE = "#7f8c8d"
 
 
 def candle_close_series(candles: list[WatchCandle]) -> list[Decimal]:
@@ -104,6 +111,48 @@ def render_order_book_lines(
     top_padding = padding // 2
     bottom_padding = padding - top_padding
     return [" " * width] * top_padding + lines[:height] + [" " * width] * bottom_padding
+
+
+def render_order_book_text(
+    snapshot: WatchSnapshot | None, width: int, height: int, depth: int
+) -> Text:
+    """Render a styled order book for the Textual watch panel."""
+    if snapshot is None:
+        message = "Loading book".center(width)[:width].ljust(width)
+        lines = [message if index == height // 2 else " " * width for index in range(height)]
+        return Text("\n".join(lines), style=EMPTY_STYLE)
+
+    asks = list(reversed(normalize_order_book_levels(snapshot.asks, descending=False, depth=depth)))
+    bids = normalize_order_book_levels(snapshot.bids, descending=True, depth=depth)
+    visible_levels = [level for level in [*asks, *bids] if level is not None]
+    max_size = max((level.size for level in visible_levels), default=Decimal("0"))
+    rows = [(format_order_book_row(level, width, max_size), ASK_STYLE) for level in asks]
+    rows.append((format_order_book_midline(snapshot.mark_price, width), MID_STYLE))
+    rows.extend((format_order_book_row(level, width, max_size), BID_STYLE) for level in bids)
+    padding = max(height - len(rows), 0)
+    top_padding = padding // 2
+    bottom_padding = padding - top_padding
+    styled_rows = (
+        [(" " * width, EMPTY_STYLE)] * top_padding
+        + rows[:height]
+        + [(" " * width, EMPTY_STYLE)] * bottom_padding
+    )
+
+    rendered = Text()
+    mid_price = f"{snapshot.mark_price:,.2f}"
+    for index, (line, style) in enumerate(styled_rows):
+        if index:
+            rendered.append("\n")
+        rendered.append(line, style)
+        if style == MID_STYLE:
+            start = line.find(mid_price)
+            if start >= 0:
+                rendered.stylize(
+                    f"bold {MID_STYLE}",
+                    len(rendered.plain) - len(line) + start,
+                    len(rendered.plain) - len(line) + start + len(mid_price),
+                )
+    return rendered
 
 
 def format_price_header(value: Decimal) -> str:

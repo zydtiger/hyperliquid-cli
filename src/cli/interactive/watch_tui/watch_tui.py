@@ -7,6 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import ClassVar
 
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
@@ -28,7 +29,7 @@ from .watch_helpers import (
     format_order_book_footer,
     format_price_header,
     format_watch_axis_label,
-    render_order_book_lines,
+    render_order_book_text,
     visible_order_book_depth,
 )
 
@@ -107,7 +108,7 @@ class WatchScreenControl:
 
 
 class OrderBookView(Static):
-    """Plain-text order book panel for the Textual watch app."""
+    """Styled order book panel for the Textual watch app."""
 
     def __init__(self, *, widget_id: str | None = None):
         super().__init__("", id=widget_id)
@@ -119,14 +120,12 @@ class OrderBookView(Static):
         self.depth = depth
         self.refresh()
 
-    def render(self) -> str:
-        return "\n".join(
-            render_order_book_lines(
-                self.snapshot,
-                max(self.size.width, 18),
-                max(self.size.height, 5),
-                self.depth,
-            )
+    def render(self) -> Text:
+        return render_order_book_text(
+            self.snapshot,
+            max(self.size.width, 18),
+            max(self.size.height, 5),
+            self.depth,
         )
 
 
@@ -144,7 +143,7 @@ class WatchApp(App[None]):
     .panel-title { height: auto; padding: 0 1; color: #f8f8f2; text-style: bold; }
     .panel-summary { height: auto; padding: 0 1; color: #7aa2f7; }
     BrailleChart, OrderBookView { height: 1fr; min-height: 12; }
-    OrderBookView { padding: 0 1; border: round #3b4261; }
+    OrderBookView { padding: 0 1; border: solid #3b4261; }
     """
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit_view", show=False),
@@ -178,6 +177,7 @@ class WatchApp(App[None]):
                 )
             with Vertical(id="book-column"):
                 yield Static("Order Book", classes="panel-title")
+                yield Static(" ", classes="panel-summary", id="book-summary")
                 yield OrderBookView(widget_id="order-book")
                 yield Static("", classes="footer", id="book-footer")
         yield Static("", classes="footer", id="status")
