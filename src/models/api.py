@@ -247,6 +247,10 @@ class WatchSnapshot(BaseModel):
         default_factory=list,
         description="Top ask levels ordered from lowest to highest price",
     )
+    size_decimals: int = Field(
+        default=0,
+        description="Display precision sourced from coin metadata size decimals",
+    )
     order_book_depth: int = Field(
         default=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
         description="Effective per-side order book depth returned in this snapshot",
