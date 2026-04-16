@@ -1,11 +1,14 @@
 """
-Tests for the fullscreen PnL TUI renderer.
+Tests for the Textual fullscreen PnL TUI.
 """
 
-from datetime import datetime
+from __future__ import annotations
+
+import asyncio
 from decimal import Decimal
 
-from cli.interactive.pnl_tui import PnlScreenControl, render_braille_plot, window_label
+from cli.interactive.plotting.braille_chart import BrailleChart
+from cli.interactive.pnl_tui.pnl_tui import PnlScreenControl, PnlTUI, format_money, window_label
 from models.api import DEFAULT_PNL_WINDOW, PnlHistory, PnlHistoryCatalog, PnlPoint
 
 
@@ -55,48 +58,18 @@ def _sample_history() -> PnlHistoryCatalog:
     )
 
 
-def test_render_braille_plot_uses_braille_glyphs():
-    """The plot renderer should emit non-ASCII braille glyphs for chart lines."""
-    lines = render_braille_plot(
-        [Decimal("0.0"), Decimal("10.5"), Decimal("6.0")],
-        width=20,
-        height=6,
-    )
-
-    rendered = "".join(lines)
-    assert len(lines) == 6
-    assert any(ord(char) >= 0x2800 for char in rendered if char.strip())
-
-
-def test_pnl_screen_control_renders_panel_titles():
-    """The screen control should render all panel labels into the content."""
+def test_pnl_screen_control_formats_header_and_summary():
+    """The PnL control should expose the active window title and latest totals."""
     control = PnlScreenControl(_sample_history())
-    content = control.create_content(width=80, height=30)
-    lines = ["".join(fragment for _, fragment in content.get_line(index)) for index in range(30)]
-    rendered = "\n".join(lines)
 
-    assert "Hyperliquid PnL TUI - 7D" in rendered
-    assert "Total PnL" in rendered
-    assert "Perp PnL" in rendered
-    assert "Spot PnL" in rendered
-
-
-def test_pnl_screen_control_keeps_panel_borders_aligned():
-    """Panel borders should span exactly the requested width with intact corners."""
-    width = 80
-    control = PnlScreenControl(_sample_history())
-    content = control.create_content(width=width, height=30)
-    lines = ["".join(fragment for _, fragment in content.get_line(index)) for index in range(30)]
-
-    panel_border_lines = [line for line in lines if line.startswith("┌") or line.startswith("└")]
-    assert panel_border_lines
-    assert all(len(line) == width for line in panel_border_lines)
-    assert all(line.endswith("┐") for line in panel_border_lines if line.startswith("┌"))
-    assert all(line.endswith("┘") for line in panel_border_lines if line.startswith("└"))
+    assert control.header_title() == "Hyperliquid PnL TUI - 7D"
+    assert "Total $+6.00" in control.header_summary()
+    assert "Perp $+8.50" in control.header_summary()
+    assert "Spot $-2.50" in control.header_summary()
 
 
 def test_pnl_screen_control_advances_between_windows():
-    """The control should clamp and update the active range while rendering."""
+    """The PnL control should clamp while switching the active window."""
     control = PnlScreenControl(_sample_history())
 
     assert control.current_window() == "7d"
@@ -110,50 +83,50 @@ def test_pnl_screen_control_advances_between_windows():
     assert control.current_window() == "1d"
 
 
-def test_pnl_screen_control_renders_empty_window_message():
-    """Selecting an empty range should keep the TUI alive with an empty-state panel."""
-    control = PnlScreenControl(_sample_history())
-    control.advance_window(-1)
-    content = control.create_content(width=80, height=30)
-    lines = ["".join(fragment for _, fragment in content.get_line(index)) for index in range(30)]
-    rendered = "\n".join(lines)
+def test_pnl_textual_app_renders_y_ticks_and_shared_bottom_x_ticks():
+    """The Textual PnL app should show real y ticks and x ticks only on the spot chart."""
 
-    assert "Hyperliquid PnL TUI - 3D" in rendered
-    assert "No PnL samples in this window" in rendered
+    async def scenario() -> None:
+        tui = PnlTUI(_sample_history())
+        app = tui._build_app()
+
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            total_plot = app.query_one("#total-plot", BrailleChart).render().plain
+            perp_plot = app.query_one("#perp-plot", BrailleChart).render().plain
+            spot_plot = app.query_one("#spot-plot", BrailleChart).render().plain
+
+            assert "$15.00" in total_plot
+            assert "$10.00" in perp_plot
+            assert "$4.00" in spot_plot
+            assert "-$4.00" in spot_plot
+            assert any(ord(char) >= 0x2800 for char in total_plot if char.strip())
+            assert "03-13" not in total_plot
+            assert "03-15" not in perp_plot
+            assert "03-13" in spot_plot
+            assert "03-15" in spot_plot
+
+    asyncio.run(scenario())
 
 
-def test_window_label_maps_all_time():
-    """The window label helper should expose the expected display names."""
+def test_pnl_textual_app_keeps_empty_window_message():
+    """Empty ranges should keep a visible no-data summary in the active panel set."""
+
+    async def scenario() -> None:
+        tui = PnlTUI(_sample_history())
+        tui.control.advance_window(-1)
+        app = tui._build_app()
+
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            summary = str(app.query_one("#total-summary").render())
+
+            assert summary == "No PnL samples in this window"
+
+    asyncio.run(scenario())
+
+
+def test_window_label_and_money_helpers_are_stable():
+    """Basic PnL formatting helpers should keep their current user-facing labels."""
     assert window_label("all") == "ALL-TIME"
-
-
-def test_pnl_screen_control_renders_zoom_controls():
-    """The controls line should describe zooming in and out."""
-    control = PnlScreenControl(_sample_history())
-    content = control.create_content(width=80, height=30)
-    controls_line = "".join(fragment for _, fragment in content.get_line(2))
-
-    assert "+ zoom in" in controls_line
-    assert "- zoom out" in controls_line
-
-
-def test_pnl_screen_control_keeps_footer_visible_on_short_terminal():
-    """Shorter terminals should still show complete panels and both footer lines."""
-    control = PnlScreenControl(_sample_history())
-    content = control.create_content(width=40, height=20)
-    lines = ["".join(fragment for _, fragment in content.get_line(index)) for index in range(20)]
-
-    assert content.line_count == 20
-    assert lines[-2].strip().startswith("03-13")
-    assert "y-scales" in lines[-1]
-    assert lines[-1].strip()
-
-
-def test_pnl_screen_control_formats_dates_in_local_time():
-    """The PnL x-axis formatter should use local time rather than UTC."""
-    control = PnlScreenControl(_sample_history())
-    timestamp_ms = 1741973030493
-
-    assert control._format_date(timestamp_ms) == datetime.fromtimestamp(
-        timestamp_ms / 1000
-    ).strftime("%m-%d")
+    assert format_money(Decimal("10.5")) == "$+10.50"
