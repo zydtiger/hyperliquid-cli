@@ -443,7 +443,7 @@ def test_pnl_command_handles_empty_history(
     cli.do_pnl("")
     output = capsys.readouterr().out
 
-    assert "No 7-day PnL history found." in output
+    assert "No PnL history found." in output
 
 
 def test_watch_command_renders_graph(
