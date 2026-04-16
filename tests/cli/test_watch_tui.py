@@ -8,9 +8,16 @@ import asyncio
 from datetime import datetime
 from decimal import Decimal
 
+from textual.widgets import Static
+
 from cli.interactive.plotting.braille_chart import BrailleChart
 from cli.interactive.watch_tui.watch_helpers import format_watch_axis_label
-from cli.interactive.watch_tui.watch_tui import OrderBookView, WatchScreenControl, WatchTUI
+from cli.interactive.watch_tui.watch_tui import (
+    OrderBookView,
+    WatchApp,
+    WatchScreenControl,
+    WatchTUI,
+)
 from models.api import DEFAULT_WATCH_ORDER_BOOK_DEPTH, OrderBookLevel, WatchCandle, WatchSnapshot
 
 
@@ -58,6 +65,7 @@ def _sample_snapshot() -> WatchSnapshot:
             OrderBookLevel(price=Decimal("43249.50"), size=Decimal("1.25")),
             OrderBookLevel(price=Decimal("43249.00"), size=Decimal("0.75")),
         ],
+        size_decimals=5,
         order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     )
 
@@ -67,12 +75,12 @@ def test_watch_screen_control_formats_header_summary_and_status():
     control = WatchScreenControl("BTC")
     control.set_snapshot(_sample_snapshot())
 
-    assert "Price $43,250.5000" in control.header_summary()
+    assert "Price $43,250.5" in control.header_summary()
     assert "OI $1,250.75" in control.header_summary()
     assert control.chart_title() == "Price Chart - 5M Interval"
-    assert "last 43,250.5000" in control.chart_summary()
-    assert "max 43,250.5000" in control.chart_summary()
-    assert "min 43,205.2500" in control.chart_summary()
+    assert "last 43,250.5" in control.chart_summary()
+    assert "max 43,250.5" in control.chart_summary()
+    assert "min 43,205.2" in control.chart_summary()
     assert "3 candles" in control.status_line()
 
 
@@ -106,7 +114,7 @@ def test_watch_tui_fetches_with_current_interval_and_refetches_on_interval_chang
 
 
 def test_watch_textual_app_renders_real_axis_labels_and_order_book():
-    """The Textual watch app should render actual x/y tick labels and order book rows."""
+    """The Textual watch app should render inline axes and order book rows."""
 
     async def scenario() -> None:
         def fetcher(coin: str, interval: str, depth: int) -> WatchSnapshot:
@@ -121,16 +129,62 @@ def test_watch_textual_app_renders_real_axis_labels_and_order_book():
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
             plot = app.query_one("#watch-plot", BrailleChart)
-            rendered_plot = plot.render().plain
+            rendered_text = plot.render()
+            rendered_plot = rendered_text.plain
             rendered_book = app.query_one(OrderBookView).render()
+            rendered_book_plain = rendered_book.plain
 
             assert "43,260" in rendered_plot
             assert "43,240" in rendered_plot
+            assert "┌" in rendered_plot
+            assert "┐" in rendered_plot
+            assert "┤" in rendered_plot
+            assert "│" in rendered_plot
+            assert "├" not in rendered_plot
+            assert "└" in rendered_plot
+            assert "┘" in rendered_plot
+            assert "┬" in rendered_plot
             assert "13:15" in rendered_plot
             assert "13:25" in rendered_plot
             assert any(ord(char) >= 0x2800 for char in rendered_plot if char.strip())
-            assert "43,251.00" in rendered_book
-            assert "43,249.50" in rendered_book
+            assert any("3b4261" in str(span.style) for span in rendered_text.spans)
+            assert "43,251.0" in rendered_book_plain
+            assert "43,249.5" in rendered_book_plain
+            assert "Spread 1.2" in rendered_book_plain
+            assert "Mid" not in rendered_book_plain
+            assert any("f7768e" in str(span.style) for span in rendered_book.spans)
+            assert any("9ece6a" in str(span.style) for span in rendered_book.spans)
+            assert any("e0af68" in str(span.style) for span in rendered_book.spans)
+            assert any(
+                "bold" in str(span.style) and "e0af68" in str(span.style)
+                for span in rendered_book.spans
+            )
+            assert "border: solid #3b4261;" in WatchApp.CSS
+
+    asyncio.run(scenario())
+
+
+def test_watch_textual_app_aligns_order_book_with_chart_frame():
+    """The order book panel should align with the chart frame at top and bottom."""
+
+    async def scenario() -> None:
+        def fetcher(coin: str, interval: str, depth: int) -> WatchSnapshot:
+            assert coin == "BTC"
+            assert interval == "5m"
+            assert depth >= 1
+            return _sample_snapshot()
+
+        tui = WatchTUI("BTC", fetcher, poll_interval_seconds=60.0)
+        app = tui._build_app()
+
+        async with app.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            plot = app.query_one("#watch-plot", BrailleChart)
+            book = app.query_one(OrderBookView)
+            book_footer_spacer = app.query_one("#book-footer-spacer", Static)
+
+            assert plot.region.y == book.region.y
+            assert plot.region.height == book.region.height + book_footer_spacer.region.height
 
     asyncio.run(scenario())
 

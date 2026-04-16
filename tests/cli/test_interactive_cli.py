@@ -347,6 +347,7 @@ def watch_snapshot() -> WatchSnapshot:
         ],
         bids=[OrderBookLevel(price=Decimal("43249.50"), size=Decimal("1.25"))],
         asks=[OrderBookLevel(price=Decimal("43250.75"), size=Decimal("0.50"))],
+        size_decimals=5,
     )
 
 

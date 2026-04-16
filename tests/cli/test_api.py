@@ -60,6 +60,7 @@ def test_backend_api_get_watch_snapshot_parses_response():
                 ],
                 "bids": [{"price": "43249.50", "size": "1.25"}],
                 "asks": [{"price": "43250.75", "size": "0.50"}],
+                "size_decimals": 5,
                 "order_book_depth": 12,
                 "default_interval": "5m",
                 "supported_intervals": ["1m", "5m", "15m", "1h", "4h", "1d"],
@@ -80,6 +81,7 @@ def test_backend_api_get_watch_snapshot_parses_response():
     assert snapshot.open_interest == Decimal("1250.75")
     assert snapshot.candles[-1].close == Decimal("43250.50")
     assert snapshot.bids[0].price == Decimal("43249.50")
+    assert snapshot.size_decimals == 5
     assert snapshot.order_book_depth == 12
     assert seen_query["interval"] == "1h"
     assert seen_query["depth"] == "12"
@@ -129,6 +131,7 @@ def test_backend_api_get_watch_snapshot_parses_null_open_interest_for_spot():
                     "candles": [],
                     "bids": [],
                     "asks": [],
+                    "size_decimals": 5,
                     "order_book_depth": 10,
                     "default_interval": "5m",
                     "supported_intervals": ["1m", "5m", "15m", "1h", "4h", "1d"],
@@ -142,5 +145,6 @@ def test_backend_api_get_watch_snapshot_parses_null_open_interest_for_spot():
     try:
         snapshot = api.get_watch_snapshot("UBTC/USDC", "1h")
         assert snapshot.open_interest is None
+        assert snapshot.size_decimals == 5
     finally:
         api.client.close()

@@ -84,7 +84,7 @@ def test_pnl_screen_control_advances_between_windows():
 
 
 def test_pnl_textual_app_renders_y_ticks_and_shared_bottom_x_ticks():
-    """The Textual PnL app should show real y ticks and x ticks only on the spot chart."""
+    """The Textual PnL app should render inline axes and x ticks only on the spot chart."""
 
     async def scenario() -> None:
         tui = PnlTUI(_sample_history())
@@ -92,19 +92,35 @@ def test_pnl_textual_app_renders_y_ticks_and_shared_bottom_x_ticks():
 
         async with app.run_test(size=(100, 30)) as pilot:
             await pilot.pause()
-            total_plot = app.query_one("#total-plot", BrailleChart).render().plain
-            perp_plot = app.query_one("#perp-plot", BrailleChart).render().plain
-            spot_plot = app.query_one("#spot-plot", BrailleChart).render().plain
+            total_rendered = app.query_one("#total-plot", BrailleChart).render()
+            perp_rendered = app.query_one("#perp-plot", BrailleChart).render()
+            spot_rendered = app.query_one("#spot-plot", BrailleChart).render()
+            total_plot = total_rendered.plain
+            perp_plot = perp_rendered.plain
+            spot_plot = spot_rendered.plain
 
             assert "$15.00" in total_plot
             assert "$10.00" in perp_plot
             assert "$4.00" in spot_plot
             assert "-$4.00" in spot_plot
+            assert "┌" in total_plot
+            assert "┐" in total_plot
+            assert "┘" in spot_plot
+            assert "┤" in total_plot
+            assert "│" in total_plot
+            assert "├" not in total_plot
             assert any(ord(char) >= 0x2800 for char in total_plot if char.strip())
             assert "03-13" not in total_plot
             assert "03-15" not in perp_plot
+            assert "└" in total_plot
+            assert "└" in perp_plot
+            assert "┬" not in total_plot
+            assert "┬" not in perp_plot
+            assert "└" in spot_plot
+            assert "┬" in spot_plot
             assert "03-13" in spot_plot
             assert "03-15" in spot_plot
+            assert any("3b4261" in str(span.style) for span in total_rendered.spans)
 
     asyncio.run(scenario())
 
