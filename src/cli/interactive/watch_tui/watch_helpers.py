@@ -24,6 +24,17 @@ SPREAD_STYLE = "#e0af68"
 EMPTY_STYLE = "#7f8c8d"
 
 
+def watch_price_decimals(size_decimals: int) -> int:
+    """Return the display precision for watch prices from coin size decimals."""
+    return max(6 - size_decimals, 0)
+
+
+def format_watch_price(value: Decimal, size_decimals: int) -> str:
+    """Format a watch price using derived display precision."""
+    decimals = watch_price_decimals(size_decimals)
+    return f"{value:,.{decimals}f}"
+
+
 def candle_close_series(candles: list[WatchCandle]) -> list[Decimal]:
     """Extract ordered candle close prices for chart rendering."""
     return [candle.close for candle in candles]
@@ -54,20 +65,29 @@ def visible_order_book_depth(panel_height: int) -> int:
     return min(max((panel_height - 1) // 2, 1), MAX_WATCH_ORDER_BOOK_DEPTH)
 
 
-def format_order_book_price(price: Decimal, width: int) -> str:
+def format_order_book_price(price: Decimal, width: int, size_decimals: int) -> str:
     """Format an order book price label that fits the available panel width."""
-    for pattern in (f"{price:,.2f}", f"{price:.2f}", f"{price:,.0f}", f"{price:.0f}"):
+    decimals = watch_price_decimals(size_decimals)
+    formatted = format_watch_price(price, size_decimals)
+    candidates = [formatted, formatted.replace(",", "")]
+    if decimals > 0:
+        rounded = f"{price:,.{min(decimals, 2)}f}"
+        candidates.extend([rounded, rounded.replace(",", "")])
+    candidates.extend([f"{price:,.0f}", f"{price:.0f}"])
+    for pattern in candidates:
         if len(pattern) <= width:
             return pattern
     return f"{price:.0f}"[-width:]
 
 
-def format_order_book_row(level: OrderBookLevel | None, width: int, max_size: Decimal) -> str:
+def format_order_book_row(
+    level: OrderBookLevel | None, width: int, max_size: Decimal, size_decimals: int
+) -> str:
     """Format a price label plus a proportional size bar that fits the panel width."""
     if level is None:
         return " " * width
     price_width = min(max(width // 2, 8), max(width - 2, 1))
-    price_text = format_order_book_price(level.price, price_width)
+    price_text = format_order_book_price(level.price, price_width, size_decimals)
     bar_width = max(width - len(price_text) - 1, 0)
     if bar_width == 0:
         return price_text.rjust(width)
@@ -85,7 +105,8 @@ def format_order_book_spreadline(snapshot: WatchSnapshot | None, width: int) -> 
     if snapshot is None or not snapshot.asks or not snapshot.bids:
         return " Spread n/a ".center(width)[:width].ljust(width)
     spread = snapshot.asks[0].price - snapshot.bids[0].price
-    return f" Spread {spread:,.2f} ".center(width)[:width].ljust(width)
+    spread_text = format_watch_price(spread, snapshot.size_decimals)
+    return f" Spread {spread_text} ".center(width)[:width].ljust(width)
 
 
 def render_order_book_lines(
@@ -99,9 +120,13 @@ def render_order_book_lines(
     bids = normalize_order_book_levels(snapshot.bids, descending=True, depth=depth)
     visible_levels = [level for level in [*asks, *bids] if level is not None]
     max_size = max((level.size for level in visible_levels), default=Decimal("0"))
-    lines = [format_order_book_row(level, width, max_size) for level in asks]
+    lines = [
+        format_order_book_row(level, width, max_size, snapshot.size_decimals) for level in asks
+    ]
     lines.append(format_order_book_spreadline(snapshot, width))
-    lines.extend(format_order_book_row(level, width, max_size) for level in bids)
+    lines.extend(
+        format_order_book_row(level, width, max_size, snapshot.size_decimals) for level in bids
+    )
     padding = max(height - len(lines), 0)
     top_padding = padding // 2
     bottom_padding = padding - top_padding
@@ -121,9 +146,15 @@ def render_order_book_text(
     bids = normalize_order_book_levels(snapshot.bids, descending=True, depth=depth)
     visible_levels = [level for level in [*asks, *bids] if level is not None]
     max_size = max((level.size for level in visible_levels), default=Decimal("0"))
-    rows = [(format_order_book_row(level, width, max_size), ASK_STYLE) for level in asks]
+    rows = [
+        (format_order_book_row(level, width, max_size, snapshot.size_decimals), ASK_STYLE)
+        for level in asks
+    ]
     rows.append((format_order_book_spreadline(snapshot, width), SPREAD_STYLE))
-    rows.extend((format_order_book_row(level, width, max_size), BID_STYLE) for level in bids)
+    rows.extend(
+        (format_order_book_row(level, width, max_size, snapshot.size_decimals), BID_STYLE)
+        for level in bids
+    )
     padding = max(height - len(rows), 0)
     top_padding = padding // 2
     bottom_padding = padding - top_padding
@@ -137,7 +168,9 @@ def render_order_book_text(
     spread_value = (
         "n/a"
         if not snapshot.asks or not snapshot.bids
-        else f"{snapshot.asks[0].price - snapshot.bids[0].price:,.2f}"
+        else format_watch_price(
+            snapshot.asks[0].price - snapshot.bids[0].price, snapshot.size_decimals
+        )
     )
     for index, (line, style) in enumerate(styled_rows):
         if index:
@@ -154,9 +187,9 @@ def render_order_book_text(
     return rendered
 
 
-def format_price_header(value: Decimal) -> str:
+def format_price_header(value: Decimal, size_decimals: int) -> str:
     """Format the live mark price for the watch header."""
-    return f"Price ${value:,.4f}"
+    return f"Price ${format_watch_price(value, size_decimals)}"
 
 
 def format_open_interest_header(value: Decimal | None) -> str:

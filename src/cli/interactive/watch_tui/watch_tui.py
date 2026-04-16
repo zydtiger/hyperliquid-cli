@@ -28,6 +28,7 @@ from .watch_helpers import (
     format_open_interest_header,
     format_price_header,
     format_watch_axis_label,
+    format_watch_price,
     render_order_book_text,
     visible_order_book_depth,
 )
@@ -70,9 +71,15 @@ class WatchScreenControl:
         if self.snapshot is None:
             return f"{self.coin} loading live candle stream"
         if self.error_message:
-            return f"{format_price_header(self.snapshot.mark_price)}   {self.error_message}"
+            return (
+                f"{format_price_header(self.snapshot.mark_price, self.snapshot.size_decimals)}   "
+                f"{self.error_message}"
+            )
         open_interest = format_open_interest_header(self.snapshot.open_interest)
-        return f"{format_price_header(self.snapshot.mark_price)}   {open_interest}".strip()
+        return (
+            f"{format_price_header(self.snapshot.mark_price, self.snapshot.size_decimals)}   "
+            f"{open_interest}"
+        ).strip()
 
     def chart_title(self) -> str:
         return f"Price Chart - {self.current_interval().upper()} Interval"
@@ -82,7 +89,12 @@ class WatchScreenControl:
         price_range = self.price_range()
         if not closes or price_range is None:
             return "awaiting first live candles"
-        return f"last {closes[-1]:,.4f}   max {max(closes):,.4f}   min {price_range[0]:,.4f}"
+        decimals = self.snapshot.size_decimals if self.snapshot is not None else 0
+        return (
+            f"last {format_watch_price(closes[-1], decimals)}   "
+            f"max {format_watch_price(max(closes), decimals)}   "
+            f"min {format_watch_price(price_range[0], decimals)}"
+        )
 
     def status_line(self) -> str:
         if self.error_message:
@@ -178,6 +190,7 @@ class WatchApp(App[None]):
                 yield Static("Order Book", classes="panel-title")
                 yield Static(" ", classes="panel-summary", id="book-summary")
                 yield OrderBookView(widget_id="order-book")
+                yield Static(" ", classes="footer", id="book-footer-spacer")
         yield Static("", classes="footer", id="status")
 
     def on_mount(self) -> None:
