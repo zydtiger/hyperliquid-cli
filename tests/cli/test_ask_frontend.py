@@ -344,7 +344,7 @@ def test_build_cli_manual_includes_ask_and_watch(config: Config):
     assert "## ask" in manual
     assert "configured OpenAI-compatible agent endpoint" in manual
     assert "## watch" in manual
-    assert "Launch a live market watch TUI for a perpetual coin" in manual
+    assert "Launch a live market watch TUI for a supported coin or spot pair" in manual
 
 
 def test_build_cli_manual_discovers_project_do_methods_without_cmd_builtins() -> None:

@@ -311,8 +311,3 @@ class OrderFormatter(
     def _format_timestamp(self, timestamp_ms: int) -> str:
         """Format an exchange timestamp in local time."""
         return datetime.fromtimestamp(timestamp_ms / 1000).strftime("%m/%d/%Y %H:%M:%S")
-
-
-__all__ = [
-    "OrderFormatter",
-]

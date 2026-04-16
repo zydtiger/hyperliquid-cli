@@ -191,13 +191,3 @@ def prompt_for_coin_selection(
             return exact_match
 
         print("❌ No matching coin selected. Use Tab to view suggestions and select one.")
-
-
-__all__ = [
-    "MAX_COIN_SUGGESTIONS",
-    "CoinCompleter",
-    "build_coin_prompt_session",
-    "normalize_coin_input",
-    "prompt_for_coin_selection",
-    "rank_coin_matches",
-]

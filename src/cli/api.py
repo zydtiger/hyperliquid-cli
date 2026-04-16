@@ -176,10 +176,10 @@ class BackendAPI:
         depth: int = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     ) -> WatchSnapshot:
         """
-        Get the live watch snapshot for a specific perpetual market.
+        Get the live watch snapshot for a supported perp or spot market.
 
         Args:
-            coin: Symbol of the perpetual market
+            coin: Market symbol accepted by the backend
             interval: Candle interval to request from the backend
             depth: Per-side order book depth to request from the backend
 

@@ -110,8 +110,3 @@ class ModifyWizard:
 
         # Create modification request
         return ModifyOrderRequest(order_id=order_id, price=new_price, quantity=new_quantity)
-
-
-__all__ = [
-    "ModifyWizard",
-]

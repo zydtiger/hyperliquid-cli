@@ -382,7 +382,9 @@ class HyperliquidClient:
 
         def _get_watch_snapshot() -> WatchSnapshot:
             market_coin = self._resolve_coin_symbol(coin.upper())
-            return self._watch_registry.get_snapshot(market_coin, interval, depth)
+            snapshot = self._watch_registry.get_snapshot(market_coin, interval, depth)
+            metadata = self.get_metadata(market_coin)
+            return snapshot.model_copy(update={"size_decimals": metadata.size_decimals})
 
         return self.connection.retry_operation(_get_watch_snapshot)
 
@@ -1828,8 +1830,3 @@ class HyperliquidClient:
         """Release watch subscriptions and the underlying exchange connection."""
         self._watch_registry.close()
         self.connection.close()
-
-
-__all__ = [
-    "HyperliquidClient",
-]

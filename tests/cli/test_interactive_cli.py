@@ -347,6 +347,7 @@ def watch_snapshot() -> WatchSnapshot:
         ],
         bids=[OrderBookLevel(price=Decimal("43249.50"), size=Decimal("1.25"))],
         asks=[OrderBookLevel(price=Decimal("43250.75"), size=Decimal("0.50"))],
+        size_decimals=5,
     )
 
 
@@ -443,7 +444,7 @@ def test_pnl_command_handles_empty_history(
     cli.do_pnl("")
     output = capsys.readouterr().out
 
-    assert "No 7-day PnL history found." in output
+    assert "No PnL history found." in output
 
 
 def test_watch_command_renders_graph(

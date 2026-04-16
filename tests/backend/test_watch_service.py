@@ -71,6 +71,7 @@ def sample_watch_snapshot() -> WatchSnapshot:
             OrderBookLevel(price=Decimal("43250.75"), size=Decimal("0.50")),
             OrderBookLevel(price=Decimal("43251.00"), size=Decimal("1.10")),
         ],
+        size_decimals=5,
         order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
         default_interval=DEFAULT_WATCH_INTERVAL,
     )
@@ -120,6 +121,7 @@ def test_watch_endpoint_success():
             {"price": "43250.75", "size": "0.50"},
             {"price": "43251.00", "size": "1.10"},
         ],
+        "size_decimals": 5,
         "order_book_depth": 10,
         "default_interval": "5m",
         "supported_intervals": ["1m", "5m", "15m", "1h", "4h", "1d"],
@@ -193,6 +195,7 @@ def test_watch_endpoint_supports_spot_pairs():
         candles=[_sample_candle(1741972500000, 1741973400000, "101200.25", is_closed=False)],
         bids=[OrderBookLevel(price=Decimal("101230.50"), size=Decimal("0.25"))],
         asks=[OrderBookLevel(price=Decimal("101235.75"), size=Decimal("0.10"))],
+        size_decimals=5,
         order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
         default_interval=DEFAULT_WATCH_INTERVAL,
     )

@@ -1,6 +1,4 @@
-"""
-Shared chart rendering helpers for fullscreen TUIs.
-"""
+"""Braille-grid rendering primitives for Textual charts."""
 
 from __future__ import annotations
 
@@ -19,7 +17,14 @@ BRAILLE_BITS = {
 }
 
 
-def render_braille_plot(values: list[Decimal], width: int, height: int) -> list[str]:
+def render_braille_plot(
+    values: list[Decimal],
+    width: int,
+    height: int,
+    *,
+    min_value: Decimal | None = None,
+    max_value: Decimal | None = None,
+) -> list[str]:
     """Render a line chart using Unicode braille cells."""
     if not values:
         return [" " * width for _ in range(height)]
@@ -27,7 +32,13 @@ def render_braille_plot(values: list[Decimal], width: int, height: int) -> list[
     pixel_width = max(width * 2, 2)
     pixel_height = max(height * 4, 4)
     pixels = [[False for _ in range(pixel_width)] for _ in range(pixel_height)]
-    points = _series_to_pixel_points(values, pixel_width, pixel_height)
+    points = _series_to_pixel_points(
+        values,
+        pixel_width,
+        pixel_height,
+        min_value=min_value,
+        max_value=max_value,
+    )
 
     for (x1, y1), (x2, y2) in pairwise(points):
         _draw_pixel_line(pixels, x1, y1, x2, y2)
@@ -42,14 +53,17 @@ def _series_to_pixel_points(
     values: list[Decimal],
     pixel_width: int,
     pixel_height: int,
+    *,
+    min_value: Decimal | None = None,
+    max_value: Decimal | None = None,
 ) -> list[tuple[int, int]]:
     """Map numeric values into the high-resolution braille grid."""
     if len(values) == 1:
         return [(0, pixel_height // 2)]
 
-    min_value = min(values)
-    max_value = max(values)
-    span = max_value - min_value
+    lower_bound = min(values) if min_value is None else min_value
+    upper_bound = max(values) if max_value is None else max_value
+    span = upper_bound - lower_bound
     points: list[tuple[int, int]] = []
 
     for index, value in enumerate(values):
@@ -57,7 +71,7 @@ def _series_to_pixel_points(
         if span == 0:
             y = pixel_height // 2
         else:
-            normalized = (value - min_value) / span
+            normalized = (value - lower_bound) / span
             y = pixel_height - 1 - round(float(normalized) * (pixel_height - 1))
         points.append((x, y))
 
@@ -105,6 +119,3 @@ def _pixels_to_braille_lines(
         lines.append("".join(row_chars))
 
     return lines
-
-
-__all__ = ["render_braille_plot"]

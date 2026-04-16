@@ -118,8 +118,3 @@ class HyperliquidConnection:
         ws_manager = getattr(self.info, "ws_manager", None)
         if ws_manager is not None:
             ws_manager.stop()
-
-
-__all__ = [
-    "HyperliquidConnection",
-]

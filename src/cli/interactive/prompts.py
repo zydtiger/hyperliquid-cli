@@ -306,8 +306,3 @@ class Prompts:
             trigger_type=self.get_trigger_type_selection(),
             trigger_price=self.get_trigger_price_input(coin),
         )
-
-
-__all__ = [
-    "Prompts",
-]

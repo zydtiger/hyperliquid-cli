@@ -205,15 +205,3 @@ def parse_levels(levels: list[dict[str, Any]], descending: bool) -> list[OrderBo
     ]
     parsed.sort(key=lambda level: level.price, reverse=descending)
     return parsed[:MAX_WATCH_ORDER_BOOK_DEPTH]
-
-
-__all__ = [
-    "HISTORICAL_CANDLE_COUNT",
-    "SNAPSHOT_LOOKBACK_CANDLES",
-    "WATCH_CANDLE_COUNT",
-    "IntervalState",
-    "advance_interval_state",
-    "interval_open_time",
-    "parse_l2_book",
-    "seed_interval_state",
-]
