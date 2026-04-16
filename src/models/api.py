@@ -225,9 +225,9 @@ class WatchCandle(BaseModel):
 
 
 class WatchSnapshot(BaseModel):
-    """Normalized live watch snapshot for a single perpetual market."""
+    """Normalized live watch snapshot for a single supported market."""
 
-    coin: str = Field(..., description="Symbol of the perpetual market")
+    coin: str = Field(..., description="Supported market symbol")
     interval: WatchInterval = Field(..., description="Requested candle interval")
     mark_price: Decimal = Field(..., description="Current mark price")
     open_interest: Decimal | None = Field(
@@ -259,41 +259,3 @@ class WatchSnapshot(BaseModel):
         default_factory=lambda: list(WATCH_INTERVAL_ORDER),
         description="Supported candle intervals for the watch TUI",
     )
-
-
-# ============================================================================
-# EXPORTS
-# ============================================================================
-
-__all__ = [
-    "DEFAULT_PNL_WINDOW",
-    "DEFAULT_WATCH_INTERVAL",
-    "DEFAULT_WATCH_ORDER_BOOK_DEPTH",
-    "MAX_WATCH_ORDER_BOOK_DEPTH",
-    "MIN_WATCH_ORDER_BOOK_DEPTH",
-    "PNL_WINDOW_ORDER",
-    "WATCH_INTERVAL_MS",
-    "WATCH_INTERVAL_ORDER",
-    "APIError",
-    "BalanceInfo",
-    "CoinMetadata",
-    "ExchangeError",
-    "HealthResponse",
-    "HealthStatus",
-    "LeverageType",
-    "OrderBookLevel",
-    "PnlHistory",
-    "PnlHistoryCatalog",
-    "PnlPoint",
-    "PnlWindow",
-    "PositionInfo",
-    "RootResponse",
-    "SpotBalance",
-    "StakingDelegation",
-    "StakingInfo",
-    "StakingStatus",
-    "Ticker",
-    "WatchCandle",
-    "WatchInterval",
-    "WatchSnapshot",
-]

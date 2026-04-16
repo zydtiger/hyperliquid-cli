@@ -224,6 +224,3 @@ class LiveWatchRegistry:
 
 def _current_time_ms() -> int:
     return int(time() * 1000)
-
-
-__all__ = ["LiveWatchRegistry"]

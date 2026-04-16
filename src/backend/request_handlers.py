@@ -98,7 +98,7 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
 
     @app.get("/watch/{coin:path}")
     async def get_watch_snapshot(
-        coin: str = Path(..., description="Symbol of the perpetual market"),
+        coin: str = Path(..., description="Supported market symbol"),
         interval: Annotated[
             WatchInterval,
             Query(description="Candle interval to return for the watch snapshot"),
@@ -113,10 +113,10 @@ def setup_request_handlers(app: FastAPI, client: HyperliquidClient) -> None:  # 
         ] = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     ) -> WatchSnapshot:
         """
-        Get the live watch snapshot for a perpetual market.
+        Get the live watch snapshot for a supported perp or spot market.
 
         Args:
-            coin: Symbol of the perpetual market
+            coin: Supported market symbol
             interval: Candle interval to return for the watch snapshot
             depth: Per-side order book depth to return for the watch snapshot
 

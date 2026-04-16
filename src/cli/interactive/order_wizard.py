@@ -107,8 +107,3 @@ class OrderWizard:
             raise KeyboardInterrupt
 
         return order
-
-
-__all__ = [
-    "OrderWizard",
-]

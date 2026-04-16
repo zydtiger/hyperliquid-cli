@@ -657,7 +657,7 @@ class InteractiveCLI(cmd.Cmd):
 
     def do_pnl(self, args: str) -> None:
         """
-        Show a fixed 7-day fullscreen PnL graph.
+        Show the fullscreen multi-window PnL dashboard.
 
         Usage: pnl
         """
@@ -670,7 +670,7 @@ class InteractiveCLI(cmd.Cmd):
             with BackendAPI(self.config) as api:
                 history_catalog = api.get_pnl_history()
                 if not any(history.points for history in history_catalog.histories):
-                    print("No 7-day PnL history found.")
+                    print("No PnL history found.")
                 else:
                     PnlTUI(history_catalog).run()
                 print(flush=True)
@@ -679,16 +679,16 @@ class InteractiveCLI(cmd.Cmd):
 
     def help_pnl(self) -> None:
         """Show help for the pnl command."""
-        print("pnl - Show a 7-day fullscreen PnL graph")
+        print("pnl - Show a fullscreen multi-window PnL dashboard")
         print("Usage: pnl")
         print()
         print("Launches a fullscreen TUI with switchable 1d, 3d, 7d, 1m, 3m, 6m, 1y, and")
         print("all-time total, perpetual, and spot PnL charts.")
-        print("This version is hard-coded and does not accept any arguments.")
+        print("This command does not accept any arguments.")
 
     def do_watch(self, args: str) -> None:
         """
-        Launch the live watch TUI for a perpetual market.
+        Launch the live watch TUI for a supported market.
 
         Usage: watch <coin>
         """
@@ -710,20 +710,21 @@ class InteractiveCLI(cmd.Cmd):
 
     def help_watch(self) -> None:
         """Show help for the watch command."""
-        print("watch - Launch a live market watch TUI for a perpetual coin")
+        print("watch - Launch a live market watch TUI for a supported coin or spot pair")
         print("Usage: watch <coin>")
         print()
         print("Arguments:")
-        print("  coin        Perpetual market symbol (e.g. BTC, ETH)")
+        print("  coin        Market symbol (e.g. BTC, ETH, UBTC/USDC)")
         print()
         print("Examples:")
         print("  watch BTC")
         print("  watch ETH")
+        print("  watch UBTC/USDC")
         print()
         print("The watch TUI shows:")
         print("- The last 99 completed candles plus the current live candle")
-        print("- Current open interest next to the price header")
-        print("- Top 10 asks and top 10 bids from the live order book")
+        print("- Current open interest next to the price header when the market provides it")
+        print("- A live order book sized to the visible watch panel height")
         print("- `+` to switch to a shorter candle interval and `-` for a longer interval")
 
     def do_cancel_order(self, args: str) -> None:

@@ -1828,8 +1828,3 @@ class HyperliquidClient:
         """Release watch subscriptions and the underlying exchange connection."""
         self._watch_registry.close()
         self.connection.close()
-
-
-__all__ = [
-    "HyperliquidClient",
-]

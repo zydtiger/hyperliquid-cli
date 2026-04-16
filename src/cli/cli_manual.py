@@ -61,6 +61,3 @@ def build_cli_manual(cli: Cmd, commands: Iterable[str] | None = None) -> str:
         )
 
     return "\n".join(sections).rstrip() + "\n"
-
-
-__all__ = ["build_cli_manual"]
