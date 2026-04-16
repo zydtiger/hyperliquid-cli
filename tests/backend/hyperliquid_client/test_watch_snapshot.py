@@ -288,10 +288,13 @@ def test_get_watch_snapshot_supports_spot_markets(
         candles=[],
         bids=[],
         asks=[],
+        size_decimals=5,
         order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     )
     client._watch_registry = Mock()
-    client._watch_registry.get_snapshot.return_value = expected
+    client._watch_registry.get_snapshot.return_value = expected.model_copy(
+        update={"size_decimals": 0}
+    )
 
     result = client.get_watch_snapshot("UBTC/USDC")
 
@@ -305,7 +308,10 @@ def test_get_watch_snapshot_returns_registry_snapshot(
     mock_retry_operation,
 ):
     """The client should delegate watch snapshots through the shared registry."""
-    mock_connection.info.meta.return_value = {"universe": [{"name": "BTC"}]}
+    mock_connection.info.meta.return_value = {
+        "universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]
+    }
+    mock_connection.info.spot_meta.return_value = {"universe": [], "tokens": []}
     mock_connection.retry_operation.side_effect = mock_retry_operation
     expected = WatchSnapshot(
         coin="BTC",
@@ -316,10 +322,13 @@ def test_get_watch_snapshot_returns_registry_snapshot(
         candles=[],
         bids=[],
         asks=[],
+        size_decimals=5,
         order_book_depth=DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     )
     client._watch_registry = Mock()
-    client._watch_registry.get_snapshot.return_value = expected
+    client._watch_registry.get_snapshot.return_value = expected.model_copy(
+        update={"size_decimals": 0}
+    )
 
     result = client.get_watch_snapshot("BTC")
 
@@ -333,7 +342,9 @@ def test_get_watch_snapshot_passes_requested_interval(
     mock_retry_operation,
 ):
     """The client should forward custom watch intervals to the registry."""
-    mock_connection.info.meta.return_value = {"universe": [{"name": "BTC"}]}
+    mock_connection.info.meta.return_value = {
+        "universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]
+    }
     mock_connection.retry_operation.side_effect = mock_retry_operation
     client._watch_registry = Mock()
     client._watch_registry.get_snapshot.return_value = WatchSnapshot(
@@ -348,8 +359,9 @@ def test_get_watch_snapshot_passes_requested_interval(
         order_book_depth=12,
     )
 
-    client.get_watch_snapshot("BTC", "1h", 12)
+    result = client.get_watch_snapshot("BTC", "1h", 12)
 
+    assert result.size_decimals == 5
     client._watch_registry.get_snapshot.assert_called_once_with("BTC", "1h", 12)
 
 
