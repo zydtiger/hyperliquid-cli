@@ -143,8 +143,8 @@ class WatchApp(App[None]):
     #book-column { width: 1fr; min-width: 20; layout: vertical; padding: 0 1 0 0; }
     .panel-title { height: auto; padding: 0 1; color: #f8f8f2; text-style: bold; }
     .panel-summary { height: auto; padding: 0 1; color: #7aa2f7; }
-    BrailleChart, OrderBookView { height: 1fr; min-height: 12; border: round #3b4261; }
-    OrderBookView { padding: 0 1; }
+    BrailleChart, OrderBookView { height: 1fr; min-height: 12; }
+    OrderBookView { padding: 0 1; border: round #3b4261; }
     """
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit_view", show=False),

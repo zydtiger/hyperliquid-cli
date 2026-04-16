@@ -41,7 +41,7 @@ def build_plot_columns(indices: list[int], series_length: int, plot_width: int) 
     return [round(index * (plot_width - 1) / (series_length - 1)) for index in indices]
 
 
-def build_x_axis_line(
+def build_x_axis_labels_line(
     *,
     total_width: int,
     plot_offset: int,
@@ -65,6 +65,39 @@ def build_x_axis_line(
         for index, char in enumerate(label):
             chars[start + index] = char
         last_end = end
+
+    return "".join(chars)
+
+
+def build_plot_border_line(
+    *,
+    total_width: int,
+    plot_offset: int,
+    plot_width: int,
+    left_corner: str,
+    right_corner: str,
+    tick_columns: list[int] | None = None,
+) -> str:
+    """Build a horizontal plot border, optionally with x-axis tick marks."""
+    chars = [" "] * total_width
+    left_border = plot_offset - 1
+    right_border = plot_offset + plot_width
+
+    if 0 <= left_border < total_width:
+        chars[left_border] = left_corner
+    if 0 <= right_border < total_width:
+        chars[right_border] = right_corner
+
+    for column in range(plot_width):
+        position = plot_offset + column
+        if position >= total_width:
+            break
+        chars[position] = "─"
+
+    for column in tick_columns or []:
+        position = plot_offset + column
+        if plot_offset <= position < min(plot_offset + plot_width, total_width):
+            chars[position] = "┬"
 
     return "".join(chars)
 

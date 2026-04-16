@@ -76,7 +76,7 @@ class PnlApp(App[None]):
     .plot-panel { height: 1fr; layout: vertical; padding: 0 1; }
     .panel-title { height: auto; padding: 0 1; color: #f8f8f2; text-style: bold; }
     .panel-summary { height: auto; padding: 0 1; color: #7aa2f7; }
-    BrailleChart { height: 1fr; min-height: 8; border: round #3b4261; }
+    BrailleChart { height: 1fr; min-height: 8; }
     """
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit_view", show=False),
