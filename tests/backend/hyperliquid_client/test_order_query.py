@@ -125,6 +125,56 @@ class TestHyperliquidClientOrderStatus:
 
         assert result == expected_order
 
+    def test_get_order_status_market_order_ignores_exchange_limit_price(
+        self,
+        client,
+        mock_connection,
+        mock_retry_operation,
+    ):
+        """Test market orders normalize exchange limit caps to a null price."""
+        api_response = {
+            "order": {
+                "order": {
+                    "coin": "ETH",
+                    "side": "B",
+                    "limitPx": "43000.0",
+                    "sz": "0.0",
+                    "oid": 220717680689,
+                    "timestamp": 1762141573010,
+                    "reduceOnly": False,
+                    "orderType": "Market",
+                    "origSz": "0.2",
+                    "averageFillPx": "42500.5",
+                    "tif": "Ioc",
+                },
+                "status": "filled",
+                "statusTimestamp": 1762141573011,
+            }
+        }
+
+        expected_order = OrderInfo(
+            order_id=220717680689,
+            coin="ETH",
+            side=OrderSide.BUY,
+            order_type=OrderType.MARKET,
+            quantity=Decimal("0.2"),
+            price=None,
+            filled_quantity=Decimal("0.2"),
+            remaining_quantity=Decimal("0.0"),
+            average_fill_price=Decimal("42500.5"),
+            status=OrderStatus.FILLED,
+            timestamp=1762141573010,
+            reduce_only=False,
+            time_in_force=OrderTif.IOC,
+        )
+
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.info.query_order_by_oid.return_value = api_response
+
+        result = client.get_order_status(220717680689)
+
+        assert result == expected_order
+
     def test_get_order_status_partially_filled(
         self,
         client,
