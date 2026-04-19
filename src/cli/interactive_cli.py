@@ -14,7 +14,16 @@ import typer
 
 from models.api import LeverageType, PositionInfo
 from models.config import Config
-from models.order import LimitOrder, MarketOrder, OrderSide, OrderTif
+from models.order import (
+    LimitOrder,
+    MarketOrder,
+    OrderInfo,
+    OrderResult,
+    OrderSide,
+    OrderTif,
+    OrderTrigger,
+    TriggerType,
+)
 
 from .api import BackendAPI
 from .cli_manual import build_cli_manual
@@ -28,6 +37,8 @@ QUICK_ORDER_ARGS = 3
 MIN_LEVERAGE = 1
 MAX_LEVERAGE = 250
 DEFAULT_ORDER_HISTORY_LIMIT = 10
+TAKE_PROFIT_FLAG = "--tp"
+STOP_LOSS_FLAG = "--sl"
 
 
 class InteractiveCLI(cmd.Cmd):
@@ -86,31 +97,57 @@ class InteractiveCLI(cmd.Cmd):
         command_name = line.strip().split(maxsplit=1)[0].lower()
         return command_name != "ask"
 
-    def _parse_quick_order(self, args: str) -> MarketOrder | LimitOrder:
-        """Parse quick-order arguments into a market or limit order."""
-        parts = args.strip().split()
-        if len(parts) != QUICK_ORDER_ARGS:
-            raise ValueError("Quick order requires exactly 3 arguments")
-
+    def _parse_positive_decimal(self, value: str, label: str) -> Decimal:
+        """Parse and validate a positive decimal value."""
         try:
-            side = OrderSide(parts[0].lower())
-        except ValueError as exc:
-            raise ValueError("Side must be 'buy' or 'sell'") from exc
+            parsed_value = Decimal(value)
+        except InvalidOperation as exc:
+            raise ValueError(f"{label} must be a valid decimal value") from exc
 
-        coin = parts[1].upper()
-        quantity_spec = parts[2]
+        if parsed_value <= 0:
+            raise ValueError(f"{label} must be greater than 0")
 
-        # A single numeric quantity means a market order, while `qty@price`
-        # selects the fast limit-order path.
+        return parsed_value
+
+    def _parse_quick_order_flags(self, parts: list[str]) -> tuple[Decimal | None, Decimal | None]:
+        """Parse optional quick-order TP/SL flags."""
+        take_profit: Decimal | None = None
+        stop_loss: Decimal | None = None
+        index = 0
+
+        while index < len(parts):
+            flag = parts[index]
+            if flag not in {TAKE_PROFIT_FLAG, STOP_LOSS_FLAG}:
+                raise ValueError(f"Unknown quick-order flag: {flag}")
+
+            if index + 1 >= len(parts) or parts[index + 1].startswith("--"):
+                raise ValueError(f"{flag} requires a price value")
+
+            price_label = "Take-profit price" if flag == TAKE_PROFIT_FLAG else "Stop-loss price"
+            price = self._parse_positive_decimal(parts[index + 1], price_label)
+
+            if flag == TAKE_PROFIT_FLAG:
+                if take_profit is not None:
+                    raise ValueError(f"Duplicate quick-order flag: {TAKE_PROFIT_FLAG}")
+                take_profit = price
+            else:
+                if stop_loss is not None:
+                    raise ValueError(f"Duplicate quick-order flag: {STOP_LOSS_FLAG}")
+                stop_loss = price
+
+            index += 2
+
+        return take_profit, stop_loss
+
+    def _build_quick_order(
+        self,
+        side: OrderSide,
+        coin: str,
+        quantity_spec: str,
+    ) -> MarketOrder | LimitOrder:
+        """Build the primary quick order from the positional arguments."""
         if "@" not in quantity_spec:
-            try:
-                quantity = Decimal(quantity_spec)
-            except InvalidOperation as exc:
-                raise ValueError("Quantity must be a valid decimal value") from exc
-
-            if quantity <= 0:
-                raise ValueError("Quantity must be greater than 0")
-
+            quantity = self._parse_positive_decimal(quantity_spec, "Quantity")
             return MarketOrder(
                 coin=coin,
                 side=side,
@@ -122,20 +159,8 @@ class InteractiveCLI(cmd.Cmd):
         if not quantity_text or not price_text:
             raise ValueError("Limit orders must use the format <quantity>@<price>")
 
-        try:
-            quantity = Decimal(quantity_text)
-        except InvalidOperation as exc:
-            raise ValueError("Quantity must be a valid decimal value") from exc
-
-        try:
-            price = Decimal(price_text)
-        except InvalidOperation as exc:
-            raise ValueError("Price must be a valid decimal value") from exc
-
-        if quantity <= 0:
-            raise ValueError("Quantity must be greater than 0")
-        if price <= 0:
-            raise ValueError("Price must be greater than 0")
+        quantity = self._parse_positive_decimal(quantity_text, "Quantity")
+        price = self._parse_positive_decimal(price_text, "Price")
 
         return LimitOrder(
             coin=coin,
@@ -146,6 +171,94 @@ class InteractiveCLI(cmd.Cmd):
             time_in_force=OrderTif.GTC,
         )
 
+    def _build_quick_trigger_orders(
+        self,
+        primary_order: MarketOrder | LimitOrder,
+        take_profit: Decimal | None,
+        stop_loss: Decimal | None,
+    ) -> list[tuple[str, MarketOrder]]:
+        """Build reduce-only trigger-market child orders for quick TP/SL."""
+        trigger_orders: list[tuple[str, MarketOrder]] = []
+        exit_side = OrderSide.SELL if primary_order.side == OrderSide.BUY else OrderSide.BUY
+
+        if take_profit is not None:
+            trigger_orders.append(
+                (
+                    "Take Profit Order",
+                    MarketOrder(
+                        coin=primary_order.coin,
+                        side=exit_side,
+                        quantity=primary_order.quantity,
+                        reduce_only=True,
+                        trigger=OrderTrigger(
+                            trigger_type=TriggerType.TAKE,
+                            trigger_price=take_profit,
+                        ),
+                    ),
+                )
+            )
+
+        if stop_loss is not None:
+            trigger_orders.append(
+                (
+                    "Stop Loss Order",
+                    MarketOrder(
+                        coin=primary_order.coin,
+                        side=exit_side,
+                        quantity=primary_order.quantity,
+                        reduce_only=True,
+                        trigger=OrderTrigger(
+                            trigger_type=TriggerType.STOP,
+                            trigger_price=stop_loss,
+                        ),
+                    ),
+                )
+            )
+
+        return trigger_orders
+
+    def _parse_quick_order(
+        self,
+        args: str,
+    ) -> tuple[MarketOrder | LimitOrder, list[tuple[str, MarketOrder]]]:
+        """Parse quick-order arguments into a primary order plus optional TP/SL orders."""
+        parts = args.strip().split()
+        if len(parts) < QUICK_ORDER_ARGS:
+            raise ValueError("Quick order requires at least 3 arguments")
+
+        try:
+            side = OrderSide(parts[0].lower())
+        except ValueError as exc:
+            raise ValueError("Side must be 'buy' or 'sell'") from exc
+
+        coin = parts[1].upper()
+        quantity_spec = parts[2]
+        primary_order = self._build_quick_order(side, coin, quantity_spec)
+        take_profit, stop_loss = self._parse_quick_order_flags(parts[QUICK_ORDER_ARGS:])
+        return primary_order, self._build_quick_trigger_orders(
+            primary_order, take_profit, stop_loss
+        )
+
+    def _submit_single_order(
+        self,
+        api: BackendAPI,
+        order: MarketOrder | LimitOrder,
+    ) -> OrderResult:
+        """Submit one order through the existing API surface."""
+        if isinstance(order, LimitOrder):
+            return api.submit_limit_order(order)
+        return api.submit_market_order(order)
+
+    def _print_order_output(
+        self, data: OrderResult | OrderInfo | list[OrderInfo], **kwargs: str
+    ) -> None:
+        """Render order-related output with the shared formatter."""
+        formatter = OrderFormatter()
+        try:
+            print(formatter.format(data, **kwargs))
+        except ValueError as format_err:
+            print(format_err)
+
     def _submit_order(self, api: BackendAPI, order: MarketOrder | LimitOrder) -> None:
         """Submit an order and print the formatted result."""
         print("⏳ Submitting order...")
@@ -153,16 +266,61 @@ class InteractiveCLI(cmd.Cmd):
         # Route the quick-order and wizard flows through the same submission
         # logic so validation, formatting, and error handling stay aligned.
         try:
-            if isinstance(order, LimitOrder):
-                result = api.submit_limit_order(order)
-            else:
-                result = api.submit_market_order(order)
+            result = self._submit_single_order(api, order)
+            self._print_order_output(result)
+        except Exception as submission_err:
+            print(f"❌ Failed to submit order: {submission_err}")
 
-            formatter = OrderFormatter()
-            try:
-                print(formatter.format(result))
-            except ValueError as format_err:
-                print(format_err)
+    def _submit_quick_order(
+        self,
+        api: BackendAPI,
+        primary_order: MarketOrder | LimitOrder,
+        trigger_orders: list[tuple[str, MarketOrder]],
+    ) -> None:
+        """Submit a quick order and any requested TP/SL trigger orders."""
+        print("⏳ Submitting order...")
+
+        try:
+            primary_result = self._submit_single_order(api, primary_order)
+            if not primary_result.success:
+                self._print_order_output(primary_result)
+                return
+
+            successful_orders: list[tuple[str, int]] = []
+            failed_results: list[tuple[str, OrderResult]] = []
+
+            if primary_result.order_id is not None:
+                successful_orders.append(("Primary Order", primary_result.order_id))
+            else:
+                failed_results.append(("Primary Order", primary_result))
+
+            for label, trigger_order in trigger_orders:
+                trigger_result = self._submit_single_order(api, trigger_order)
+                if trigger_result.success and trigger_result.order_id is not None:
+                    successful_orders.append((label, trigger_result.order_id))
+                else:
+                    failed_results.append((label, trigger_result))
+
+            order_statuses: list[OrderInfo] = []
+            for label, order_id in successful_orders:
+                try:
+                    order_statuses.append(api.get_order_status(order_id))
+                except Exception as status_err:
+                    print(
+                        "❌ Failed to fetch "
+                        f"{label.lower()} status for order {order_id}: {status_err}"
+                    )
+
+            if order_statuses:
+                self._print_order_output(
+                    order_statuses,
+                    title=f"Submitted Orders ({len(order_statuses)})",
+                )
+
+            for label, result in failed_results:
+                print()
+                print(f"{label}:")
+                self._print_order_output(result)
 
         except Exception as submission_err:
             print(f"❌ Failed to submit order: {submission_err}")
@@ -178,19 +336,26 @@ class InteractiveCLI(cmd.Cmd):
         try:
             with BackendAPI(self.config) as api:
                 if args.strip():
-                    order = self._parse_quick_order(args)
+                    order, trigger_orders = self._parse_quick_order(args)
                 else:
                     wizard = OrderWizard(self.config, api)
                     order = wizard.run()
+                    trigger_orders: list[tuple[str, MarketOrder]] = []
 
-                self._submit_order(api, order)
+                if trigger_orders:
+                    self._submit_quick_order(api, order, trigger_orders)
+                else:
+                    self._submit_order(api, order)
 
         except KeyboardInterrupt:
             print("❌ Order creation cancelled")
         except ValueError as e:
             print(f"❌ Error: {e}")
             print("Usage: order")
-            print("   or: order <buy|sell> <coin> <quantity|quantity@price>")
+            print(
+                "   or: order <buy|sell> <coin> <quantity|quantity@price> "
+                "[--tp <price>] [--sl <price>]"
+            )
         except Exception as e:
             print(f"❌ Failed to create order: {e}")
         finally:
@@ -231,12 +396,15 @@ class InteractiveCLI(cmd.Cmd):
         """Show help for the order command."""
         print("order - Launch the wizard or place a quick market/limit order")
         print("Usage: order")
-        print("   or: order <buy|sell> <coin> <quantity|quantity@price>")
+        print(
+            "   or: order <buy|sell> <coin> <quantity|quantity@price> [--tp <price>] [--sl <price>]"
+        )
         print()
         print("Examples:")
         print("  order")
         print("  order buy ETH 0.25")
         print("  order sell BTC 0.01@105000")
+        print("  order buy BTC 2@75000 --tp 80000 --sl 60000")
         print()
         print(
             "With no arguments, this command starts an interactive wizard that guides you through:"
@@ -252,7 +420,9 @@ class InteractiveCLI(cmd.Cmd):
         print("Quick-order syntax:")
         print("- `<quantity>` submits a market order")
         print("- `<quantity>@<price>` submits a GTC limit order")
-        print("- Quick orders default to non-reduce-only and do not add triggers")
+        print("- `--tp <price>` adds a full-size reduce-only take-profit trigger-market exit")
+        print("- `--sl <price>` adds a full-size reduce-only stop-loss trigger-market exit")
+        print("- Quick orders default to non-reduce-only on the primary order")
         print()
         print("The wizard provides market data suggestions and validates all inputs.")
         print("Wizard orders are submitted upon confirmation.")
