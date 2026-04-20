@@ -1,9 +1,4 @@
-"""
-Order formatting utilities for the Hyperliquid CLI.
-
-This module provides formatting utilities for displaying order information
-in a user-friendly way.
-"""
+"""Order formatting utilities for the Hyperliquid CLI."""
 
 from datetime import datetime
 from decimal import Decimal
@@ -26,9 +21,7 @@ class OrderFormatter(
         | list[OrderHistoryEntry]
     ]
 ):
-    """
-    Formatter class for order data display.
-    """
+    """Formatter class for order data display."""
 
     def format(
         self,
@@ -55,7 +48,7 @@ class OrderFormatter(
         """
         # Handle List[OrderInfo] objects (multiple orders display)
         if isinstance(data, list) and all(isinstance(item, OrderInfo) for item in data):
-            return self._format_order_infos(data)  # type: ignore
+            return self._format_order_infos(data, title=kwargs.get("title"))  # type: ignore
 
         # Handle List[OrderHistoryEntry] objects (filled order history display)
         if isinstance(data, list) and all(isinstance(item, OrderHistoryEntry) for item in data):
@@ -103,15 +96,7 @@ class OrderFormatter(
         )
 
     def _format_order_info(self, order: OrderInfo) -> str:
-        """
-        Format OrderInfo objects for order status display.
-
-        Args:
-            order: OrderInfo object to format
-
-        Returns:
-            str: Formatted order status information
-        """
+        """Format OrderInfo objects for order status display."""
         lines = []
         lines.append("=" * 50)
         lines.append("ORDER STATUS")
@@ -154,15 +139,7 @@ class OrderFormatter(
         return "\n".join(lines)
 
     def _format_order_result(self, result: OrderResult) -> str:
-        """
-        Format OrderResult objects for order submission result display.
-
-        Args:
-            result: OrderResult object to format
-
-        Returns:
-            str: Formatted order submission result information
-        """
+        """Format OrderResult objects for order submission result display."""
         lines = []
 
         if result.success:
@@ -180,16 +157,7 @@ class OrderFormatter(
         return "\n".join(lines)
 
     def _format_status(self, status: OrderStatus, monospace: bool = False) -> str:
-        """
-        Format order status with appropriate indicators.
-
-        Args:
-            status: OrderStatus enum value
-            monospace: Whether to use monospace-compatible status indicators
-
-        Returns:
-            str: Formatted status string
-        """
+        """Format order status with appropriate indicators."""
         if monospace:
             status_map = {
                 OrderStatus.OPEN: "+ OPEN",
@@ -212,20 +180,11 @@ class OrderFormatter(
         """Format a label-value pair with right-aligned labels."""
         return f"{label.ljust(12)}: {value}"
 
-    def _format_order_infos(self, orders: list[OrderInfo]) -> str:
-        """
-        Format a list of OrderInfo objects as a table using TableFormatter.
-
-        Args:
-            orders: List of OrderInfo objects to format
-
-        Returns:
-            str: Formatted table of orders
-        """
+    def _format_order_infos(self, orders: list[OrderInfo], title: str | None = None) -> str:
+        """Format a list of OrderInfo objects as a table using TableFormatter."""
         if not orders:
             return "\nNo open orders found."
 
-        # Define table headers
         headers = [
             "Order ID",
             "Coin",
@@ -242,13 +201,9 @@ class OrderFormatter(
         if show_trigger_columns:
             headers.extend(["Trigger Type", "Trigger Px"])
 
-        # Convert OrderInfo objects to table rows
         rows = []
         for order in orders:
-            # Format price (handle market orders)
-            price_str = f"${order.price}" if order.price is not None else "Market"
-
-            # Format TIF (handle null values)
+            price_str = f"${order.price}" if order.price is not None else ""
             tif_str = order.time_in_force.value if order.time_in_force else "N/A"
 
             row = [
@@ -272,9 +227,9 @@ class OrderFormatter(
                 )
             rows.append(row)
 
-        # Use TableFormatter to create the table
         table_formatter = TableFormatter()
-        return table_formatter.format((headers, rows), title=f"Open Orders ({len(orders)})")
+        table_title = title or f"Open Orders ({len(orders)})"
+        return table_formatter.format((headers, rows), title=table_title)
 
     def _format_order_history(self, entries: list[OrderHistoryEntry]) -> str:
         """Format filled-order history as a table."""
