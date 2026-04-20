@@ -852,9 +852,18 @@ class HyperliquidClient:
                 filled_quantity = original_quantity - current_quantity
                 remaining_quantity = current_quantity
 
-                # Get limit price if available (limitPx is the API field name)
+                # Determine order type from API orderType field
+                order_type_str = order_data.get("orderType", "Limit").upper()
+                order_type = OrderType.LIMIT if order_type_str == "LIMIT" else OrderType.MARKET
+
+                # Market orders are submitted as aggressive IOC limits in the SDK,
+                # but the CLI model intentionally hides that internal cap price.
                 limit_px = order_data.get("limitPx")
-                price = Decimal(str(limit_px)) if limit_px and limit_px != "0" else None
+                price = (
+                    Decimal(str(limit_px))
+                    if order_type == OrderType.LIMIT and limit_px and limit_px != "0"
+                    else None
+                )
 
                 # Get average fill price if available
                 avg_fill_px = order_data.get("averageFillPx")
@@ -864,9 +873,6 @@ class HyperliquidClient:
                 tif_value = order_data.get("tif")
                 time_in_force = OrderTif(tif_value.upper()) if tif_value else None
 
-                # Determine order type from API orderType field
-                order_type_str = order_data.get("orderType", "Limit").upper()
-                order_type = OrderType.LIMIT if order_type_str == "LIMIT" else OrderType.MARKET
                 trigger = self._extract_order_trigger(order_data)
 
                 return OrderInfo(
