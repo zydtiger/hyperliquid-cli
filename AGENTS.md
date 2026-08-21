@@ -33,6 +33,17 @@ Hyperliquid smart order trading system with structured architecture.
 
 ## Workflow
 
+### Project Skills
+
+Task workflows for this repository live in `.agents/skills/`, one directory per
+skill with a `SKILL.md`. Read the matching `SKILL.md` and follow it before
+falling back to a general approach:
+
+| Skill | Use for |
+| --- | --- |
+| `create-backend-feature` | Adding or modifying backend functionality |
+| `create-interactive-cli-command` | Adding a command to the interactive CLI |
+
 ### Adding Features
 
 1. Search existing codebase
