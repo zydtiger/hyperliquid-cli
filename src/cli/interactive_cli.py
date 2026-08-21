@@ -340,7 +340,7 @@ class InteractiveCLI(cmd.Cmd):
                 else:
                     wizard = OrderWizard(self.config, api)
                     order = wizard.run()
-                    trigger_orders: list[tuple[str, MarketOrder]] = []
+                    trigger_orders = []
 
                 if trigger_orders:
                     self._submit_quick_order(api, order, trigger_orders)
