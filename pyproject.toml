@@ -42,7 +42,6 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.11.0",
-    "flake8>=6.0.0",
     "mypy>=1.0.0",
     "types-PyYAML>=6.0.0",
 ]
@@ -120,6 +119,7 @@ exclude_lines = [
 ]
 
 [tool.mypy]
+files = ["src"]
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
 warn_return_any = true
