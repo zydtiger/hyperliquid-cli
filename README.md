@@ -148,7 +148,8 @@ cd hyperliquid-cli
 
 # Set up development environment
 uv sync --dev
-uv run pre-commit install
+uv tool install prek
+prek install
 
 # Run tests
 uv run pytest -v .
@@ -197,7 +198,7 @@ GNU Affero General Public License v3.0 - see [LICENSE](LICENSE) for details.
 2. Create a feature branch
 3. Make your changes
 4. Run tests: `pytest -v .`
-5. Install hooks once: `uv run pre-commit install`
+5. Install hooks once: `uv tool install prek && prek install`
 6. Hooks run `uv run ruff check --fix` and `uv run ruff format` on staged Python files at commit time
 7. Submit a pull request
 
