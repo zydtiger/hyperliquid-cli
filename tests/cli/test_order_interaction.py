@@ -97,7 +97,7 @@ def make_order_info(
     )
 
 
-def test_market_order_wizard_without_trigger(monkeypatch) -> None:
+def test_market_order_wizard_without_trigger(monkeypatch: pytest.MonkeyPatch) -> None:
     wizard = OrderWizard(make_config(), FakeAPI())
     responses = iter(["BTC", "1", "1", "0.123", "n", "", "y"])
     monkeypatch.setattr("builtins.input", lambda _: next(responses))
@@ -111,7 +111,7 @@ def test_market_order_wizard_without_trigger(monkeypatch) -> None:
     assert order.trigger is None
 
 
-def test_market_order_wizard_with_stop_trigger(monkeypatch) -> None:
+def test_market_order_wizard_with_stop_trigger(monkeypatch: pytest.MonkeyPatch) -> None:
     wizard = OrderWizard(make_config(), FakeAPI())
     responses = iter(["BTC", "1", "1", "0.123", "n", "y", "1", "101000", "y"])
     monkeypatch.setattr("builtins.input", lambda _: next(responses))
@@ -124,7 +124,7 @@ def test_market_order_wizard_with_stop_trigger(monkeypatch) -> None:
     )
 
 
-def test_limit_order_wizard_with_take_trigger(monkeypatch) -> None:
+def test_limit_order_wizard_with_take_trigger(monkeypatch: pytest.MonkeyPatch) -> None:
     wizard = OrderWizard(make_config(), FakeAPI())
     responses = iter(["ETH", "2", "2", "3200", "", "1.500", "n", "y", "2", "3500", "y"])
     monkeypatch.setattr("builtins.input", lambda _: next(responses))
@@ -140,7 +140,9 @@ def test_limit_order_wizard_with_take_trigger(monkeypatch) -> None:
     )
 
 
-def test_trigger_type_prompt_retries_on_invalid_choice(monkeypatch, capsys) -> None:
+def test_trigger_type_prompt_retries_on_invalid_choice(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     prompts = Prompts(make_config(), FakeAPI())
     responses = iter(["3", "2"])
     monkeypatch.setattr("builtins.input", lambda _: next(responses))
@@ -151,7 +153,9 @@ def test_trigger_type_prompt_retries_on_invalid_choice(monkeypatch, capsys) -> N
     assert "Please enter 1 (Stop) or 2 (Take)" in capsys.readouterr().out
 
 
-def test_trigger_price_prompt_retries_on_invalid_input(monkeypatch, capsys) -> None:
+def test_trigger_price_prompt_retries_on_invalid_input(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     prompts = Prompts(make_config(), FakeAPI())
     responses = iter(["abc", "0", "123.45"])
     monkeypatch.setattr("builtins.input", lambda _: next(responses))
@@ -399,7 +403,7 @@ def test_parse_quick_order_rejects_invalid_trigger_flags(args: str, error_messag
         cli._parse_quick_order(args)
 
 
-def test_do_order_submits_non_trigger_limit_order(capsys) -> None:
+def test_do_order_submits_non_trigger_limit_order(capsys: pytest.CaptureFixture[str]) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -430,7 +434,7 @@ def test_do_order_submits_non_trigger_limit_order(capsys) -> None:
     assert "formatted" in capsys.readouterr().out
 
 
-def test_do_order_submits_trigger_market_order(capsys) -> None:
+def test_do_order_submits_trigger_market_order(capsys: pytest.CaptureFixture[str]) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -460,7 +464,7 @@ def test_do_order_submits_trigger_market_order(capsys) -> None:
     assert "formatted" in capsys.readouterr().out
 
 
-def test_do_order_submits_quick_market_order(capsys) -> None:
+def test_do_order_submits_quick_market_order(capsys: pytest.CaptureFixture[str]) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -488,7 +492,7 @@ def test_do_order_submits_quick_market_order(capsys) -> None:
     assert "formatted" in capsys.readouterr().out
 
 
-def test_do_order_submits_quick_limit_order(capsys) -> None:
+def test_do_order_submits_quick_limit_order(capsys: pytest.CaptureFixture[str]) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -518,7 +522,9 @@ def test_do_order_submits_quick_limit_order(capsys) -> None:
     assert "formatted" in capsys.readouterr().out
 
 
-def test_do_order_submits_quick_limit_order_with_tp_and_sl_and_displays_statuses(capsys) -> None:
+def test_do_order_submits_quick_limit_order_with_tp_and_sl_and_displays_statuses(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -620,7 +626,9 @@ def test_do_order_submits_quick_limit_order_with_tp_and_sl_and_displays_statuses
     assert "STOP" in output
 
 
-def test_do_order_submits_quick_sell_order_tp_sl_children_as_buy_reduce_only(capsys) -> None:
+def test_do_order_submits_quick_sell_order_tp_sl_children_as_buy_reduce_only(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -714,7 +722,9 @@ def test_do_order_submits_quick_sell_order_tp_sl_children_as_buy_reduce_only(cap
     assert "Submitted Orders (3)" in capsys.readouterr().out
 
 
-def test_do_order_does_not_submit_child_triggers_when_primary_quick_order_fails(capsys) -> None:
+def test_do_order_does_not_submit_child_triggers_when_primary_quick_order_fails(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -741,7 +751,9 @@ def test_do_order_does_not_submit_child_triggers_when_primary_quick_order_fails(
     assert "Submitted Orders" not in output
 
 
-def test_do_order_reports_partial_trigger_failures_and_continues(capsys) -> None:
+def test_do_order_reports_partial_trigger_failures_and_continues(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     config = make_config()
     cli = InteractiveCLI(config)
     api = Mock()
@@ -798,7 +810,7 @@ def test_do_order_reports_partial_trigger_failures_and_continues(capsys) -> None
     assert "trigger rejected" in output
 
 
-def test_do_order_rejects_invalid_quick_order_side(capsys) -> None:
+def test_do_order_rejects_invalid_quick_order_side(capsys: pytest.CaptureFixture[str]) -> None:
     cli = InteractiveCLI(make_config())
 
     cli.do_order("long ETH 1")
@@ -810,7 +822,7 @@ def test_do_order_rejects_invalid_quick_order_side(capsys) -> None:
     )
 
 
-def test_help_order_describes_quick_order_syntax(capsys) -> None:
+def test_help_order_describes_quick_order_syntax(capsys: pytest.CaptureFixture[str]) -> None:
     cli = InteractiveCLI(make_config())
 
     cli.help_order()

@@ -5,17 +5,18 @@ This module provides comprehensive tests for client initialization
 and connection testing functionality.
 """
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from backend.exchange.hyperliquid_client import HyperliquidClient
+from models.config import Config
 
 
 class TestHyperliquidClientInitialization:
     """Test cases for HyperliquidClient initialization."""
 
-    def test_initialization(self, mock_config, mock_connection):
+    def test_initialization(self, mock_config: Config, mock_connection: Mock) -> None:
         """Test that HyperliquidClient initializes correctly."""
         with patch(
             "backend.exchange.hyperliquid_client.HyperliquidConnection",
@@ -27,7 +28,7 @@ class TestHyperliquidClientInitialization:
             assert client.connection == mock_connection
             mock_conn_class.assert_called_once_with(mock_config)
 
-    def test_initialization_with_connection_error(self, mock_config):
+    def test_initialization_with_connection_error(self, mock_config: Config) -> None:
         """Test initialization when HyperliquidConnection fails."""
         with patch(
             "backend.exchange.hyperliquid_client.HyperliquidConnection",
@@ -40,7 +41,9 @@ class TestHyperliquidClientInitialization:
 class TestHyperliquidClientConnection:
     """Test cases for connection-related methods."""
 
-    def test_test_connection_success(self, client, mock_connection):
+    def test_test_connection_success(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test successful connection test."""
         mock_connection.test_connection.return_value = True
 
@@ -49,7 +52,9 @@ class TestHyperliquidClientConnection:
         assert result is True
         mock_connection.test_connection.assert_called_once()
 
-    def test_test_connection_failure(self, client, mock_connection):
+    def test_test_connection_failure(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test failed connection test."""
         mock_connection.test_connection.return_value = False
 

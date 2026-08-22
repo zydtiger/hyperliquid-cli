@@ -2,10 +2,13 @@
 Tests for HyperliquidClient PnL history retrieval.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
+from unittest.mock import Mock
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import DEFAULT_PNL_WINDOW, PNL_WINDOW_ORDER, ExchangeError
 
 
@@ -111,11 +114,11 @@ class TestHyperliquidClientGetPnlHistory:
 
     def test_get_pnl_history_success(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
         sample_portfolio_response: list[list[object]],
-    ):
+    ) -> None:
         """Test portfolio data is parsed into the full catalog of PnL windows."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.portfolio.return_value = sample_portfolio_response
@@ -210,10 +213,10 @@ class TestHyperliquidClientGetPnlHistory:
 
     def test_get_pnl_history_zero_fills_missing_perp_bucket(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test missing perp history treats the full total series as spot PnL."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.portfolio.return_value = [
@@ -231,10 +234,10 @@ class TestHyperliquidClientGetPnlHistory:
 
     def test_get_pnl_history_returns_empty_when_source_bucket_missing(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test missing native bucket data returns empty histories, not an exception."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.portfolio.return_value = [["allTime", {"pnlHistory": []}]]
@@ -246,10 +249,10 @@ class TestHyperliquidClientGetPnlHistory:
 
     def test_get_pnl_history_wraps_portfolio_errors(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test exchange errors are surfaced with the new command context."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.portfolio.side_effect = Exception("portfolio failed")

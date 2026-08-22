@@ -5,11 +5,14 @@ This module provides comprehensive tests for leverage modification
 operations including success and failure scenarios.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import LeverageType, PositionInfo
 
 
@@ -17,16 +20,16 @@ class TestHyperliquidClientLeverage:
     """Test cases for change_leverage method."""
 
     @pytest.fixture(autouse=True)
-    def _setup_retry_operation(self, mock_connection, mock_retry_operation):
+    def _setup_retry_operation(self, mock_connection: Mock, mock_retry_operation: Callable) -> None:
         """Execute retry-wrapped leverage calls during tests."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
     def test_change_leverage_success_cross_margin(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+    ) -> None:
         """Test successful leverage update with cross margin."""
         # Setup mock responses
         mock_connection.info.user_state.return_value = sample_user_state_response
@@ -57,10 +60,10 @@ class TestHyperliquidClientLeverage:
 
     def test_change_leverage_success_isolated_margin(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+    ) -> None:
         """Test successful leverage update with isolated margin."""
         # Setup mock responses
         mock_connection.info.user_state.return_value = sample_user_state_response
@@ -91,10 +94,10 @@ class TestHyperliquidClientLeverage:
 
     def test_change_leverage_exchange_error(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+    ) -> None:
         """Test leverage update when exchange returns an error."""
         # Setup mock responses
         mock_connection.info.user_state.return_value = sample_user_state_response
@@ -127,10 +130,10 @@ class TestHyperliquidClientLeverage:
 
     def test_change_leverage_exception_handling(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+    ) -> None:
         """Test leverage update when an exception occurs."""
         # Setup mock responses
         mock_connection.info.user_state.return_value = sample_user_state_response
@@ -168,13 +171,13 @@ class TestHyperliquidClientLeverage:
     )
     def test_change_leverage_parameter_validation(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-        leverage,
-        coin,
-        is_cross,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+        leverage: int,
+        coin: str,
+        is_cross: bool,
+    ) -> None:
         """Test leverage update with various valid parameters."""
         # Setup mock responses
         mock_connection.info.user_state.return_value = sample_user_state_response
@@ -214,15 +217,15 @@ class TestHyperliquidClientLeverage:
     )
     def test_change_leverage_bounds_validation(
         self,
-        client,
-        mock_connection,
-        leverage,
-        coin,
-        is_cross,
-        expected_error,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        leverage: float,
+        coin: str,
+        is_cross: bool,
+        expected_error: str,
+    ) -> None:
         """Test leverage update with invalid leverage values."""
-        result = client.change_leverage(leverage, coin, is_cross)
+        result = client.change_leverage(leverage, coin, is_cross)  # type: ignore[arg-type]
 
         assert result.success is False
         assert expected_error in result.message
@@ -239,14 +242,14 @@ class TestHyperliquidClientLeverage:
     )
     def test_change_leverage_coin_validation(
         self,
-        client,
-        mock_connection,
-        coin,
-        is_cross,
-        expected_error,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        coin: str | None,
+        is_cross: bool,
+        expected_error: str,
+    ) -> None:
         """Test leverage update with invalid coin symbols."""
-        result = client.change_leverage(10, coin, is_cross)
+        result = client.change_leverage(10, coin, is_cross)  # type: ignore[arg-type]
 
         assert result.success is False
         assert expected_error in result.message
@@ -256,9 +259,9 @@ class TestHyperliquidClientLeverage:
 
     def test_change_leverage_specific_error_messages(
         self,
-        client,
-        mock_connection,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ) -> None:
         """Test leverage update with specific API error messages."""
         # Test leverage type switch error
         mock_connection.exchange.update_leverage.return_value = {

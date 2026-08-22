@@ -19,7 +19,7 @@ from models.config import Config, HyperliquidConfig, NetworkType
 class FakeCoinPromptSession:
     """Simple prompt session test double."""
 
-    def __init__(self, responses: list[str]):
+    def __init__(self, responses: list[str]) -> None:
         self._responses = iter(responses)
 
     def prompt(self, message: str) -> str:
@@ -46,7 +46,7 @@ class FailingAPI:
 class WorkingAPI:
     """API test double that returns configured coins."""
 
-    def __init__(self, coins: list[str]):
+    def __init__(self, coins: list[str]) -> None:
         self._coins = coins
 
     def get_available_coins(self) -> list[str]:

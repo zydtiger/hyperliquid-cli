@@ -83,7 +83,7 @@ def test_pnl_endpoint_success(
     test_app: TestClient,
     mock_client: Mock,
     sample_pnl_history: PnlHistoryCatalog,
-):
+) -> None:
     """Test successful /pnl endpoint response."""
     mock_client.get_pnl_history.return_value = sample_pnl_history
 
@@ -126,7 +126,7 @@ def test_pnl_endpoint_success(
     mock_client.get_pnl_history.assert_called_once_with()
 
 
-def test_pnl_endpoint_exchange_error(test_app: TestClient, mock_client: Mock):
+def test_pnl_endpoint_exchange_error(test_app: TestClient, mock_client: Mock) -> None:
     """Test /pnl endpoint when the exchange layer fails."""
     mock_client.get_pnl_history.side_effect = ExchangeError("Authentication failed")
 
@@ -136,7 +136,7 @@ def test_pnl_endpoint_exchange_error(test_app: TestClient, mock_client: Mock):
     assert "Authentication failed" in response.json()["detail"]
 
 
-def test_pnl_endpoint_unexpected_error(test_app: TestClient, mock_client: Mock):
+def test_pnl_endpoint_unexpected_error(test_app: TestClient, mock_client: Mock) -> None:
     """Test /pnl endpoint when an unexpected error occurs."""
     mock_client.get_pnl_history.side_effect = Exception("Network error")
 

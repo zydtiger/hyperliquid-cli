@@ -3,8 +3,9 @@
 import builtins
 import sys
 from cmd import Cmd
+from collections.abc import Callable, Iterator
 from io import StringIO
-from typing import Any
+from typing import Any, Self
 
 import pytest
 
@@ -28,11 +29,11 @@ def config() -> Config:
     )
 
 
-def test_submit_builds_prompt_from_cli_manual(config: Config):
+def test_submit_builds_prompt_from_cli_manual(config: Config) -> None:
     """Test ask prompt payload includes the generated CLI manual content."""
     captured_requests: list[dict[str, object]] = []
 
-    def fake_send(self, request: dict[str, object]) -> str:
+    def fake_send(self: AskFrontend, request: dict[str, object]) -> str:
         captured_requests.append(request)
         return AGENT_RESPONSE
 
@@ -54,11 +55,11 @@ def test_submit_builds_prompt_from_cli_manual(config: Config):
     assert frontend.history[0]["role"] == "system"
 
 
-def test_submit_preserves_history_between_turns(config: Config):
+def test_submit_preserves_history_between_turns(config: Config) -> None:
     """Test ask sessions keep prior turns in the next request payload."""
     captured_requests: list[dict[str, object]] = []
 
-    def fake_send(self, request: dict[str, object]) -> str:
+    def fake_send(self: AskFrontend, request: dict[str, object]) -> str:
         captured_requests.append(request)
         return AGENT_RESPONSE
 
@@ -91,7 +92,7 @@ def test_submit_preserves_history_between_turns(config: Config):
 def test_run_interactive_ignores_blank_input_and_exits(
     monkeypatch: pytest.MonkeyPatch,
     config: Config,
-):
+) -> None:
     """Test the interactive ask loop ignores blank lines and exits on /quit."""
     prompted_values: list[str] = []
     user_inputs = iter(["", "how do i cancel orders", "/quit"])
@@ -117,7 +118,7 @@ def test_run_interactive_ignores_blank_input_and_exits(
 def test_run_interactive_prints_response_with_trailing_newline(
     monkeypatch: pytest.MonkeyPatch,
     config: Config,
-):
+) -> None:
     """Test interactive stdout output ends with one blank line."""
     user_inputs = iter(["how do i cancel orders", "/quit"])
     stdout = StringIO()
@@ -142,22 +143,22 @@ def test_run_interactive_prints_response_with_trailing_newline(
 def test_stream_chat_request_uses_streaming_endpoint(
     monkeypatch: pytest.MonkeyPatch,
     config: Config,
-):
+) -> None:
     """Test the interactive ask flow requests streamed chat completions."""
     captured_calls: list[dict[str, Any]] = []
     stdout = StringIO()
 
     class FakeStreamResponse:
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def raise_for_status(self) -> None:
             return None
 
-        def iter_lines(self):
+        def iter_lines(self) -> Iterator[str]:
             return iter(
                 [
                     'data: {"choices":[{"delta":{"content":"Use: "}}]}',
@@ -167,13 +168,13 @@ def test_stream_chat_request_uses_streaming_endpoint(
             )
 
     class FakeClient:
-        def __init__(self, timeout: float):
+        def __init__(self, timeout: float) -> None:
             self.timeout = timeout
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def stream(
@@ -211,7 +212,7 @@ def test_ask_command_prints_agent_response(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test one-shot ask prints the agent response."""
     monkeypatch.setattr(
         "cli.interactive.ask_frontend.AskFrontend._send_chat_request", lambda *_: AGENT_RESPONSE
@@ -226,13 +227,13 @@ def test_ask_command_prints_agent_response(
 def test_ask_command_runs_interactive_session(
     monkeypatch: pytest.MonkeyPatch,
     config: Config,
-):
+) -> None:
     """Test bare ask launches the interactive session helper."""
     launched_sessions: list[Config] = []
     captured_manual: list[str] = []
 
     class FakeAskFrontend:
-        def __init__(self, passed_config: Config, manual_builder):
+        def __init__(self, passed_config: Config, manual_builder: Callable[[], str]) -> None:
             launched_sessions.append(passed_config)
             captured_manual.append(manual_builder())
 
@@ -255,7 +256,7 @@ def test_onecmd_ask_exit_ends_with_single_newline(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test interactive ask exit leaves a blank line before the main prompt."""
 
     def fake_input(prompt: str) -> str:
@@ -275,7 +276,7 @@ def test_onecmd_ask_exit_ends_with_single_newline(
 def test_send_chat_request_uses_configured_endpoint(
     monkeypatch: pytest.MonkeyPatch,
     config: Config,
-):
+) -> None:
     """Test the agent request uses the configured URL, headers, and payload."""
     captured_calls: list[dict[str, Any]] = []
 
@@ -287,13 +288,13 @@ def test_send_chat_request_uses_configured_endpoint(
             return {"choices": [{"message": {"content": AGENT_RESPONSE}}]}
 
     class FakeClient:
-        def __init__(self, timeout: float):
+        def __init__(self, timeout: float) -> None:
             self.timeout = timeout
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def post(self, url: str, headers: dict[str, str], json: dict[str, object]) -> FakeResponse:
@@ -311,7 +312,7 @@ def test_send_chat_request_uses_configured_endpoint(
     assert captured_calls[0]["json"]["model"] == "your_model_id_here"
 
 
-def test_extract_response_text_supports_content_parts(config: Config):
+def test_extract_response_text_supports_content_parts(config: Config) -> None:
     """Test content arrays are flattened into plain text."""
     frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
 
@@ -333,7 +334,7 @@ def test_extract_response_text_supports_content_parts(config: Config):
     assert response == "first line\nsecond line"
 
 
-def test_command_completion_includes_ask_and_balances(config: Config):
+def test_command_completion_includes_ask_and_balances(config: Config) -> None:
     """Test command completion includes the new ask command and existing balances."""
     cli = InteractiveCLI(config)
 
@@ -341,7 +342,7 @@ def test_command_completion_includes_ask_and_balances(config: Config):
     assert "balances" in cli.completenames("bal")
 
 
-def test_build_cli_manual_includes_ask_and_watch(config: Config):
+def test_build_cli_manual_includes_ask_and_watch(config: Config) -> None:
     """Test the generated manual includes the ask and watch commands."""
     cli = InteractiveCLI(config)
     manual = build_cli_manual(cli)

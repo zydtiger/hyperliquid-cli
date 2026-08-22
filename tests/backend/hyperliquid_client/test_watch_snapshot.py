@@ -4,8 +4,10 @@ Tests for the live watch snapshot registry and client method.
 
 from collections.abc import Callable
 from decimal import Decimal
+from typing import Any
 from unittest.mock import Mock
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from backend.exchange.watch_snapshot import LiveWatchRegistry
 from models.api import (
     DEFAULT_WATCH_ORDER_BOOK_DEPTH,
@@ -33,7 +35,7 @@ def _raw_candle(
     }
 
 
-def test_watch_registry_builds_seeded_snapshot_from_ticker_l2_book_and_candles():
+def test_watch_registry_builds_seeded_snapshot_from_ticker_l2_book_and_candles() -> None:
     """The first snapshot should seed from REST ticker data, L2 data, and candle history."""
     info = Mock()
     info.l2_snapshot.return_value = {
@@ -49,7 +51,7 @@ def test_watch_registry_builds_seeded_snapshot_from_ticker_l2_book_and_candles()
     ]
     callbacks: dict[str, Callable[..., None]] = {}
 
-    def subscribe(subscription, callback):
+    def subscribe(subscription: dict[str, Any], callback: Callable[..., None]) -> int:
         callbacks[subscription["type"]] = callback
         return len(callbacks)
 
@@ -80,14 +82,14 @@ def test_watch_registry_builds_seeded_snapshot_from_ticker_l2_book_and_candles()
     assert set(callbacks) == {"activeAssetCtx", "l2Book"}
 
 
-def test_watch_registry_updates_live_candle_ohlc_from_active_asset_ctx():
+def test_watch_registry_updates_live_candle_ohlc_from_active_asset_ctx() -> None:
     """Active asset context updates should keep the current candle dynamic."""
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
     info.candles_snapshot.return_value = [_raw_candle(0, 300_000, "99", "100", "98", "100")]
     callbacks: dict[str, Callable[..., None]] = {}
 
-    def subscribe(subscription, callback):
+    def subscribe(subscription: dict[str, Any], callback: Callable[..., None]) -> int:
         callbacks[subscription["type"]] = callback
         return len(callbacks)
 
@@ -122,14 +124,14 @@ def test_watch_registry_updates_live_candle_ohlc_from_active_asset_ctx():
     assert live.is_closed is False
 
 
-def test_watch_registry_rolls_candles_forward_when_interval_changes():
+def test_watch_registry_rolls_candles_forward_when_interval_changes() -> None:
     """A new bucket should close the previous live candle and append the next live candle."""
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
     info.candles_snapshot.return_value = [_raw_candle(0, 60_000, "99", "100", "98", "100")]
     callbacks: dict[str, Callable[..., None]] = {}
 
-    def subscribe(subscription, callback):
+    def subscribe(subscription: dict[str, Any], callback: Callable[..., None]) -> int:
         callbacks[subscription["type"]] = callback
         return len(callbacks)
 
@@ -160,7 +162,7 @@ def test_watch_registry_rolls_candles_forward_when_interval_changes():
     assert snapshot.candles[-1].close == Decimal("103")
 
 
-def test_watch_registry_truncates_to_99_historical_candles_plus_live_candle():
+def test_watch_registry_truncates_to_99_historical_candles_plus_live_candle() -> None:
     """Snapshots should include 99 completed candles plus one live candle."""
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
@@ -171,7 +173,7 @@ def test_watch_registry_truncates_to_99_historical_candles_plus_live_candle():
     ]
     callbacks: dict[str, Callable[..., None]] = {}
 
-    def subscribe(subscription, callback):
+    def subscribe(subscription: dict[str, Any], callback: Callable[..., None]) -> int:
         callbacks[subscription["type"]] = callback
         return len(callbacks)
 
@@ -194,7 +196,7 @@ def test_watch_registry_truncates_to_99_historical_candles_plus_live_candle():
     assert snapshot.candles[-1].is_closed is False
 
 
-def test_watch_registry_returns_requested_order_book_depth():
+def test_watch_registry_returns_requested_order_book_depth() -> None:
     """Snapshots should return only the requested number of levels per side."""
     info = Mock()
     info.l2_snapshot.return_value = {
@@ -226,7 +228,7 @@ def test_watch_registry_returns_requested_order_book_depth():
     assert snapshot.asks[0].price == Decimal("101")
 
 
-def test_watch_registry_caps_stored_order_book_depth_to_maximum():
+def test_watch_registry_caps_stored_order_book_depth_to_maximum() -> None:
     """Snapshots should never store or return more than the configured maximum depth."""
     info = Mock()
     info.l2_snapshot.return_value = {
@@ -257,10 +259,10 @@ def test_watch_registry_caps_stored_order_book_depth_to_maximum():
 
 
 def test_get_watch_snapshot_supports_spot_markets(
-    client,
-    mock_connection,
-    mock_retry_operation,
-):
+    client: HyperliquidClient,
+    mock_connection: Mock,
+    mock_retry_operation: Callable,
+) -> None:
     """Spot pairs should route through the shared watch registry."""
     mock_connection.info.meta.return_value = {"universe": [{"name": "BTC"}]}
     mock_connection.info.spot_meta.return_value = {
@@ -304,10 +306,10 @@ def test_get_watch_snapshot_supports_spot_markets(
 
 
 def test_get_watch_snapshot_returns_registry_snapshot(
-    client,
-    mock_connection,
-    mock_retry_operation,
-):
+    client: HyperliquidClient,
+    mock_connection: Mock,
+    mock_retry_operation: Callable,
+) -> None:
     """The client should delegate watch snapshots through the shared registry."""
     mock_connection.info.meta.return_value = {
         "universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]
@@ -338,10 +340,10 @@ def test_get_watch_snapshot_returns_registry_snapshot(
 
 
 def test_get_watch_snapshot_passes_requested_interval(
-    client,
-    mock_connection,
-    mock_retry_operation,
-):
+    client: HyperliquidClient,
+    mock_connection: Mock,
+    mock_retry_operation: Callable,
+) -> None:
     """The client should forward custom watch intervals to the registry."""
     mock_connection.info.meta.return_value = {
         "universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]
@@ -366,7 +368,7 @@ def test_get_watch_snapshot_passes_requested_interval(
     client._watch_registry.get_snapshot.assert_called_once_with("BTC", "1h", 12)
 
 
-def test_watch_registry_exposes_extended_supported_intervals():
+def test_watch_registry_exposes_extended_supported_intervals() -> None:
     """Snapshots should advertise the full watch interval list, including 4h and 1d."""
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
@@ -389,14 +391,14 @@ def test_watch_registry_exposes_extended_supported_intervals():
     assert snapshot.supported_intervals == ["1m", "5m", "15m", "1h", "4h", "1d"]
 
 
-def test_watch_registry_keeps_spot_open_interest_as_none_on_asset_updates():
+def test_watch_registry_keeps_spot_open_interest_as_none_on_asset_updates() -> None:
     """Spot watch snapshots should keep open interest unset when asset updates omit it."""
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
     info.candles_snapshot.return_value = []
     callbacks: dict[str, Callable[..., None]] = {}
 
-    def subscribe(subscription, callback):
+    def subscribe(subscription: dict[str, Any], callback: Callable[..., None]) -> int:
         callbacks[subscription["type"]] = callback
         return len(callbacks)
 

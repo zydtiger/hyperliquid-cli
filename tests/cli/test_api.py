@@ -21,7 +21,7 @@ def _config() -> Config:
     )
 
 
-def test_backend_api_get_watch_snapshot_parses_response():
+def test_backend_api_get_watch_snapshot_parses_response() -> None:
     """The CLI API client should parse /watch responses into WatchSnapshot models."""
     api = BackendAPI.__new__(BackendAPI)
     api.base_url = "http://localhost:8080"
@@ -88,7 +88,7 @@ def test_backend_api_get_watch_snapshot_parses_response():
     api.client.close()
 
 
-def test_backend_api_get_watch_snapshot_reports_missing_endpoint():
+def test_backend_api_get_watch_snapshot_reports_missing_endpoint() -> None:
     """A missing /watch route should raise a restart-focused error."""
     api = BackendAPI.__new__(BackendAPI)
     api.base_url = "http://localhost:8080"
@@ -114,7 +114,7 @@ def test_backend_api_get_watch_snapshot_reports_missing_endpoint():
         api.client.close()
 
 
-def test_backend_api_get_watch_snapshot_parses_null_open_interest_for_spot():
+def test_backend_api_get_watch_snapshot_parses_null_open_interest_for_spot() -> None:
     """Spot watch snapshots should preserve null open interest values from the backend."""
     api = BackendAPI.__new__(BackendAPI)
     api.base_url = "http://localhost:8080"

@@ -70,7 +70,7 @@ def mock_connection() -> Mock:
 def mock_retry_operation() -> Callable:
     """Mock retry_operation that executes the function."""
 
-    def mock_retry_operation(func):
+    def mock_retry_operation(func: Callable[[], Any]) -> Any:
         return func()
 
     return mock_retry_operation

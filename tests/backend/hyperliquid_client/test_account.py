@@ -5,16 +5,21 @@ This module provides comprehensive tests for position management
 and account-related queries.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import (
+    BalanceInfo,
     ExchangeError,
     LeverageType,
     PositionInfo,
     StakingDelegation,
+    StakingStatus,
     Ticker,
 )
 
@@ -24,13 +29,13 @@ class TestHyperliquidClientPositions:
 
     def test_get_positions_success(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-        sample_meta_response,
-        sample_asset_ctxs_response,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+        sample_meta_response: dict[str, Any],
+        sample_asset_ctxs_response: list[dict[str, Any]],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful positions retrieval."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = sample_user_state_response
@@ -103,10 +108,10 @@ class TestHyperliquidClientPositions:
 
     def test_get_positions_empty_positions(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test positions retrieval when no positions exist."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = {"assetPositions": []}
@@ -118,10 +123,10 @@ class TestHyperliquidClientPositions:
 
     def test_get_positions_no_asset_positions_key(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test positions retrieval when assetPositions key is missing."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = {}
@@ -133,10 +138,10 @@ class TestHyperliquidClientPositions:
 
     def test_get_positions_only_zero_sized(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test positions retrieval when all positions are zero-sized."""
         user_state = {
             "assetPositions": [
@@ -173,12 +178,12 @@ class TestHyperliquidClientPositions:
 
     def test_get_positions_computes_positive_removable_margin(
         self,
-        client,
-        mock_connection,
-        sample_meta_response,
-        sample_asset_ctxs_response,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_meta_response: dict[str, Any],
+        sample_asset_ctxs_response: list[dict[str, Any]],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test removable margin calculation for isolated positions with excess margin."""
         user_state = {
             "assetPositions": [
@@ -228,7 +233,9 @@ class TestHyperliquidClientPositions:
         assert len(result) == 1
         assert result[0].removable_margin == Decimal("10.0")
 
-    def test_get_positions_with_retry_failure(self, client, mock_connection):
+    def test_get_positions_with_retry_failure(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test retry failure when getting positions."""
         mock_connection.retry_operation.side_effect = ExchangeError(
             "Operation failed after 4 attempts: Connection lost"
@@ -245,14 +252,14 @@ class TestHyperliquidClientBalances:
 
     def test_get_balances_success(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-        sample_spot_state,
-        sample_staking_summary,
-        expected_balance_info,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+        sample_spot_state: dict[str, Any],
+        sample_staking_summary: dict[str, Any],
+        expected_balance_info: BalanceInfo,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful balance retrieval with all data sources."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = sample_user_state_response
@@ -267,12 +274,12 @@ class TestHyperliquidClientBalances:
 
     def test_get_balances_no_spot_balances(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-        sample_staking_summary,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+        sample_staking_summary: dict[str, Any],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test balance retrieval with no spot balances."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = sample_user_state_response
@@ -295,12 +302,12 @@ class TestHyperliquidClientBalances:
 
     def test_get_balances_no_staking_info(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-        sample_spot_state,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+        sample_spot_state: dict[str, Any],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test balance retrieval with staking data failure."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = sample_user_state_response
@@ -319,10 +326,10 @@ class TestHyperliquidClientBalances:
 
     def test_get_balances_zero_balances_filtered(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test that zero spot balances are filtered out."""
         mock_info = mock_connection.info
 
@@ -365,10 +372,10 @@ class TestHyperliquidClientBalances:
 
     def test_get_balances_missing_user_state_keys(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test balance retrieval with missing user state keys."""
         mock_info = mock_connection.info
 
@@ -400,12 +407,12 @@ class TestHyperliquidClientBalances:
 
     def test_get_balances_spot_api_failure(
         self,
-        client,
-        mock_connection,
-        sample_user_state_response,
-        sample_staking_summary,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_user_state_response: dict[str, Any],
+        sample_staking_summary: dict[str, Any],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test balance retrieval when spot API fails."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = sample_user_state_response
@@ -423,7 +430,9 @@ class TestHyperliquidClientBalances:
         # Check spot balances is empty due to API failure
         assert result.spot_balances == []
 
-    def test_get_balances_retry_failure(self, client, mock_connection):
+    def test_get_balances_retry_failure(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test retry failure when getting balances."""
         mock_connection.retry_operation.side_effect = ExchangeError(
             "Operation failed after 4 attempts: Connection lost"
@@ -440,15 +449,15 @@ class TestHyperliquidClientStaking:
 
     def test_get_staking_status_success(
         self,
-        client,
-        mock_connection,
-        sample_staking_summary,
-        sample_staking_delegations,
-        sample_staking_rewards,
-        sample_validator_summaries,
-        expected_staking_status,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_staking_summary: dict[str, Any],
+        sample_staking_delegations: list[dict[str, Any]],
+        sample_staking_rewards: list[dict[str, Any]],
+        sample_validator_summaries: list[dict[str, Any]],
+        expected_staking_status: StakingStatus,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful staking status retrieval."""
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = sample_staking_summary
@@ -463,12 +472,12 @@ class TestHyperliquidClientStaking:
 
     def test_get_staking_status_filters_zero_amount_delegations(
         self,
-        client,
-        mock_connection,
-        sample_staking_summary,
-        sample_staking_rewards,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_staking_summary: dict[str, Any],
+        sample_staking_rewards: list[dict[str, Any]],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test zero-amount staking delegations are excluded."""
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = sample_staking_summary
@@ -508,10 +517,10 @@ class TestHyperliquidClientStaking:
 
     def test_get_staking_status_empty(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test staking status retrieval with no active delegations."""
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = {"delegated": "0"}
@@ -528,10 +537,10 @@ class TestHyperliquidClientStaking:
 
     def test_get_staking_status_summary_failure(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test staking summary retrieval failures are wrapped."""
         mock_info = mock_connection.info
         mock_info.user_staking_summary.side_effect = Exception("summary failed")
@@ -542,11 +551,11 @@ class TestHyperliquidClientStaking:
 
     def test_get_staking_status_delegations_failure(
         self,
-        client,
-        mock_connection,
-        sample_staking_summary,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_staking_summary: dict[str, Any],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test staking delegation retrieval failures are wrapped."""
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = sample_staking_summary
@@ -558,12 +567,12 @@ class TestHyperliquidClientStaking:
 
     def test_get_staking_status_validator_metadata_failure(
         self,
-        client,
-        mock_connection,
-        sample_staking_summary,
-        sample_staking_delegations,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_staking_summary: dict[str, Any],
+        sample_staking_delegations: list[dict[str, Any]],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test validator metadata retrieval failures are wrapped."""
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = sample_staking_summary
@@ -577,12 +586,12 @@ class TestHyperliquidClientStaking:
 
     def test_get_staking_status_rewards_failure(
         self,
-        client,
-        mock_connection,
-        sample_staking_summary,
-        sample_staking_delegations,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_staking_summary: dict[str, Any],
+        sample_staking_delegations: list[dict[str, Any]],
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test staking reward retrieval failures are wrapped."""
         mock_info = mock_connection.info
         mock_info.user_staking_summary.return_value = sample_staking_summary

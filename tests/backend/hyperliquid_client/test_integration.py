@@ -5,11 +5,14 @@ This module provides comprehensive integration tests and edge case
 scenarios for the HyperliquidClient class.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
-from unittest.mock import patch
+from typing import Any
+from unittest.mock import Mock, patch
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import CoinMetadata, ExchangeError, Ticker
 from models.order import OrderInfo, OrderSide, OrderStatus, OrderTif, OrderType
 
@@ -19,12 +22,12 @@ class TestHyperliquidClientIntegration:
 
     def test_client_workflow_full(
         self,
-        client,
-        mock_connection,
-        sample_meta_response,
-        sample_asset_ctxs_response,
-        sample_user_state_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_meta_response: dict[str, Any],
+        sample_asset_ctxs_response: list[dict[str, Any]],
+        sample_user_state_response: dict[str, Any],
+    ) -> None:
         """Test a complete workflow using multiple client methods."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
@@ -49,7 +52,7 @@ class TestHyperliquidClientIntegration:
 
         # Custom retry operation for this integration test.
         # Different methods need different return values.
-        def mock_retry_operation_integration(func):
+        def mock_retry_operation_integration(func: Callable[[], Any]) -> Any:
             if func.__name__ == "_get_available_coins":
                 return ["BTC", "ETH", "SOL"]
             if func.__name__ == "_get_ticker":
@@ -89,7 +92,7 @@ class TestHyperliquidClientIntegration:
         # Verify all operations were called
         assert mock_connection.retry_operation.call_count == 4
 
-    def test_error_propagation(self, client, mock_connection):
+    def test_error_propagation(self, client: HyperliquidClient, mock_connection: Mock) -> None:
         """Test that errors from connection are properly propagated."""
         mock_connection.retry_operation.side_effect = ExchangeError("API error")
 
@@ -109,7 +112,9 @@ class TestHyperliquidClientIntegration:
 class TestHyperliquidClientEdgeCases:
     """Test cases for edge cases and boundary conditions."""
 
-    def test_ticker_with_decimal_values(self, client, mock_connection):
+    def test_ticker_with_decimal_values(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test ticker with very small decimal values."""
         expected_ticker = Ticker(
             coin="BTC",
@@ -123,7 +128,9 @@ class TestHyperliquidClientEdgeCases:
 
         assert result == expected_ticker
 
-    def test_positions_with_extreme_values(self, client, mock_connection):
+    def test_positions_with_extreme_values(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test positions with extreme decimal values."""
         # This test would require mocking the complex position data
         # For now, just ensure the method handles the retry mechanism
@@ -136,10 +143,10 @@ class TestHyperliquidClientEdgeCases:
 
     def test_retry_operation_called_on_all_methods(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test that retry_operation is called on all data retrieval methods."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
@@ -175,12 +182,12 @@ class TestHyperliquidClientEdgeCases:
     )
     def test_get_order_status_status_variations(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        api_status,
-        expected_status,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        api_status: str,
+        expected_status: OrderStatus,
+    ) -> None:
         """Test order status retrieval with various status strings from API."""
         api_response = {
             "order": {
@@ -225,9 +232,9 @@ class TestHyperliquidClientEdgeCases:
 
     def test_get_order_status_order_status_mapped_to_open(
         self,
-        client,
-        mock_connection,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ) -> None:
         """Test that 'order' status from API is mapped to OPEN."""
         api_response = {
             "order": {

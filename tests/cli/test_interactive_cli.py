@@ -3,9 +3,10 @@ Tests for interactive CLI position hints and isolated margin commands.
 """
 
 import sys
+from collections.abc import Callable
 from decimal import Decimal
 from io import StringIO
-from typing import TextIO
+from typing import Self, TextIO
 
 import pytest
 
@@ -64,17 +65,17 @@ def test_positions_command_shows_removable_margin(
     capsys: pytest.CaptureFixture[str],
     config: Config,
     isolated_position: PositionInfo,
-):
+) -> None:
     """Test positions output includes the removable margin column."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             pass
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_positions(self) -> list[PositionInfo]:
@@ -95,19 +96,19 @@ def test_update_margin_shows_hint_and_calls_backend(
     capsys: pytest.CaptureFixture[str],
     config: Config,
     isolated_position: PositionInfo,
-):
+) -> None:
     """Test update_margin shows the removable hint before submitting."""
     created_apis = []
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             self.calls: list[tuple[Decimal, str]] = []
             created_apis.append(self)
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_position(self, coin: str) -> PositionInfo:
@@ -143,19 +144,19 @@ def test_update_margin_requires_existing_position(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test update_margin exits early when no current position exists."""
     created_apis = []
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             self.calls: list[tuple[Decimal, str]] = []
             created_apis.append(self)
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_position(self, coin: str) -> PositionInfo:
@@ -206,19 +207,19 @@ def test_order_history_defaults_to_ten(
     capsys: pytest.CaptureFixture[str],
     config: Config,
     order_history_entries: list[OrderHistoryEntry],
-):
+) -> None:
     """Test order_history defaults to 10 entries."""
     created_apis = []
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             self.calls: list[int] = []
             created_apis.append(self)
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_order_history(self, limit: int) -> list[OrderHistoryEntry]:
@@ -242,19 +243,19 @@ def test_order_history_uses_explicit_limit(
     capsys: pytest.CaptureFixture[str],
     config: Config,
     order_history_entries: list[OrderHistoryEntry],
-):
+) -> None:
     """Test order_history forwards the explicit limit."""
     created_apis = []
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             self.calls: list[int] = []
             created_apis.append(self)
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_order_history(self, limit: int) -> list[OrderHistoryEntry]:
@@ -276,11 +277,11 @@ def test_order_history_rejects_invalid_args(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test order_history validates CLI arguments."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             raise AssertionError("BackendAPI should not be created for invalid args")
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
@@ -357,20 +358,20 @@ def test_pnl_command_renders_graph(
     capsys: pytest.CaptureFixture[str],
     config: Config,
     pnl_history: PnlHistoryCatalog,
-):
+) -> None:
     """Test pnl launches the fullscreen TUI renderer."""
     created_apis = []
     launched_histories: list[object] = []
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             self.calls = 0
             created_apis.append(self)
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_pnl_history(self) -> PnlHistoryCatalog:
@@ -378,7 +379,7 @@ def test_pnl_command_renders_graph(
             return pnl_history
 
     class FakePnlTUI:
-        def __init__(self, history: PnlHistoryCatalog):
+        def __init__(self, history: PnlHistoryCatalog) -> None:
             launched_histories.append(history)
 
         def run(self) -> None:
@@ -400,11 +401,11 @@ def test_pnl_command_rejects_extra_args(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test pnl validates its no-argument interface."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             raise AssertionError("BackendAPI should not be created for invalid args")
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
@@ -420,17 +421,17 @@ def test_pnl_command_handles_empty_history(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test pnl prints the empty-state message when no points are available."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             pass
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_pnl_history(self) -> PnlHistoryCatalog:
@@ -453,20 +454,20 @@ def test_watch_command_renders_graph(
     capsys: pytest.CaptureFixture[str],
     config: Config,
     watch_snapshot: WatchSnapshot,
-):
+) -> None:
     """Test watch launches the live watch TUI renderer."""
     created_apis = []
-    launched = []
+    launched: list[object] = []
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             self.calls: list[str] = []
             created_apis.append(self)
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_watch_snapshot(
@@ -476,7 +477,7 @@ def test_watch_command_renders_graph(
             return watch_snapshot
 
     class FakeWatchTUI:
-        def __init__(self, coin: str, fetcher):
+        def __init__(self, coin: str, fetcher: Callable[[str, str, int], WatchSnapshot]) -> None:
             launched.append(coin)
             launched.append(fetcher("BTC", "5m", 10))
 
@@ -501,11 +502,11 @@ def test_watch_command_rejects_invalid_args(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test watch validates its required single-argument interface."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             raise AssertionError("BackendAPI should not be created for invalid args")
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
@@ -521,17 +522,17 @@ def test_watch_command_handles_backend_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test watch prints backend errors cleanly."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             pass
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_watch_snapshot(
@@ -553,17 +554,17 @@ def test_info_command_renders_open_interest_as_usd(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test info renders open interest with a leading dollar sign."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             pass
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_ticker(self, coin: str) -> Ticker:
@@ -590,17 +591,17 @@ def test_staking_command_renders_summary_and_table(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test staking prints summary and validator rows."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             pass
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_staking_status(self) -> StakingStatus:
@@ -643,17 +644,17 @@ def test_staking_command_empty_state(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test staking prints the empty-state message when no delegations exist."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             pass
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_staking_status(self) -> StakingStatus:
@@ -676,11 +677,11 @@ def test_staking_command_rejects_extra_args(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test staking validates its no-argument interface."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             raise AssertionError("BackendAPI should not be created for invalid args")
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
@@ -696,17 +697,17 @@ def test_staking_command_handles_backend_error(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test staking prints backend errors cleanly."""
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             pass
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_staking_status(self) -> StakingStatus:
@@ -725,7 +726,7 @@ def test_staking_command_handles_backend_error(
 def test_clear_command_clears_screen(
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test clear emits the terminal clear sequence."""
     cli = InteractiveCLI(config)
 
@@ -738,7 +739,7 @@ def test_clear_command_clears_screen(
 def test_cls_command_is_alias_for_clear(
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test cls emits the same terminal clear sequence as clear."""
     cli = InteractiveCLI(config)
 
@@ -757,7 +758,7 @@ def test_clear_commands_reject_extra_args(
     expected_usage: str,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test clear aliases reject unexpected arguments."""
     cli = InteractiveCLI(config)
 
@@ -767,7 +768,7 @@ def test_clear_commands_reject_extra_args(
     assert expected_usage in output
 
 
-def test_clear_commands_are_in_command_completion(config: Config):
+def test_clear_commands_are_in_command_completion(config: Config) -> None:
     """Test clear aliases are available for command completion."""
     cli = InteractiveCLI(config)
 
@@ -790,7 +791,7 @@ def test_onecmd_always_ends_with_single_blank_line(
     expected_text: str,
     capsys: pytest.CaptureFixture[str],
     config: Config,
-):
+) -> None:
     """Test command output is normalized to one trailing blank line in interactive mode."""
     cli = InteractiveCLI(config)
 
@@ -813,7 +814,7 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
     config: Config,
     pnl_history: PnlHistoryCatalog,
     watch_snapshot: WatchSnapshot,
-):
+) -> None:
     """Test fullscreen TUI commands write to and flush the original stdout."""
 
     class TrackingStdout(StringIO):
@@ -830,14 +831,14 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
     created_apis = []
 
     class FakeBackendAPI:
-        def __init__(self, _config: Config):
+        def __init__(self, _config: Config) -> None:
             self.calls: list[str] = []
             created_apis.append(self)
 
-        def __enter__(self):
+        def __enter__(self) -> Self:
             return self
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
         def get_pnl_history(self) -> PnlHistoryCatalog:
@@ -851,21 +852,21 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
             return watch_snapshot
 
     class FakePnlTUI:
-        def __init__(self, history: PnlHistoryCatalog):
+        def __init__(self, history: PnlHistoryCatalog) -> None:
             assert history == pnl_history
 
         def run(self) -> None:
             observed_stdouts.append(sys.stdout)
 
     class FakeWatchTUI:
-        def __init__(self, coin: str, fetcher):
+        def __init__(self, coin: str, fetcher: Callable[[str, str, int], WatchSnapshot]) -> None:
             assert coin == "BTC"
             assert fetcher("BTC", "5m", 10) == watch_snapshot
 
         def run(self) -> None:
             observed_stdouts.append(sys.stdout)
 
-    def fail_if_writer_used(*_args, **_kwargs):
+    def fail_if_writer_used(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("TrailingNewlineNormalizingWriter should not wrap TUI commands")
 
     monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)

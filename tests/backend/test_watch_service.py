@@ -77,7 +77,7 @@ def sample_watch_snapshot() -> WatchSnapshot:
     )
 
 
-def test_watch_endpoint_success():
+def test_watch_endpoint_success() -> None:
     """Test successful /watch/{coin} endpoint response."""
     client = mock_client()
     client.get_watch_snapshot.return_value = sample_watch_snapshot()
@@ -129,7 +129,7 @@ def test_watch_endpoint_success():
     client.get_watch_snapshot.assert_called_once_with("BTC", "5m", 10)
 
 
-def test_watch_endpoint_passes_interval_query():
+def test_watch_endpoint_passes_interval_query() -> None:
     """The /watch endpoint should pass the requested interval to the client."""
     client = mock_client()
     client.get_watch_snapshot.return_value = sample_watch_snapshot()
@@ -142,7 +142,7 @@ def test_watch_endpoint_passes_interval_query():
     client.get_watch_snapshot.assert_called_once_with("BTC", "1h", 10)
 
 
-def test_watch_endpoint_passes_depth_query():
+def test_watch_endpoint_passes_depth_query() -> None:
     """The /watch endpoint should pass the requested order book depth to the client."""
     client = mock_client()
     client.get_watch_snapshot.return_value = sample_watch_snapshot()
@@ -155,7 +155,7 @@ def test_watch_endpoint_passes_depth_query():
     client.get_watch_snapshot.assert_called_once_with("BTC", "5m", 12)
 
 
-def test_watch_endpoint_accepts_extended_interval_query():
+def test_watch_endpoint_accepts_extended_interval_query() -> None:
     """The /watch endpoint should accept the newly supported higher intervals."""
     client = mock_client()
     client.get_watch_snapshot.return_value = sample_watch_snapshot()
@@ -168,7 +168,7 @@ def test_watch_endpoint_accepts_extended_interval_query():
     client.get_watch_snapshot.assert_called_once_with("BTC", "1d", 10)
 
 
-def test_watch_endpoint_exchange_error():
+def test_watch_endpoint_exchange_error() -> None:
     """Test /watch/{coin} when the exchange layer rejects the market."""
     client = mock_client()
     client.get_watch_snapshot.side_effect = ExchangeError(
@@ -183,7 +183,7 @@ def test_watch_endpoint_exchange_error():
     assert "not found" in response.json()["detail"]
 
 
-def test_watch_endpoint_supports_spot_pairs():
+def test_watch_endpoint_supports_spot_pairs() -> None:
     """Test successful /watch/{coin} for a spot pair."""
     client = mock_client()
     client.get_watch_snapshot.return_value = WatchSnapshot(
@@ -210,7 +210,7 @@ def test_watch_endpoint_supports_spot_pairs():
     client.get_watch_snapshot.assert_called_once_with("UBTC/USDC", "5m", 10)
 
 
-def test_watch_endpoint_rejects_invalid_interval():
+def test_watch_endpoint_rejects_invalid_interval() -> None:
     """Invalid intervals should fail FastAPI validation before reaching the client."""
     client = mock_client()
     config = mock_config()
@@ -223,7 +223,7 @@ def test_watch_endpoint_rejects_invalid_interval():
 
 
 @pytest.mark.parametrize("depth", [0, -1, 51])
-def test_watch_endpoint_rejects_invalid_depth(depth: int):
+def test_watch_endpoint_rejects_invalid_depth(depth: int) -> None:
     """Invalid depths should fail FastAPI validation before reaching the client."""
     client = mock_client()
     config = mock_config()
@@ -235,7 +235,7 @@ def test_watch_endpoint_rejects_invalid_depth(depth: int):
     client.get_watch_snapshot.assert_not_called()
 
 
-def test_watch_endpoint_unexpected_error():
+def test_watch_endpoint_unexpected_error() -> None:
     """Test /watch/{coin} when an unexpected error occurs."""
     client = mock_client()
     client.get_watch_snapshot.side_effect = Exception("Network error")
@@ -248,7 +248,7 @@ def test_watch_endpoint_unexpected_error():
     assert response.json()["detail"] == "Internal server error"
 
 
-def test_backend_service_closes_client_on_shutdown():
+def test_backend_service_closes_client_on_shutdown() -> None:
     """The FastAPI shutdown hook should close the shared Hyperliquid client."""
     config = mock_config()
     client = Mock(spec=HyperliquidClient)

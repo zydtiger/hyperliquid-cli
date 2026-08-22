@@ -5,10 +5,14 @@ This module provides comprehensive tests for order modifications,
 cancellations, and other order state change operations.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import ExchangeError
 from models.order import (
     OrderResult,
@@ -21,10 +25,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_success_both_price_and_quantity(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful order modification with both price and quantity changes."""
         # Mock current order status (open limit order)
         current_order_response = {
@@ -85,10 +89,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_success_price_only(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful order modification with only price change."""
         # Mock current order status (open limit order)
         current_order_response = {
@@ -145,10 +149,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_success_quantity_only(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful order modification with only quantity change."""
         # Mock current order status (open limit order)
         current_order_response = {
@@ -205,10 +209,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_order_not_found(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order when order is not found."""
         # Mock retry operation to return the expected result
         mock_connection.retry_operation.return_value = OrderResult(
@@ -238,10 +242,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_already_cancelled(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order when order is already cancelled."""
         # Mock order status for cancelled order
         cancelled_order_response = {
@@ -282,10 +286,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_already_filled(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order when order is already filled."""
         # Mock order status for filled order
         filled_order_response = {
@@ -325,10 +329,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_already_rejected(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order when order is already rejected."""
         # Mock order status for rejected order
         rejected_order_response = {
@@ -369,10 +373,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_market_order_type(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order when order is a market order (not allowed)."""
         # Mock order status for market order
         market_order_response = {
@@ -427,10 +431,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_api_error(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order when API returns error."""
         # Mock order status for open order
         current_order_response = {
@@ -475,10 +479,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_zero_quantity(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order with zero quantity (should fail validation)."""
         # Mock retry operation to return the expected result
         mock_connection.retry_operation.return_value = OrderResult(
@@ -509,10 +513,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_missing_price_for_limit_order(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order when current order has no price (edge case)."""
         # Mock current order status with no price
         current_order_response = {
@@ -562,10 +566,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_status_filled_with_error_response(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test modify order with API response having error status."""
         # Mock current order status (open limit order)
         current_order_response = {
@@ -613,9 +617,9 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_no_changes_requested(
         self,
-        client,
-        mock_connection,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ) -> None:
         """Test modify order when no changes are requested (both price and quantity are None)."""
         result = client.modify_order(123456, None, None)
 
@@ -635,9 +639,9 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_retry_logic(
         self,
-        client,
-        mock_connection,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ) -> None:
         """Test that retry logic works for modify order operations."""
         # This tests the retry_operation wrapper by verifying it's called
         mock_connection.retry_operation.return_value = OrderResult(
@@ -654,10 +658,10 @@ class TestHyperliquidClientModifyOrder:
 
     def test_modify_order_resolves_spot_symbol_for_exchange_request(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test spot order modification uses the resolved pair symbol."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.query_order_by_oid.return_value = {
@@ -707,11 +711,11 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_success(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        cancel_success_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        cancel_success_response: dict[str, Any],
+    ) -> None:
         """Test successful cancellation of a specific order."""
         # Mock order status for open order
         open_order_response = {
@@ -756,10 +760,10 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_already_cancelled(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test cancellation attempt on already cancelled order."""
         # Mock order status for cancelled order
         cancelled_order_response = {
@@ -800,10 +804,10 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_already_filled(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test cancellation attempt on already filled order."""
         # Mock order status for filled order
         filled_order_response = {
@@ -843,10 +847,10 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_already_rejected(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test cancellation attempt on already rejected order."""
         # Mock order status for rejected order
         rejected_order_response = {
@@ -887,11 +891,11 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_api_error(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        cancel_error_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        cancel_error_response: dict[str, Any],
+    ) -> None:
         """Test cancellation when API returns error."""
         # Mock order status for open order
         open_order_response = {
@@ -930,10 +934,10 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_not_found(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test cancellation when order is not found."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.query_order_by_oid.return_value = None
@@ -948,19 +952,19 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_all_orders_success(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_open_orders_response,
-        sample_order_status_responses,
-        cancel_success_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_open_orders_response: list[dict[str, Any]],
+        sample_order_status_responses: dict[int, dict[str, Any]],
+        cancel_success_response: dict[str, Any],
+    ) -> None:
         """Test successful cancellation of all open orders."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.open_orders.return_value = sample_open_orders_response
 
         # Mock the get_order_status calls
-        def mock_query_order_by_oid(user_address, order_id):
+        def mock_query_order_by_oid(user_address: str, order_id: int) -> dict[str, Any]:
             return sample_order_status_responses[order_id]
 
         mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid
@@ -981,11 +985,11 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_all_orders_no_orders(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_open_orders_empty_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_open_orders_empty_response: list[dict[str, Any]],
+    ) -> None:
         """Test cancel_all when no open orders exist."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.open_orders.return_value = sample_open_orders_empty_response
@@ -1005,24 +1009,24 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_all_orders_partial_failure(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_open_orders_response,
-        sample_order_status_responses,
-        cancel_success_response,
-        cancel_error_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_open_orders_response: list[dict[str, Any]],
+        sample_order_status_responses: dict[int, dict[str, Any]],
+        cancel_success_response: dict[str, Any],
+        cancel_error_response: dict[str, Any],
+    ) -> None:
         """Test cancel_all with some order cancellation failures."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.open_orders.return_value = sample_open_orders_response
 
         # Mock the get_order_status calls
-        def mock_query_order_by_oid(user_address, order_id):
+        def mock_query_order_by_oid(user_address: str, order_id: int) -> dict[str, Any]:
             return sample_order_status_responses[order_id]
 
         # Mock cancel responses - success for first, error for others
-        def mock_cancel_with_errors(coin, order_id):
+        def mock_cancel_with_errors(coin: str, order_id: int) -> dict[str, Any]:
             if order_id == 222605232959:
                 return cancel_success_response
             return cancel_error_response
@@ -1045,10 +1049,10 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_order_invalid_input(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test cancel_order with invalid input."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
@@ -1075,11 +1079,11 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_with_error_in_statuses(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        cancel_error_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        cancel_error_response: dict[str, Any],
+    ) -> None:
         """Test cancellation when API returns ok status but error in statuses array."""
         # Mock order status for open order
         open_order_response = {
@@ -1121,9 +1125,9 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_order_retry_logic(
         self,
-        client,
-        mock_connection,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+    ) -> None:
         """Test that retry logic works for network failures."""
         # This tests the retry_operation wrapper by verifying it's called
         mock_connection.retry_operation.return_value = OrderResult(
@@ -1140,11 +1144,11 @@ class TestHyperliquidClientCancelOrder:
 
     def test_cancel_specific_order_resolves_spot_symbol_for_exchange_request(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        cancel_success_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        cancel_success_response: dict[str, Any],
+    ) -> None:
         """Test spot order cancellation uses the resolved pair symbol."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.query_order_by_oid.return_value = {

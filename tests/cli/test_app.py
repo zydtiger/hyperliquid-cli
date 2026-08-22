@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 
+import pytest
 import typer
 from typer.testing import CliRunner
 
@@ -15,7 +16,7 @@ def strip_ansi(value: str) -> str:
 
 
 def test_cli_defaults_to_run_without_subcommand(
-    monkeypatch,
+    monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "config.yaml"
@@ -33,7 +34,7 @@ def test_cli_defaults_to_run_without_subcommand(
     assert called_with == [config_path]
 
 
-def test_cli_subcommands_do_not_trigger_default_run(monkeypatch) -> None:
+def test_cli_subcommands_do_not_trigger_default_run(monkeypatch: pytest.MonkeyPatch) -> None:
     called = False
 
     def fake_launch_cli(run_config_path: Path = app_module.default_config_path) -> None:

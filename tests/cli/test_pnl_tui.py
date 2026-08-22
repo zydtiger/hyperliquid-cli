@@ -83,7 +83,7 @@ def _mixed_axis_width_history() -> PnlHistoryCatalog:
     )
 
 
-def test_pnl_screen_control_formats_header_and_summary():
+def test_pnl_screen_control_formats_header_and_summary() -> None:
     """The PnL control should expose the active window title and latest totals."""
     control = PnlScreenControl(_sample_history())
 
@@ -93,7 +93,7 @@ def test_pnl_screen_control_formats_header_and_summary():
     assert "Spot $-2.50" in control.header_summary()
 
 
-def test_pnl_screen_control_advances_between_windows():
+def test_pnl_screen_control_advances_between_windows() -> None:
     """The PnL control should clamp while switching the active window."""
     control = PnlScreenControl(_sample_history())
 
@@ -108,7 +108,7 @@ def test_pnl_screen_control_advances_between_windows():
     assert control.current_window() == "1d"
 
 
-def test_pnl_textual_app_renders_y_ticks_and_shared_bottom_x_ticks():
+def test_pnl_textual_app_renders_y_ticks_and_shared_bottom_x_ticks() -> None:
     """The Textual PnL app should render inline axes and x ticks only on the spot chart."""
 
     async def scenario() -> None:
@@ -150,7 +150,7 @@ def test_pnl_textual_app_renders_y_ticks_and_shared_bottom_x_ticks():
     asyncio.run(scenario())
 
 
-def test_pnl_textual_app_keeps_empty_window_message():
+def test_pnl_textual_app_keeps_empty_window_message() -> None:
     """Empty ranges should keep a visible no-data summary in the active panel set."""
 
     async def scenario() -> None:
@@ -167,7 +167,7 @@ def test_pnl_textual_app_keeps_empty_window_message():
     asyncio.run(scenario())
 
 
-def test_pnl_textual_app_aligns_left_y_axes_for_mixed_currency_widths():
+def test_pnl_textual_app_aligns_left_y_axes_for_mixed_currency_widths() -> None:
     """All PnL panels should share the same left-axis offset for mixed tick widths."""
 
     async def scenario() -> None:
@@ -190,7 +190,7 @@ def test_pnl_textual_app_aligns_left_y_axes_for_mixed_currency_widths():
     asyncio.run(scenario())
 
 
-def test_window_label_and_money_helpers_are_stable():
+def test_window_label_and_money_helpers_are_stable() -> None:
     """Basic PnL formatting helpers should keep their current user-facing labels."""
     assert window_label("all") == "ALL-TIME"
     assert format_money(Decimal("10.5")) == "$+10.50"

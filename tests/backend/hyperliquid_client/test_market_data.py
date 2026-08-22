@@ -5,10 +5,14 @@ This module provides comprehensive tests for available coins retrieval,
 ticker data, and metadata queries.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import CoinMetadata, ExchangeError, Ticker
 
 
@@ -17,11 +21,11 @@ class TestHyperliquidClientAvailableCoins:
 
     def test_get_available_coins_success(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_meta_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+    ) -> None:
         """Test successful retrieval of available coins."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
@@ -34,11 +38,11 @@ class TestHyperliquidClientAvailableCoins:
 
     def test_get_available_coins_includes_spot_pairs(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_meta_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+    ) -> None:
         """Test available coins includes resolved spot pair symbols."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
@@ -66,10 +70,10 @@ class TestHyperliquidClientAvailableCoins:
 
     def test_get_available_coins_empty_universe(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test handling of empty universe in meta response."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = {"universe": []}
@@ -79,7 +83,9 @@ class TestHyperliquidClientAvailableCoins:
 
         assert result == []
 
-    def test_get_available_coins_with_retry_failure(self, client, mock_connection):
+    def test_get_available_coins_with_retry_failure(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test retry failure when getting available coins."""
         mock_connection.retry_operation.side_effect = ExchangeError(
             "Operation failed after 4 attempts: API Error"
@@ -94,11 +100,11 @@ class TestHyperliquidClientTicker:
 
     def test_get_ticker_success(
         self,
-        client,
-        mock_connection,
-        sample_meta_response,
-        sample_asset_ctxs_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_meta_response: dict[str, Any],
+        sample_asset_ctxs_response: list[dict[str, Any]],
+    ) -> None:
         """Test successful ticker retrieval."""
         mock_info = mock_connection.info
         mock_info.meta_and_asset_ctxs.return_value = (
@@ -122,12 +128,12 @@ class TestHyperliquidClientTicker:
 
     def test_get_ticker_coin_not_found(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_meta_response,
-        sample_asset_ctxs_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+        sample_asset_ctxs_response: list[dict[str, Any]],
+    ) -> None:
         """Test ticker retrieval for non-existent coin."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
@@ -144,10 +150,10 @@ class TestHyperliquidClientTicker:
 
     def test_get_ticker_meta_failure(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test ticker retrieval when meta call fails."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = None
@@ -157,7 +163,9 @@ class TestHyperliquidClientTicker:
         with pytest.raises(ExchangeError, match="Failed to retrieve market metadata from exchange"):
             client.get_ticker("BTC")
 
-    def test_get_ticker_with_retry_failure(self, client, mock_connection):
+    def test_get_ticker_with_retry_failure(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test retry failure when getting ticker."""
         mock_connection.retry_operation.side_effect = ExchangeError(
             "Operation failed after 4 attempts: Network timeout"
@@ -170,11 +178,11 @@ class TestHyperliquidClientTicker:
 
     def test_get_ticker_supports_spot_pairs(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_meta_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+    ) -> None:
         """Spot pairs should resolve from spot asset contexts."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
@@ -225,11 +233,11 @@ class TestHyperliquidClientMetadata:
 
     def test_get_metadata_success(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_meta_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+    ) -> None:
         """Test successful metadata retrieval."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
@@ -246,11 +254,11 @@ class TestHyperliquidClientMetadata:
 
     def test_get_metadata_coin_not_found(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_meta_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+    ) -> None:
         """Test metadata retrieval for non-existent coin."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response
@@ -262,10 +270,10 @@ class TestHyperliquidClientMetadata:
 
     def test_get_metadata_meta_failure(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test metadata retrieval when meta call fails."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = None
@@ -274,7 +282,9 @@ class TestHyperliquidClientMetadata:
         with pytest.raises(ExchangeError, match="Failed to retrieve market metadata from exchange"):
             client.get_metadata("BTC")
 
-    def test_get_metadata_with_retry_failure(self, client, mock_connection):
+    def test_get_metadata_with_retry_failure(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test retry failure when getting metadata."""
         mock_connection.retry_operation.side_effect = ExchangeError(
             "Operation failed after 4 attempts: API timeout"
@@ -285,11 +295,11 @@ class TestHyperliquidClientMetadata:
 
     def test_get_metadata_supports_spot_pairs(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_meta_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+    ) -> None:
         """Spot pairs should expose size precision and a 1x leverage ceiling."""
         mock_info = mock_connection.info
         mock_info.meta.return_value = sample_meta_response

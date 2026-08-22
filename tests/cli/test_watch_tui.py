@@ -70,7 +70,7 @@ def _sample_snapshot() -> WatchSnapshot:
     )
 
 
-def test_watch_screen_control_formats_header_summary_and_status():
+def test_watch_screen_control_formats_header_summary_and_status() -> None:
     """The watch control should expose formatted header and chart metadata."""
     control = WatchScreenControl("BTC")
     control.set_snapshot(_sample_snapshot())
@@ -84,7 +84,7 @@ def test_watch_screen_control_formats_header_summary_and_status():
     assert "3 candles" in control.status_line()
 
 
-def test_watch_screen_control_clamps_interval_navigation():
+def test_watch_screen_control_clamps_interval_navigation() -> None:
     """The watch interval selector should clamp at the supported bounds."""
     control = WatchScreenControl("BTC")
 
@@ -97,7 +97,7 @@ def test_watch_screen_control_clamps_interval_navigation():
     assert control.current_interval() == "1d"
 
 
-def test_watch_tui_fetches_with_current_interval_and_refetches_on_interval_change():
+def test_watch_tui_fetches_with_current_interval_and_refetches_on_interval_change() -> None:
     """The watch wrapper should keep fetches aligned with the current interval state."""
     calls = []
 
@@ -113,7 +113,7 @@ def test_watch_tui_fetches_with_current_interval_and_refetches_on_interval_chang
     assert calls == [("BTC", "5m", 10), ("BTC", "1m", 10), ("BTC", "1d", 10)]
 
 
-def test_watch_textual_app_renders_real_axis_labels_and_order_book():
+def test_watch_textual_app_renders_real_axis_labels_and_order_book() -> None:
     """The Textual watch app should render inline axes and order book rows."""
 
     async def scenario() -> None:
@@ -164,7 +164,7 @@ def test_watch_textual_app_renders_real_axis_labels_and_order_book():
     asyncio.run(scenario())
 
 
-def test_watch_textual_app_aligns_order_book_with_chart_frame():
+def test_watch_textual_app_aligns_order_book_with_chart_frame() -> None:
     """The order book panel should align with the chart frame at top and bottom."""
 
     async def scenario() -> None:
@@ -189,7 +189,7 @@ def test_watch_textual_app_aligns_order_book_with_chart_frame():
     asyncio.run(scenario())
 
 
-def test_watch_screen_control_renders_na_open_interest_for_spot():
+def test_watch_screen_control_renders_na_open_interest_for_spot() -> None:
     """Spot watch headers should omit open interest when it is unavailable."""
     control = WatchScreenControl("UBTC/USDC")
     control.set_snapshot(_sample_snapshot().model_copy(update={"open_interest": None}))
@@ -197,7 +197,7 @@ def test_watch_screen_control_renders_na_open_interest_for_spot():
     assert "OI $" not in control.header_summary()
 
 
-def test_format_watch_axis_label_uses_interval_specific_format():
+def test_format_watch_axis_label_uses_interval_specific_format() -> None:
     """The watch x-axis should switch to dates for higher timeframes."""
     timestamp_ms = 1741973100000
 

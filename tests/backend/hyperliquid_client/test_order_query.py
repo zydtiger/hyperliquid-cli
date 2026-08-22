@@ -5,12 +5,17 @@ This module provides comprehensive tests for order status queries
 and open orders retrieval operations.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import ExchangeError
 from models.order import (
+    OrderHistoryEntry,
     OrderInfo,
     OrderSide,
     OrderStatus,
@@ -26,10 +31,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_success_limit_order(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful order status retrieval for a limit order."""
         # Mock API response matching actual structure
         api_response = {
@@ -79,10 +84,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_success_market_order(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test successful order status retrieval for a market order."""
         api_response = {
             "order": {
@@ -127,10 +132,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_market_order_ignores_exchange_limit_price(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test market orders normalize exchange limit caps to a null price."""
         api_response = {
             "order": {
@@ -177,10 +182,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_partially_filled(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test order status retrieval for a partially filled order."""
         api_response = {
             "order": {
@@ -227,10 +232,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_success_trigger_order(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test trigger order status includes trigger type and price."""
         api_response = {
             "order": {
@@ -282,10 +287,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_not_found(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test order status retrieval when order is not found."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.query_order_by_oid.return_value = None
@@ -297,10 +302,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_api_error(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test order status retrieval when API returns an error."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.query_order_by_oid.side_effect = Exception("API Error")
@@ -312,10 +317,10 @@ class TestHyperliquidClientOrderStatus:
 
     def test_get_order_status_resolves_spot_symbol(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test spot order status returns the human-readable pair symbol."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.query_order_by_oid.return_value = {
@@ -355,19 +360,19 @@ class TestHyperliquidClientGetOpenOrders:
 
     def test_get_open_orders_success(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_open_orders_response,
-        sample_order_status_responses,
-        expected_open_orders,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_open_orders_response: list[dict[str, Any]],
+        sample_order_status_responses: dict[int, dict[str, Any]],
+        expected_open_orders: list[OrderInfo],
+    ) -> None:
         """Test successful open orders retrieval with multiple orders."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.open_orders.return_value = sample_open_orders_response
 
         # Mock the get_order_status calls
-        def mock_query_order_by_oid(user_address, order_id):
+        def mock_query_order_by_oid(user_address: str, order_id: int) -> dict[str, Any]:
             return sample_order_status_responses[order_id]
 
         mock_connection.info.query_order_by_oid.side_effect = mock_query_order_by_oid
@@ -393,11 +398,11 @@ class TestHyperliquidClientGetOpenOrders:
 
     def test_get_open_orders_empty(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_open_orders_empty_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_open_orders_empty_response: list[dict[str, Any]],
+    ) -> None:
         """Test open orders retrieval when no orders are open."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.open_orders.return_value = sample_open_orders_empty_response
@@ -413,10 +418,10 @@ class TestHyperliquidClientGetOpenOrders:
 
     def test_get_open_orders_api_error(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test open orders retrieval when API returns an error."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.open_orders.side_effect = Exception("API Error")
@@ -428,17 +433,17 @@ class TestHyperliquidClientGetOpenOrders:
 
     def test_get_open_orders_order_status_error(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_open_orders_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_open_orders_response: list[dict[str, Any]],
+    ) -> None:
         """Test open orders retrieval when get_order_status fails for one order."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.open_orders.return_value = sample_open_orders_response
 
         # Mock query_order_by_oid to fail for one specific order
-        def mock_query_order_by_oid_with_error(user_address, order_id):
+        def mock_query_order_by_oid_with_error(user_address: str, order_id: int) -> dict[str, Any]:
             if order_id == 222605232960:
                 raise Exception("Order not found")
             return {
@@ -469,10 +474,10 @@ class TestHyperliquidClientGetOpenOrders:
 
     def test_get_open_orders_single_order(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test open orders retrieval with a single open order."""
         single_order_response = [
             {
@@ -534,13 +539,13 @@ class TestHyperliquidClientGetOrderHistory:
 
     def test_get_order_history_success(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_historical_orders_response,
-        sample_user_fills_response,
-        expected_order_history,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_historical_orders_response: list[dict[str, Any]],
+        sample_user_fills_response: list[dict[str, Any]],
+        expected_order_history: list[OrderHistoryEntry],
+    ) -> None:
         """Test successful filled-order history aggregation."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.historical_orders.return_value = sample_historical_orders_response
@@ -559,13 +564,13 @@ class TestHyperliquidClientGetOrderHistory:
 
     def test_get_order_history_applies_limit(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_historical_orders_response,
-        sample_user_fills_response,
-        expected_order_history,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_historical_orders_response: list[dict[str, Any]],
+        sample_user_fills_response: list[dict[str, Any]],
+        expected_order_history: list[OrderHistoryEntry],
+    ) -> None:
         """Test history retrieval applies the requested limit."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.historical_orders.return_value = sample_historical_orders_response
@@ -581,18 +586,18 @@ class TestHyperliquidClientGetOrderHistory:
 
     def test_get_order_history_expands_until_limit_is_reached(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_historical_orders_response,
-        sample_user_fills_response,
-        expected_order_history,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_historical_orders_response: list[dict[str, Any]],
+        sample_user_fills_response: list[dict[str, Any]],
+        expected_order_history: list[OrderHistoryEntry],
+    ) -> None:
         """Test history retrieval widens the fill query until enough rows are found."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.historical_orders.return_value = sample_historical_orders_response
 
-        def fills_for_start_time(_address: str, start_time: int):
+        def fills_for_start_time(_address: str, start_time: int) -> list[dict[str, Any]]:
             if start_time == 1762271506000:
                 return sample_user_fills_response[:2]
             if start_time == 1762271504000:
@@ -615,10 +620,10 @@ class TestHyperliquidClientGetOrderHistory:
 
     def test_get_order_history_empty(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test history retrieval when no filled entries are available."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.historical_orders.return_value = []
@@ -630,10 +635,10 @@ class TestHyperliquidClientGetOrderHistory:
 
     def test_get_order_history_historical_orders_error(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test history retrieval when historical_orders fails."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.historical_orders.side_effect = Exception("API Error")
@@ -645,11 +650,11 @@ class TestHyperliquidClientGetOrderHistory:
 
     def test_get_order_history_user_fills_error(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-        sample_historical_orders_response,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_historical_orders_response: list[dict[str, Any]],
+    ) -> None:
         """Test history retrieval when user_fills_by_time fails."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.historical_orders.return_value = sample_historical_orders_response
@@ -662,10 +667,10 @@ class TestHyperliquidClientGetOrderHistory:
 
     def test_get_order_history_resolves_spot_symbol_and_fee_conversion(
         self,
-        client,
-        mock_connection,
-        mock_retry_operation,
-    ):
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
         """Test spot fills resolve to pair symbols before fee conversion."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
         mock_connection.info.historical_orders.return_value = [

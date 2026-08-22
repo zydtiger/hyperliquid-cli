@@ -2,11 +2,13 @@
 Test cases for HyperliquidClient isolated margin functionality.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
+from backend.exchange.hyperliquid_client import HyperliquidClient
 from models.api import LeverageType, PositionInfo
 
 
@@ -14,11 +16,13 @@ class TestHyperliquidClientIsolatedMargin:
     """Test cases for update_isolated_margin method."""
 
     @pytest.fixture(autouse=True)
-    def _setup_retry_operation(self, mock_connection, mock_retry_operation):
+    def _setup_retry_operation(self, mock_connection: Mock, mock_retry_operation: Callable) -> None:
         """Execute retry-wrapped isolated margin calls during tests."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
-    def test_update_isolated_margin_success_add(self, client, mock_connection):
+    def test_update_isolated_margin_success_add(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test successful isolated margin addition."""
         current_position = PositionInfo(
             coin="ETH",
@@ -49,7 +53,9 @@ class TestHyperliquidClientIsolatedMargin:
         assert result.updated_position == updated_position
         mock_connection.exchange.update_isolated_margin.assert_called_once_with(1.0, "ETH")
 
-    def test_update_isolated_margin_success_remove(self, client, mock_connection):
+    def test_update_isolated_margin_success_remove(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test successful isolated margin removal."""
         current_position = PositionInfo(
             coin="ETH",
@@ -80,7 +86,9 @@ class TestHyperliquidClientIsolatedMargin:
         assert result.updated_position == updated_position
         mock_connection.exchange.update_isolated_margin.assert_called_once_with(-0.5, "ETH")
 
-    def test_update_isolated_margin_no_open_position(self, client, mock_connection):
+    def test_update_isolated_margin_no_open_position(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test isolated margin update when no open position exists."""
         with patch.object(client, "get_positions", return_value=[]):
             result = client.update_isolated_margin(Decimal("1"), "ETH")
@@ -90,7 +98,9 @@ class TestHyperliquidClientIsolatedMargin:
         assert result.updated_position is None
         mock_connection.exchange.update_isolated_margin.assert_not_called()
 
-    def test_update_isolated_margin_cross_margin_position(self, client, mock_connection):
+    def test_update_isolated_margin_cross_margin_position(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test isolated margin update rejection for cross margin positions."""
         current_position = PositionInfo(
             coin="BTC",
@@ -116,7 +126,9 @@ class TestHyperliquidClientIsolatedMargin:
         assert result.updated_position is None
         mock_connection.exchange.update_isolated_margin.assert_not_called()
 
-    def test_update_isolated_margin_zero_amount_validation(self, client, mock_connection):
+    def test_update_isolated_margin_zero_amount_validation(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test isolated margin update with zero amount."""
         result = client.update_isolated_margin(Decimal("0"), "ETH")
 
@@ -125,7 +137,9 @@ class TestHyperliquidClientIsolatedMargin:
         assert result.updated_position is None
         mock_connection.exchange.update_isolated_margin.assert_not_called()
 
-    def test_update_isolated_margin_precision_validation(self, client, mock_connection):
+    def test_update_isolated_margin_precision_validation(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test isolated margin update with too many decimal places."""
         result = client.update_isolated_margin(Decimal("0.1234567"), "ETH")
 
@@ -138,16 +152,20 @@ class TestHyperliquidClientIsolatedMargin:
         mock_connection.exchange.update_isolated_margin.assert_not_called()
 
     @pytest.mark.parametrize("coin", ["", None])
-    def test_update_isolated_margin_invalid_coin(self, client, mock_connection, coin):
+    def test_update_isolated_margin_invalid_coin(
+        self, client: HyperliquidClient, mock_connection: Mock, coin: str | None
+    ) -> None:
         """Test isolated margin update with invalid coin symbols."""
-        result = client.update_isolated_margin(Decimal("1"), coin)
+        result = client.update_isolated_margin(Decimal("1"), coin)  # type: ignore[arg-type]
 
         assert result.success is False
         assert result.message == "Invalid coin symbol: must be a non-empty string"
         assert result.updated_position is None
         mock_connection.exchange.update_isolated_margin.assert_not_called()
 
-    def test_update_isolated_margin_exchange_error(self, client, mock_connection):
+    def test_update_isolated_margin_exchange_error(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test isolated margin update when exchange returns an error."""
         current_position = PositionInfo(
             coin="ETH",
@@ -176,7 +194,9 @@ class TestHyperliquidClientIsolatedMargin:
         )
         assert result.updated_position is None
 
-    def test_update_isolated_margin_success_without_position_refresh(self, client, mock_connection):
+    def test_update_isolated_margin_success_without_position_refresh(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test successful isolated margin update when position refresh fails."""
         current_position = PositionInfo(
             coin="ETH",
@@ -203,7 +223,9 @@ class TestHyperliquidClientIsolatedMargin:
         assert result.message == "Successfully added $1.00 isolated margin to ETH"
         assert result.updated_position is None
 
-    def test_update_isolated_margin_unexpected_success_response(self, client, mock_connection):
+    def test_update_isolated_margin_unexpected_success_response(
+        self, client: HyperliquidClient, mock_connection: Mock
+    ) -> None:
         """Test isolated margin update when the exchange returns an unexpected success payload."""
         current_position = PositionInfo(
             coin="ETH",
