@@ -119,7 +119,9 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-files = ["src"]
+files = ["src", "tests"]
+mypy_path = ["src", "."]
+explicit_package_bases = true
 python_version = "3.11"
 plugins = ["pydantic.mypy"]
 warn_return_any = true
