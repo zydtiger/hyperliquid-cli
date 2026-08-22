@@ -6,24 +6,41 @@ that can be shared across different CLI components.
 """
 
 from decimal import Decimal, InvalidOperation
+from typing import Protocol
 
 from models import Config, OrderSide, OrderTif, OrderTrigger, TriggerType
+from models.api import CoinMetadata, Ticker
 
-from ..api import BackendAPI
 from .coin_selector import prompt_for_coin_selection
 
 DEFAULT_SIZE_DECIMALS = 2
 
 
+class MarketDataSource(Protocol):
+    """The market data these prompts read, rather than a whole backend client."""
+
+    def get_available_coins(self) -> list[str]:
+        """Return every tradable coin symbol."""
+        ...
+
+    def get_metadata(self, coin: str) -> CoinMetadata:
+        """Return size and price precision for one coin."""
+        ...
+
+    def get_ticker(self, coin: str) -> Ticker:
+        """Return the current ticker for one coin."""
+        ...
+
+
 class Prompts:
     """Collection of interactive prompt methods for user input."""
 
-    def __init__(self, config: Config, api: BackendAPI):
+    def __init__(self, config: Config, api: MarketDataSource):
         """
-        Initialize prompts with API client.
+        Initialize prompts with a market data source.
 
         Args:
-            api: BackendAPI client for fetching market data
+            api: source of coin lists, metadata, and tickers
         """
         self.config = config
         self.api = api

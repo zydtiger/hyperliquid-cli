@@ -10,6 +10,7 @@ from cli.interactive.coin_selector import (
     rank_coin_matches,
 )
 from cli.interactive.prompts import Prompts
+from models.api import CoinMetadata, Ticker
 from models.config import Config, HyperliquidConfig, NetworkType
 
 
@@ -24,10 +25,20 @@ class FakeCoinPromptSession:
 
 
 class FailingAPI:
-    """API test double that cannot load coins."""
+    """API test double that cannot load coins.
+
+    The remaining `MarketDataSource` members fail loudly: these tests only
+    exercise coin selection, so reaching them means the test drifted.
+    """
 
     def get_available_coins(self) -> list[str]:
         raise RuntimeError("boom")
+
+    def get_metadata(self, coin: str) -> CoinMetadata:
+        raise AssertionError("get_metadata is not part of this test")
+
+    def get_ticker(self, coin: str) -> Ticker:
+        raise AssertionError("get_ticker is not part of this test")
 
 
 class WorkingAPI:
@@ -38,6 +49,12 @@ class WorkingAPI:
 
     def get_available_coins(self) -> list[str]:
         return self._coins
+
+    def get_metadata(self, coin: str) -> CoinMetadata:
+        raise AssertionError("get_metadata is not part of this test")
+
+    def get_ticker(self, coin: str) -> Ticker:
+        raise AssertionError("get_ticker is not part of this test")
 
 
 @pytest.fixture
