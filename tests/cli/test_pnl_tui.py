@@ -8,6 +8,7 @@ import asyncio
 from decimal import Decimal
 
 from cli.interactive.plotting.braille_chart import BrailleChart
+from cli.interactive.pnl_tui.pnl_helpers import format_pnl_date
 from cli.interactive.pnl_tui.pnl_tui import PnlScreenControl, PnlTUI, format_money, window_label
 from models.api import DEFAULT_PNL_WINDOW, PnlHistory, PnlHistoryCatalog, PnlPoint
 
@@ -135,16 +136,21 @@ def test_pnl_textual_app_renders_y_ticks_and_shared_bottom_x_ticks() -> None:
             assert "│" in total_plot
             assert "├" not in total_plot
             assert any(ord(char) >= 0x2800 for char in total_plot if char.strip())
-            assert "03-13" not in total_plot
-            assert "03-15" not in perp_plot
+            # Axis labels are rendered in local time, so derive them with the
+            # same helper the chart uses rather than pinning one timezone.
+            first_day = format_pnl_date(1741886630493)
+            last_day = format_pnl_date(1742059430493)
+
+            assert first_day not in total_plot
+            assert last_day not in perp_plot
             assert "└" in total_plot
             assert "└" in perp_plot
             assert "┬" not in total_plot
             assert "┬" not in perp_plot
             assert "└" in spot_plot
             assert "┬" in spot_plot
-            assert "03-13" in spot_plot
-            assert "03-15" in spot_plot
+            assert first_day in spot_plot
+            assert last_day in spot_plot
             assert any("3b4261" in str(span.style) for span in total_rendered.spans)
 
     asyncio.run(scenario())

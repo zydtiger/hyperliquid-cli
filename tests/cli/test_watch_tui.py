@@ -144,8 +144,10 @@ def test_watch_textual_app_renders_real_axis_labels_and_order_book() -> None:
             assert "└" in rendered_plot
             assert "┘" in rendered_plot
             assert "┬" in rendered_plot
-            assert "13:15" in rendered_plot
-            assert "13:25" in rendered_plot
+            # Axis labels are rendered in local time, so derive them with the
+            # same helper the chart uses rather than pinning one timezone.
+            assert format_watch_axis_label(1741972500000, "5m") in rendered_plot
+            assert format_watch_axis_label(1741973100000, "5m") in rendered_plot
             assert any(ord(char) >= 0x2800 for char in rendered_plot if char.strip())
             assert any("3b4261" in str(span.style) for span in rendered_text.spans)
             assert "43,251.0" in rendered_book_plain
