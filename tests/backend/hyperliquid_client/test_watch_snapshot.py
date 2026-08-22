@@ -2,6 +2,7 @@
 Tests for the live watch snapshot registry and client method.
 """
 
+from collections.abc import Callable
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -46,7 +47,7 @@ def test_watch_registry_builds_seeded_snapshot_from_ticker_l2_book_and_candles()
         _raw_candle(900_000, 300_000, "95", "101", "94", "100"),
         _raw_candle(1_200_000, 300_000, "100", "103", "99", "101"),
     ]
-    callbacks: dict[str, object] = {}
+    callbacks: dict[str, Callable[..., None]] = {}
 
     def subscribe(subscription, callback):
         callbacks[subscription["type"]] = callback
@@ -84,7 +85,7 @@ def test_watch_registry_updates_live_candle_ohlc_from_active_asset_ctx():
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
     info.candles_snapshot.return_value = [_raw_candle(0, 300_000, "99", "100", "98", "100")]
-    callbacks: dict[str, object] = {}
+    callbacks: dict[str, Callable[..., None]] = {}
 
     def subscribe(subscription, callback):
         callbacks[subscription["type"]] = callback
@@ -126,7 +127,7 @@ def test_watch_registry_rolls_candles_forward_when_interval_changes():
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
     info.candles_snapshot.return_value = [_raw_candle(0, 60_000, "99", "100", "98", "100")]
-    callbacks: dict[str, object] = {}
+    callbacks: dict[str, Callable[..., None]] = {}
 
     def subscribe(subscription, callback):
         callbacks[subscription["type"]] = callback
@@ -168,7 +169,7 @@ def test_watch_registry_truncates_to_99_historical_candles_plus_live_candle():
         _raw_candle(index * interval_ms, interval_ms, "100", "101", "99", "100")
         for index in range(120)
     ]
-    callbacks: dict[str, object] = {}
+    callbacks: dict[str, Callable[..., None]] = {}
 
     def subscribe(subscription, callback):
         callbacks[subscription["type"]] = callback
@@ -393,7 +394,7 @@ def test_watch_registry_keeps_spot_open_interest_as_none_on_asset_updates():
     info = Mock()
     info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
     info.candles_snapshot.return_value = []
-    callbacks: dict[str, object] = {}
+    callbacks: dict[str, Callable[..., None]] = {}
 
     def subscribe(subscription, callback):
         callbacks[subscription["type"]] = callback

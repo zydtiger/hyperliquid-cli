@@ -5,6 +5,7 @@ Tests for interactive CLI position hints and isolated margin commands.
 import sys
 from decimal import Decimal
 from io import StringIO
+from typing import TextIO
 
 import pytest
 
@@ -100,7 +101,7 @@ def test_update_margin_shows_hint_and_calls_backend(
 
     class FakeBackendAPI:
         def __init__(self, _config: Config):
-            self.calls = []
+            self.calls: list[tuple[Decimal, str]] = []
             created_apis.append(self)
 
         def __enter__(self):
@@ -148,7 +149,7 @@ def test_update_margin_requires_existing_position(
 
     class FakeBackendAPI:
         def __init__(self, _config: Config):
-            self.calls = []
+            self.calls: list[tuple[Decimal, str]] = []
             created_apis.append(self)
 
         def __enter__(self):
@@ -211,7 +212,7 @@ def test_order_history_defaults_to_ten(
 
     class FakeBackendAPI:
         def __init__(self, _config: Config):
-            self.calls = []
+            self.calls: list[int] = []
             created_apis.append(self)
 
         def __enter__(self):
@@ -247,7 +248,7 @@ def test_order_history_uses_explicit_limit(
 
     class FakeBackendAPI:
         def __init__(self, _config: Config):
-            self.calls = []
+            self.calls: list[int] = []
             created_apis.append(self)
 
         def __enter__(self):
@@ -359,7 +360,7 @@ def test_pnl_command_renders_graph(
 ):
     """Test pnl launches the fullscreen TUI renderer."""
     created_apis = []
-    launched_histories = []
+    launched_histories: list[object] = []
 
     class FakeBackendAPI:
         def __init__(self, _config: Config):
@@ -825,7 +826,7 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
             super().flush()
 
     tracked_stdout = TrackingStdout()
-    observed_stdouts: list[StringIO] = []
+    observed_stdouts: list[TextIO] = []
     created_apis = []
 
     class FakeBackendAPI:

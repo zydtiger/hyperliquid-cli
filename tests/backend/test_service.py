@@ -365,7 +365,7 @@ class TestCreateApp(TestBackendService):
             for middleware in app.user_middleware:
                 if (
                     hasattr(middleware.cls, "__name__")
-                    and "CORSMiddleware" in middleware.cls.__name__  # type: ignore[attr-defined]
+                    and "CORSMiddleware" in middleware.cls.__name__
                 ):
                     cors_middleware = middleware
                     break

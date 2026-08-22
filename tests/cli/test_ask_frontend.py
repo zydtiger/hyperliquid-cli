@@ -4,6 +4,7 @@ import builtins
 import sys
 from cmd import Cmd
 from io import StringIO
+from typing import Any
 
 import pytest
 
@@ -38,7 +39,9 @@ def test_submit_builds_prompt_from_cli_manual(config: Config):
     frontend = AskFrontend(
         config, manual_builder=lambda: "# Hyperliquid CLI Manual\n\nUse order for trades.\n"
     )
-    frontend._send_chat_request = fake_send.__get__(frontend, AskFrontend)
+    frontend._send_chat_request = fake_send.__get__(  # type: ignore[method-assign]
+        frontend, AskFrontend
+    )
     response = frontend.submit("how do i place an order")
 
     assert response == AGENT_RESPONSE
@@ -60,7 +63,9 @@ def test_submit_preserves_history_between_turns(config: Config):
         return AGENT_RESPONSE
 
     frontend = AskFrontend(config, manual_builder=lambda: "# Hyperliquid CLI Manual\n")
-    frontend._send_chat_request = fake_send.__get__(frontend, AskFrontend)
+    frontend._send_chat_request = fake_send.__get__(  # type: ignore[method-assign]
+        frontend, AskFrontend
+    )
     frontend.submit("first question")
     frontend.submit("second question")
 
@@ -139,7 +144,7 @@ def test_stream_chat_request_uses_streaming_endpoint(
     config: Config,
 ):
     """Test the interactive ask flow requests streamed chat completions."""
-    captured_calls: list[dict[str, object]] = []
+    captured_calls: list[dict[str, Any]] = []
     stdout = StringIO()
 
     class FakeStreamResponse:
@@ -272,7 +277,7 @@ def test_send_chat_request_uses_configured_endpoint(
     config: Config,
 ):
     """Test the agent request uses the configured URL, headers, and payload."""
-    captured_calls: list[dict[str, object]] = []
+    captured_calls: list[dict[str, Any]] = []
 
     class FakeResponse:
         def raise_for_status(self) -> None:

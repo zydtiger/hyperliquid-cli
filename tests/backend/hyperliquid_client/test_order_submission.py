@@ -41,9 +41,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             client = HyperliquidClient(mock_config_with_slippage)
 
         # Mock the market_open method
-        client.connection.exchange.market_open.return_value = market_success_response_resting  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.return_value = market_success_response_resting
 
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(sample_market_buy_order)
 
@@ -57,7 +57,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         assert result == expected_result
 
         # Verify the correct method was called with correct parameters
-        client.connection.exchange.market_open.assert_called_once_with(  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.assert_called_once_with(
             name="ETH",
             is_buy=True,
             sz=0.1,
@@ -82,9 +82,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             client = HyperliquidClient(mock_config_with_slippage)
 
         # Mock the market_open method
-        client.connection.exchange.market_open.return_value = market_success_response_filled  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.return_value = market_success_response_filled
 
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(sample_market_buy_order)
 
@@ -98,7 +98,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         assert result == expected_result
 
         # Verify the correct method was called with correct parameters
-        client.connection.exchange.market_open.assert_called_once_with(  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.assert_called_once_with(
             name="ETH",
             is_buy=True,
             sz=0.1,
@@ -123,9 +123,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             client = HyperliquidClient(mock_config_with_slippage)
 
         # Mock the market_open method to return error status
-        client.connection.exchange.market_open.return_value = order_error_response  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.return_value = order_error_response
 
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(sample_market_buy_order)
 
@@ -156,9 +156,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             client = HyperliquidClient(mock_config_with_slippage)
 
         # Mock the market_open method
-        client.connection.exchange.market_open.return_value = market_success_response_resting  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.return_value = market_success_response_resting
 
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(sample_market_sell_order)
 
@@ -172,7 +172,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         assert result == expected_result
 
         # Verify the correct method was called with correct parameters
-        client.connection.exchange.market_open.assert_called_once_with(  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.assert_called_once_with(
             name="BTC",
             is_buy=False,
             sz=0.05,
@@ -197,9 +197,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             client = HyperliquidClient(mock_config_with_slippage)
 
         # Mock the market_open method to return error
-        client.connection.exchange.market_open.return_value = order_error_response  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.return_value = order_error_response
 
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(sample_market_buy_order)
 
@@ -243,8 +243,8 @@ class TestHyperliquidClientSubmitMarketOrder:
             "weiDecimals": 8,
             "index": 441,
         }
-        client.connection.exchange.market_open.return_value = market_success_response_resting  # type: ignore[attr-defined]
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.return_value = market_success_response_resting
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(
             MarketOrder(
@@ -261,7 +261,7 @@ class TestHyperliquidClientSubmitMarketOrder:
             status=OrderStatus.OPEN,
             message="Market order is resting on the book",
         )
-        client.connection.exchange.market_open.assert_called_once_with(  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.assert_called_once_with(
             name="@441",
             is_buy=True,
             sz=0.01,
@@ -294,9 +294,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             ),
         )
 
-        client.connection.exchange._slippage_price.return_value = 995.5  # type: ignore[attr-defined]
-        client.connection.exchange.order.return_value = market_success_response_resting  # type: ignore[attr-defined]
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.exchange._slippage_price.return_value = 995.5
+        client.connection.exchange.order.return_value = market_success_response_resting
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(order)
 
@@ -306,15 +306,15 @@ class TestHyperliquidClientSubmitMarketOrder:
             status=OrderStatus.OPEN,
             message="Market order is resting on the book",
         )
-        client.connection.exchange.market_open.assert_not_called()  # type: ignore[attr-defined]
-        client.connection.exchange.market_close.assert_not_called()  # type: ignore[attr-defined]
-        client.connection.exchange._slippage_price.assert_called_once_with(  # type: ignore[attr-defined]
+        client.connection.exchange.market_open.assert_not_called()
+        client.connection.exchange.market_close.assert_not_called()
+        client.connection.exchange._slippage_price.assert_called_once_with(
             "ETH",
             False,
             0.01,
             None,
         )
-        client.connection.exchange.order.assert_called_once_with(  # type: ignore[attr-defined]
+        client.connection.exchange.order.assert_called_once_with(
             name="ETH",
             is_buy=False,
             sz=0.02,
@@ -354,9 +354,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             ),
         )
 
-        client.connection.exchange._slippage_price.return_value = 101500.0  # type: ignore[attr-defined]
-        client.connection.exchange.order.return_value = order_error_response  # type: ignore[attr-defined]
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.exchange._slippage_price.return_value = 101500.0
+        client.connection.exchange.order.return_value = order_error_response
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(order)
 
@@ -367,7 +367,7 @@ class TestHyperliquidClientSubmitMarketOrder:
             message="Market order failed",
             error="Insufficient balance",
         )
-        client.connection.exchange.order.assert_called_once()  # type: ignore[attr-defined]
+        client.connection.exchange.order.assert_called_once()
 
     def test_submit_market_order_trigger_without_statuses_returns_fallback(
         self,
@@ -393,9 +393,9 @@ class TestHyperliquidClientSubmitMarketOrder:
             ),
         )
 
-        client.connection.exchange._slippage_price.return_value = 2525.0  # type: ignore[attr-defined]
-        client.connection.exchange.order.return_value = {"status": "ok", "response": {"data": {}}}  # type: ignore[attr-defined]
-        client.connection.retry_operation.side_effect = mock_retry_operation  # type: ignore[attr-defined]
+        client.connection.exchange._slippage_price.return_value = 2525.0
+        client.connection.exchange.order.return_value = {"status": "ok", "response": {"data": {}}}
+        client.connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.submit_market_order(order)
 

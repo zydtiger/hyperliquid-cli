@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import pytest
 
 from cli.interactive.coin_selector import (
@@ -72,7 +74,7 @@ def config() -> Config:
 def test_prompt_for_coin_selection_accepts_exact_match() -> None:
     """Exact symbol input should return immediately."""
 
-    def session_factory(_coins: list[str]) -> FakeCoinPromptSession:
+    def session_factory(_coins: Sequence[str]) -> FakeCoinPromptSession:
         return FakeCoinPromptSession(["BTC"])
 
     assert prompt_for_coin_selection(["BTC", "ETH"], session_factory=session_factory) == "BTC"
@@ -81,7 +83,7 @@ def test_prompt_for_coin_selection_accepts_exact_match() -> None:
 def test_prompt_for_coin_selection_normalizes_case() -> None:
     """Mixed-case input should resolve to the canonical exchange symbol."""
 
-    def session_factory(_coins: list[str]) -> FakeCoinPromptSession:
+    def session_factory(_coins: Sequence[str]) -> FakeCoinPromptSession:
         return FakeCoinPromptSession(["eTh"])
 
     assert prompt_for_coin_selection(["BTC", "ETH"], session_factory=session_factory) == "ETH"
@@ -92,7 +94,7 @@ def test_prompt_for_coin_selection_repompts_on_invalid_input(
 ) -> None:
     """Invalid input should show an error and reprompt."""
 
-    def session_factory(_coins: list[str]) -> FakeCoinPromptSession:
+    def session_factory(_coins: Sequence[str]) -> FakeCoinPromptSession:
         return FakeCoinPromptSession(["zzz", "sol"])
 
     selected = prompt_for_coin_selection(["BTC", "SOL"], session_factory=session_factory)
