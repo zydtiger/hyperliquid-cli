@@ -1,10 +1,17 @@
 repos:
+  - repo: builtin
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-yaml
+
   - repo: local
     hooks:
       - id: ruff-check-fix
-        name: ruff check --fix
-        entry: uv run ruff check --fix
+        name: ruff check --fix .
+        entry: uv run ruff check --fix .
         language: system
+        pass_filenames: false
         types_or: [python, pyi]
       - id: ruff-format
         name: ruff format
@@ -14,6 +21,12 @@ repos:
       - id: mypy
         name: mypy
         entry: uv run mypy
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
         language: system
         pass_filenames: false
         types_or: [python, pyi]
