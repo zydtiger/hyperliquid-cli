@@ -6,7 +6,7 @@ order-related configurations used in the Hyperliquid trading system.
 """
 
 from decimal import Decimal
-from enum import Enum
+from enum import Enum, StrEnum
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 # ============================================================================
 
 
-class OrderSide(str, Enum):
+class OrderSide(StrEnum):
     """Enumeration of order sides."""
 
     BUY = "buy"
@@ -30,7 +30,7 @@ class OrderTif(Enum):
     GTC = "GTC"  # Good Till Cancelled - active until filled or cancelled
 
 
-class OrderStatus(str, Enum):
+class OrderStatus(StrEnum):
     """Order status enumeration."""
 
     OPEN = "open"
@@ -40,14 +40,14 @@ class OrderStatus(str, Enum):
     PARTIALLY_FILLED = "partially_filled"
 
 
-class OrderType(str, Enum):
+class OrderType(StrEnum):
     """Order type enumeration."""
 
     LIMIT = "limit"
     MARKET = "market"
 
 
-class TriggerType(str, Enum):
+class TriggerType(StrEnum):
     """Trigger order type enumeration."""
 
     STOP = "stop"

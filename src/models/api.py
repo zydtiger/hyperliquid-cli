@@ -6,7 +6,7 @@ API communication between the CLI frontend and backend service.
 """
 
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -52,14 +52,14 @@ class ExchangeError(Exception):
 # ============================================================================
 
 
-class HealthStatus(str, Enum):
+class HealthStatus(StrEnum):
     """Health status enum."""
 
     HEALTHY = "healthy"
     UNHEALTHY = "unhealthy"
 
 
-class LeverageType(str, Enum):
+class LeverageType(StrEnum):
     """Leverage type for positions."""
 
     ISOLATED = "isolated"

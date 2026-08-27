@@ -6,7 +6,7 @@ with their respective validation logic.
 """
 
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 import yaml
@@ -24,7 +24,7 @@ class ConfigurationError(Exception):
     pass
 
 
-class NetworkType(str, Enum):
+class NetworkType(StrEnum):
     """Constants for network types."""
 
     MAINNET = "mainnet"
