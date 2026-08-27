@@ -9,6 +9,19 @@ Hyperliquid smart order trading system with structured architecture.
 - **File length**: Source files max 300 lines (refactor if needed)
 - **Test files**: No length limit
 
+## Validation
+
+- **Hook runner**: `uv tool install prek` once per machine, then `prek install`
+- **Full**: `prek run --all-files && prek run --all-files --hook-stage pre-push`
+- **Targeted**: `uv run pytest tests/<file>` or a `::<test>` selector
+- Mechanical scope — lint, format, types, file hygiene — is defined solely by
+  `.pre-commit-config.yaml`; tests run from the same file as a `pre-push` stage
+  hook. Do not restate those commands or their scopes elsewhere.
+- **CI** (`.github/workflows/ci.yml`) invokes the same hook runner rather than
+  restating hook commands: a `lint` job runs the commit-stage hooks once, and a
+  matrixed `test` job runs the pre-push stage on every supported Python
+  version, then builds and smoke-tests the wheel on the lowest one.
+
 ## Code Rules
 
 ### Models & Types
