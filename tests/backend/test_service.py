@@ -2183,7 +2183,9 @@ class TestIntegration(TestBackendService):
 
         # Make concurrent requests
         def make_request() -> Response:
-            return test_app.get("/available_coins")
+            response = test_app.get("/available_coins")
+            assert isinstance(response, Response)
+            return response
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(make_request) for _ in range(10)]
