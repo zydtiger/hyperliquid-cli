@@ -68,7 +68,7 @@ def test_positions_command_shows_removable_margin(
 ) -> None:
     """Test positions output includes the removable margin column."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             pass
 
@@ -81,7 +81,7 @@ def test_positions_command_shows_removable_margin(
         def get_positions(self) -> list[PositionInfo]:
             return [isolated_position]
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_positions("")
@@ -100,7 +100,7 @@ def test_update_margin_shows_hint_and_calls_backend(
     """Test update_margin shows the removable hint before submitting."""
     created_apis = []
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             self.calls: list[tuple[Decimal, str]] = []
             created_apis.append(self)
@@ -111,9 +111,8 @@ def test_update_margin_shows_hint_and_calls_backend(
         def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
-        def get_position(self, coin: str) -> PositionInfo:
-            assert coin == "ETH"
-            return isolated_position
+        def get_positions(self) -> list[PositionInfo]:
+            return [isolated_position]
 
         def update_isolated_margin(
             self,
@@ -129,7 +128,7 @@ def test_update_margin_shows_hint_and_calls_backend(
                 ),
             )
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_update_margin("ETH 1")
@@ -148,7 +147,7 @@ def test_update_margin_requires_existing_position(
     """Test update_margin exits early when no current position exists."""
     created_apis = []
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             self.calls: list[tuple[Decimal, str]] = []
             created_apis.append(self)
@@ -159,8 +158,8 @@ def test_update_margin_requires_existing_position(
         def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
             return None
 
-        def get_position(self, coin: str) -> PositionInfo:
-            raise RuntimeError("not found")
+        def get_positions(self) -> list[PositionInfo]:
+            return []
 
         def update_isolated_margin(
             self,
@@ -170,7 +169,7 @@ def test_update_margin_requires_existing_position(
             self.calls.append((amount, coin))
             raise AssertionError("update_isolated_margin should not be called")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_update_margin("ETH 1")
@@ -211,7 +210,7 @@ def test_order_history_defaults_to_ten(
     """Test order_history defaults to 10 entries."""
     created_apis = []
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             self.calls: list[int] = []
             created_apis.append(self)
@@ -226,7 +225,7 @@ def test_order_history_defaults_to_ten(
             self.calls.append(limit)
             return order_history_entries
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_order_history("")
@@ -247,7 +246,7 @@ def test_order_history_uses_explicit_limit(
     """Test order_history forwards the explicit limit."""
     created_apis = []
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             self.calls: list[int] = []
             created_apis.append(self)
@@ -262,7 +261,7 @@ def test_order_history_uses_explicit_limit(
             self.calls.append(limit)
             return order_history_entries
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_order_history("5")
@@ -280,11 +279,11 @@ def test_order_history_rejects_invalid_args(
 ) -> None:
     """Test order_history validates CLI arguments."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
-            raise AssertionError("BackendAPI should not be created for invalid args")
+            raise AssertionError("HyperliquidClient should not be created for invalid args")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_order_history(args)
@@ -363,7 +362,7 @@ def test_pnl_command_renders_graph(
     created_apis = []
     launched_histories: list[object] = []
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             self.calls = 0
             created_apis.append(self)
@@ -385,7 +384,7 @@ def test_pnl_command_renders_graph(
         def run(self) -> None:
             launched_histories.append("ran")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
     monkeypatch.setattr("cli.interactive_cli.PnlTUI", FakePnlTUI)
 
     cli = InteractiveCLI(config)
@@ -404,11 +403,11 @@ def test_pnl_command_rejects_extra_args(
 ) -> None:
     """Test pnl validates its no-argument interface."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
-            raise AssertionError("BackendAPI should not be created for invalid args")
+            raise AssertionError("HyperliquidClient should not be created for invalid args")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_pnl("7d")
@@ -424,7 +423,7 @@ def test_pnl_command_handles_empty_history(
 ) -> None:
     """Test pnl prints the empty-state message when no points are available."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             pass
 
@@ -440,7 +439,7 @@ def test_pnl_command_handles_empty_history(
                 histories=[PnlHistory(window="7d", points=[])],
             )
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_pnl("")
@@ -459,7 +458,7 @@ def test_watch_command_renders_graph(
     created_apis = []
     launched: list[object] = []
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             self.calls: list[str] = []
             created_apis.append(self)
@@ -484,7 +483,7 @@ def test_watch_command_renders_graph(
         def run(self) -> None:
             launched.append("ran")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
     monkeypatch.setattr("cli.interactive_cli.WatchTUI", FakeWatchTUI)
 
     cli = InteractiveCLI(config)
@@ -505,11 +504,11 @@ def test_watch_command_rejects_invalid_args(
 ) -> None:
     """Test watch validates its required single-argument interface."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
-            raise AssertionError("BackendAPI should not be created for invalid args")
+            raise AssertionError("HyperliquidClient should not be created for invalid args")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_watch(args)
@@ -525,7 +524,7 @@ def test_watch_command_handles_backend_error(
 ) -> None:
     """Test watch prints backend errors cleanly."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             pass
 
@@ -540,7 +539,7 @@ def test_watch_command_handles_backend_error(
         ) -> WatchSnapshot:
             raise RuntimeError(f"{coin} unavailable")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_watch("BTC")
@@ -557,7 +556,7 @@ def test_info_command_renders_open_interest_as_usd(
 ) -> None:
     """Test info renders open interest with a leading dollar sign."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             pass
 
@@ -578,7 +577,7 @@ def test_info_command_renders_open_interest_as_usd(
         def get_metadata(self, coin: str) -> CoinMetadata:
             return CoinMetadata(coin=coin, size_decimals=5, max_leverage=50)
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_info("BTC")
@@ -594,7 +593,7 @@ def test_staking_command_renders_summary_and_table(
 ) -> None:
     """Test staking prints summary and validator rows."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             pass
 
@@ -624,7 +623,7 @@ def test_staking_command_renders_summary_and_table(
                 ],
             )
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_staking("")
@@ -647,7 +646,7 @@ def test_staking_command_empty_state(
 ) -> None:
     """Test staking prints the empty-state message when no delegations exist."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             pass
 
@@ -662,7 +661,7 @@ def test_staking_command_empty_state(
                 total_staked=Decimal("0"), total_reward=Decimal("0"), delegations=[]
             )
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_staking("")
@@ -680,11 +679,11 @@ def test_staking_command_rejects_extra_args(
 ) -> None:
     """Test staking validates its no-argument interface."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
-            raise AssertionError("BackendAPI should not be created for invalid args")
+            raise AssertionError("HyperliquidClient should not be created for invalid args")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_staking("extra")
@@ -700,7 +699,7 @@ def test_staking_command_handles_backend_error(
 ) -> None:
     """Test staking prints backend errors cleanly."""
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             pass
 
@@ -713,7 +712,7 @@ def test_staking_command_handles_backend_error(
         def get_staking_status(self) -> StakingStatus:
             raise RuntimeError("staking unavailable")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
 
     cli = InteractiveCLI(config)
     cli.do_staking("")
@@ -830,7 +829,7 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
     observed_stdouts: list[TextIO] = []
     created_apis = []
 
-    class FakeBackendAPI:
+    class FakeClient:
         def __init__(self, _config: Config) -> None:
             self.calls: list[str] = []
             created_apis.append(self)
@@ -869,7 +868,7 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
     def fail_if_writer_used(*_args: object, **_kwargs: object) -> None:
         raise AssertionError("TrailingNewlineNormalizingWriter should not wrap TUI commands")
 
-    monkeypatch.setattr("cli.interactive_cli.BackendAPI", FakeBackendAPI)
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", FakeClient)
     monkeypatch.setattr("cli.interactive_cli.PnlTUI", FakePnlTUI)
     monkeypatch.setattr("cli.interactive_cli.WatchTUI", FakeWatchTUI)
     monkeypatch.setattr("cli.interactive_cli.TrailingNewlineNormalizingWriter", fail_if_writer_used)
@@ -884,3 +883,71 @@ def test_onecmd_bypasses_normalizing_writer_for_tui_commands(
     assert created_apis[0].calls == expected_calls
     assert tracked_stdout.getvalue() == "\n"
     assert tracked_stdout.flush_count >= 1
+
+
+def test_shared_client_reused_and_watch_uses_dedicated_closed_client(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    config: Config,
+    isolated_position: PositionInfo,
+    watch_snapshot: WatchSnapshot,
+) -> None:
+    """REPL reuses its shared client for normal commands and closes a dedicated client for watch."""
+
+    class SharedClient:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def test_connection(self) -> bool:
+            self.calls.append("test_connection")
+            return True
+
+        def get_positions(self) -> list[PositionInfo]:
+            self.calls.append("get_positions")
+            return [isolated_position]
+
+    class DedicatedWatchClient:
+        def __init__(self, _config: Config) -> None:
+            self.closed = False
+            self.calls: list[str] = []
+            watch_clients.append(self)
+
+        def __enter__(self) -> Self:
+            return self
+
+        def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+            self.closed = True
+
+        def get_watch_snapshot(
+            self, coin: str, interval: str = "5m", depth: int = 10
+        ) -> WatchSnapshot:
+            self.calls.append(f"{coin}:{interval}:{depth}")
+            return watch_snapshot
+
+    watch_clients: list[DedicatedWatchClient] = []
+
+    class FakeWatchTUI:
+        def __init__(self, _coin: str, _fetcher: Callable[[str, str, int], WatchSnapshot]) -> None:
+            pass
+
+        def run(self) -> None:
+            return None
+
+    monkeypatch.setattr("cli.interactive_cli.HyperliquidClient", DedicatedWatchClient)
+    monkeypatch.setattr("cli.interactive_cli.WatchTUI", FakeWatchTUI)
+
+    shared = SharedClient()
+    cli = InteractiveCLI(config, client=shared)  # type: ignore[arg-type]
+
+    cli.do_status("")
+    cli.do_positions("")
+    assert watch_clients == []
+    assert shared.calls == ["test_connection", "get_positions"]
+    status_out = capsys.readouterr().out
+    assert "connected" in status_out
+    assert config.hyperliquid.private_key is not None
+    assert config.hyperliquid.private_key not in status_out
+
+    cli.do_watch("BTC")
+    assert len(watch_clients) == 1
+    assert watch_clients[0].closed is True

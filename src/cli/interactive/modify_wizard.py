@@ -5,9 +5,9 @@ This module provides a step-by-step wizard for modifying orders
 with proper validation and user guidance.
 """
 
+from exchange import HyperliquidClient
 from models import Config, ModifyOrderRequest, OrderStatus, OrderType
 
-from ..api import BackendAPI
 from ..formatters.order_formatter import OrderFormatter
 from .prompts import Prompts
 
@@ -20,17 +20,17 @@ class ModifyWizard:
     with proper validation and user guidance.
     """
 
-    def __init__(self, config: Config, api: BackendAPI):
+    def __init__(self, config: Config, client: HyperliquidClient):
         """
         Initialize the modify wizard.
 
         Args:
             config: Configuration object
-            api: BackendAPI client for market data
+            client: HyperliquidClient for market data and order lookup
         """
         self.config = config
-        self.api = api
-        self.prompts = Prompts(config, api)
+        self.client = client
+        self.prompts = Prompts(config, client)
         self.formatter = OrderFormatter()
 
     def run(self, order_id: int) -> ModifyOrderRequest:
@@ -55,7 +55,7 @@ class ModifyWizard:
 
         # Step 1: Get current order status
         try:
-            order_info = self.api.get_order_status(order_id)
+            order_info = self.client.get_order_status(order_id)
         except Exception as e:
             raise ValueError(f"Failed to get order status: {e}") from e
 

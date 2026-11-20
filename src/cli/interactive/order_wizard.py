@@ -5,9 +5,9 @@ This module provides step-by-step wizards for creating orders and
 configuring trading parameters.
 """
 
+from exchange import HyperliquidClient
 from models import Config, LimitOrder, MarketOrder
 
-from ..api import BackendAPI
 from ..formatters.order_formatter import OrderFormatter
 from .prompts import Prompts
 
@@ -20,16 +20,17 @@ class OrderWizard:
     with proper validation and user guidance.
     """
 
-    def __init__(self, config: Config, api: BackendAPI):
+    def __init__(self, config: Config, client: HyperliquidClient):
         """
         Initialize the order wizard.
 
         Args:
-            api: BackendAPI client for market data
+            config: Configuration object
+            client: HyperliquidClient for market data
         """
         self.config = config
-        self.api = api
-        self.prompts = Prompts(config, api)
+        self.client = client
+        self.prompts = Prompts(config, client)
         self.formatter = OrderFormatter()
 
     def run(self) -> MarketOrder | LimitOrder:
