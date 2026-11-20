@@ -140,6 +140,12 @@ class SpotBalance(BaseModel):
 
     coin: str = Field(..., description="Symbol of the cryptocurrency")
     total: Decimal = Field(..., description="Total balance")
+    hold: Decimal = Field(default=Decimal("0"), description="Balance currently on hold")
+    entry_ntl: Decimal | None = Field(default=None, description="Spot entry notional in USD")
+    mark_price: Decimal | None = Field(default=None, description="Current spot mark price in USD")
+    market_value: Decimal | None = Field(
+        default=None, description="Current spot market value in USD"
+    )
 
 
 class StakingInfo(BaseModel):
@@ -169,6 +175,17 @@ class StakingStatus(BaseModel):
         default_factory=list,
         description="Active validator delegations with positive amounts",
     )
+    undelegated: Decimal | None = Field(default=None, description="Undelegated staking HYPE")
+    pending_withdrawals: Decimal | None = Field(
+        default=None, description="Total pending staking withdrawal HYPE"
+    )
+    pending_withdrawal_count: int | None = Field(
+        default=None, description="Number of pending staking withdrawals"
+    )
+    mark_price: Decimal | None = Field(default=None, description="Current HYPE mark price in USD")
+    market_value: Decimal | None = Field(
+        default=None, description="Total staking market value in USD"
+    )
 
 
 class BalanceInfo(BaseModel):
@@ -186,6 +203,12 @@ class BalanceInfo(BaseModel):
 
     # Staking Information
     staking_info: StakingInfo | None = Field(None, description="Staking delegations and rewards")
+
+    # Partial Fetch Errors
+    errors: dict[str, str] = Field(
+        default_factory=dict,
+        description="Per-section errors encountered during balance retrieval",
+    )
 
 
 class PnlPoint(BaseModel):

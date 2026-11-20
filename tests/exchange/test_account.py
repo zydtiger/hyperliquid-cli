@@ -18,7 +18,9 @@ from models.api import (
     ExchangeError,
     LeverageType,
     PositionInfo,
+    SpotBalance,
     StakingDelegation,
+    StakingInfo,
     StakingStatus,
 )
 from models.config import Config
@@ -288,7 +290,6 @@ class TestHyperliquidClientBalances:
         sample_user_state_response: dict[str, Any],
         sample_spot_state: dict[str, Any],
         sample_staking_summary: dict[str, Any],
-        expected_balance_info: BalanceInfo,
         mock_retry_operation: Callable,
     ) -> None:
         """Test successful balance retrieval with all data sources."""
@@ -300,8 +301,40 @@ class TestHyperliquidClientBalances:
 
         result = client.get_balances()
 
-        # Use expected_balance_info fixture for comprehensive validation
-        assert result == expected_balance_info
+        assert result == BalanceInfo(
+            perps_account_value=Decimal("3451.743653"),
+            perps_total_position_value=Decimal("10.8642"),
+            perps_total_raw_usd=Decimal("3440.879453"),
+            perps_margin_used=Decimal("5.318932"),
+            perps_withdrawable=Decimal("3451.324721"),
+            spot_balances=[
+                SpotBalance(
+                    coin="USDC",
+                    total=Decimal("1000.50"),
+                    hold=Decimal("50.25"),
+                    entry_ntl=Decimal("0.0"),
+                ),
+                SpotBalance(
+                    coin="HYPE",
+                    total=Decimal("500.0"),
+                    hold=Decimal("0.0"),
+                    entry_ntl=Decimal("0.0"),
+                ),
+                SpotBalance(
+                    coin="UETH",
+                    total=Decimal("0.002998111"),
+                    hold=Decimal("0.0"),
+                    entry_ntl=Decimal("10.8831"),
+                ),
+            ],
+            staking_info=StakingInfo(
+                delegated_amount=Decimal("100.61607572"),
+                undelegated_amount=Decimal("25.12345678"),
+                pending_withdrawals=Decimal("5.0"),
+                pending_withdrawal_count=2,
+            ),
+            errors={},
+        )
 
     def test_get_balances_no_spot_balances(
         self,
@@ -352,8 +385,9 @@ class TestHyperliquidClientBalances:
         assert result.perps_account_value == Decimal("3451.743653")
         assert len(result.spot_balances) == 3
 
-        # Check staking info is None due to API failure
+        # Check staking info is None due to API failure and error is recorded
         assert result.staking_info is None
+        assert result.errors == {"staking": "Staking API error"}
 
     def test_get_balances_zero_balances_filtered(
         self,
@@ -458,8 +492,9 @@ class TestHyperliquidClientBalances:
         assert result.staking_info is not None
         assert result.staking_info.delegated_amount == Decimal("100.61607572")
 
-        # Check spot balances is empty due to API failure
+        # Check spot balances is empty due to API failure and error is recorded
         assert result.spot_balances == []
+        assert result.errors == {"spot": "Spot API error"}
 
     def test_get_balances_retry_failure(
         self, client: HyperliquidClient, mock_connection: Mock
@@ -499,7 +534,12 @@ class TestHyperliquidClientStaking:
 
         result = client.get_staking_status()
 
-        assert result == expected_staking_status
+        assert result.total_staked == expected_staking_status.total_staked
+        assert result.total_reward == expected_staking_status.total_reward
+        assert result.delegations == expected_staking_status.delegations
+        assert result.undelegated == Decimal("25.12345678")
+        assert result.pending_withdrawals == Decimal("5.0")
+        assert result.pending_withdrawal_count == 2
 
     def test_get_staking_status_filters_zero_amount_delegations(
         self,
