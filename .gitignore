@@ -46,3 +46,7 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Nix build outputs
+result
+result-*
