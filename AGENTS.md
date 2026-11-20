@@ -1,6 +1,7 @@
 # Hyperliquid CLI - Project Instructions
 
-Hyperliquid smart order trading system with structured architecture.
+Stateless Hyperliquid trading & portfolio CLI with interactive REPL and direct
+in-process exchange integration.
 
 ## Environment
 
@@ -54,18 +55,18 @@ falling back to a general approach:
 
 | Skill | Use for |
 | --- | --- |
-| `create-backend-feature` | Adding or modifying backend functionality |
-| `create-interactive-cli-command` | Adding a command to the interactive CLI |
+| `create-interactive-cli-command` | Adding a command to the CLI |
 
 ### Adding Features
 
 1. Search existing codebase
 2. Check `src/models/` for reusable types
 3. Add new models to `src/models/`
-4. Update imports, remove obsolete files
-5. Format with `ruff format`
-6. Update tests, remove obsolete unit tests
-7. Update docs
+4. Add exchange operations under `src/exchange/` and wire CLI commands under `src/cli/commands/` (and `src/cli/interactive/` for REPL commands)
+5. Update imports, remove obsolete files
+6. Format with `ruff format`
+7. Update tests, remove obsolete unit tests
+8. Update docs
 
 ### Modifying Code
 
@@ -78,11 +79,7 @@ falling back to a general approach:
 
 ## Project Notes
 
-- Hyperliquid exchange trading system
-- Uses type hints extensively
-- Follows Python best practices
-
-## API Documentation
-
-- Update `docs/api.md` for any API changes
-- Include endpoints, parameters, responses, examples
+- Direct in-process Hyperliquid exchange client (`src/exchange/hyperliquid_client.py`)
+- Lazy 3-tier connection: REST-only `Info(skip_ws=True)` by default; signing `Exchange` and WebSocket `ws_info` initialized only when needed
+- Stateless subcommands support `--json` (compact single-line JSON output) and `--dry-run` on all write operations
+- Uses type hints extensively and follows Python best practices

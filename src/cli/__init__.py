@@ -1,18 +1,17 @@
 """
 CLI module for the Hyperliquid trading system.
 
-This module provides the command-line interface components for the Hyperliquid CLI,
-including interactive commands, formatters, and API client integration.
+This module provides the stateless and interactive command-line interface
+components for the Hyperliquid CLI, connecting directly to Hyperliquid via
+the in-process ``exchange.HyperliquidClient``.
 
 Components:
-- app: Main CLI application entry point and command definitions
-- interactive_cli: Interactive command prompt interface
+- app: Main CLI application entry point and root callback
+- runtime: Global option resolution, error handling, and JSON envelope contract
+- commands: Stateless subcommands for account, market, portfolio, and trading ops
+- interactive_cli: Interactive REPL command prompt interface
 - formatters: Output formatting utilities for orders, accounts, and tables
-- interactive: Interactive wizards and prompts for order creation and modification
-- api: Backend API client for communicating with the Hyperliquid service
-
-The CLI provides both interactive and programmatic interfaces for managing
-trading operations, viewing positions, and monitoring account status.
+- interactive: Interactive wizards, prompts, and fullscreen TUIs
 """
 
 from .app import main

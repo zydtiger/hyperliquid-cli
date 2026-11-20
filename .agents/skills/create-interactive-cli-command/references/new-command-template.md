@@ -1,6 +1,6 @@
 # Command Implementation Template
 
-Use this checklist when implementing a new interactive CLI command for the Hyperliquid trading system.
+Use this checklist when implementing a new CLI command for the Hyperliquid trading system.
 
 ## Task Definition
 
@@ -11,43 +11,43 @@ Set:
 ## Pre-Implementation Research
 
 - Search existing codebase for similar functionality.
-- Check whether the required backend support already exists in `src/backend/exchange/hyperliquid_client.py`, `src/backend/request_handlers.py`, and `src/cli/api.py`.
+- Check whether the required exchange support already exists in `src/exchange/hyperliquid_client.py` and `src/exchange/*_ops.py`.
 - Check existing formatters in `src/cli/formatters/`.
-- Identify relevant command and CLI-facing test files.
+- Check shared CLI runtime helpers in `src/cli/runtime.py` and argument parsers in `src/cli/commands/parsers.py`.
+- Identify relevant command and CLI-facing test files under `tests/cli/`.
 
-## Phase 1: Backend Prerequisite
+## Phase 1: Exchange Prerequisite
 
 Objective:
-- Confirm the command can rely on an existing backend/API surface.
+- Confirm the command can rely on an existing `HyperliquidClient` method.
 
 Tasks:
 
 ### 1.1 Capability Check
 
-- Search the backend exchange client, request handlers, and CLI API client for an existing feature path.
-- Reuse an existing CLI API function if one already exposes the needed behavior.
-- If backend support is missing or incomplete, use `create-backend-feature` and follow `references/backend-feature-template.md` in that skill before continuing here.
+- Search `src/exchange/` and `src/models/` for an existing method and response model.
+- Reuse an existing `HyperliquidClient` method if one already exposes the needed behavior.
+- If exchange support is missing, add models under `src/models/`, implement the operation under `src/exchange/`, expose it on `HyperliquidClient`, and add unit tests under `tests/exchange/`.
 
 Files typically reviewed:
-- `src/backend/exchange/hyperliquid_client.py`
-- `src/backend/request_handlers.py`
-- `src/cli/api.py`
+- `src/exchange/hyperliquid_client.py`
+- `src/exchange/*_ops.py`
+- `src/models/`
 
 ## Phase 2: CLI Integration
 
 Objective:
-- Implement the interactive CLI command.
+- Implement the stateless subcommand and/or interactive REPL command.
+- Support global options (`-c/--config`, `--address`, `--network`, `--json`) and `--dry-run` for write operations.
 - Provide consistent output formatting.
-- Ensure a smooth user experience.
 
 Tasks:
 
 ### 2.1 Command Implementation
 
-- Add command logic to `src/cli/interactive_cli.py`.
-- Follow existing command patterns.
-- Handle user input validation.
-- Implement help text and usage instructions.
+- For stateless subcommands: add the command in the matching module under `src/cli/commands/`, register it in `src/cli/commands/__init__.py`, and route execution through `run_command`.
+- For interactive REPL commands: add `do_<command>` to the matching mixin in `src/cli/interactive/` and `help_<command>` in `src/cli/interactive/repl_help.py`.
+- Handle user input validation cleanly (raise `CliValidationError` for exit code 2 in stateless commands).
 
 ### 2.2 Output Formatting
 
@@ -55,10 +55,10 @@ Tasks:
 - Reuse an appropriate existing formatter.
 - If needed, create a new formatter following `src/cli/formatters/base.py`.
 - Always use type routing in `formatter.format()` to route to internal private functions.
-- Ensure consistent output format with other commands.
 
 Files typically modified:
-- `src/cli/interactive_cli.py`
+- `src/cli/commands/*`
+- `src/cli/interactive/*` and `src/cli/interactive_cli.py`
 - `src/cli/formatters/*` if a new formatter is needed
 
 ## Post-Implementation Checklist
@@ -66,19 +66,19 @@ Files typically modified:
 ### Code Quality
 
 - Run `uv run ruff format <modified_files>` for formatting.
+- Run `uv run ruff check <modified_files>` and `uv run mypy src tests`.
 - Clean up unused imports.
-- Verify type hints are complete and accurate.
-- Keep files under 300 lines when practical; refactor if needed.
+- Keep source files <= 300 lines; refactor if needed.
 
 ### Testing
 
-- Run command-related tests and any integration coverage needed for the new flow.
+- Run command-related tests in `tests/cli/` covering both human and `--json` modes (and `--dry-run` for write commands).
 
 ### Documentation
 
 - Verify command help text is clear.
-- Add new commands to `src/cli/cli_manual.py`.
-- Verify examples are present and tested where useful.
+- Ensure interactive commands have matching `help_*` methods discovered by `src/cli/cli_manual.py`.
+- Update `README.md` if adding a top-level subcommand.
 
 ## Quick Commands
 
@@ -87,7 +87,7 @@ Before coding:
 ```bash
 rg -n "<similar_feature>" src tests
 rg -n "<similar_feature>" src/cli
-rg -n "<similar_feature>" src/backend src/cli/api.py
+rg -n "<similar_feature>" src/exchange src/models
 rg --files src/cli/formatters
 rg --files tests
 ```

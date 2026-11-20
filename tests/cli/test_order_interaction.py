@@ -3,11 +3,11 @@ from unittest.mock import Mock, call, patch
 
 import pytest
 
-from cli.api import BackendAPI
 from cli.formatters.order_formatter import OrderFormatter
 from cli.interactive.order_wizard import OrderWizard
 from cli.interactive.prompts import Prompts
 from cli.interactive_cli import InteractiveCLI
+from exchange import HyperliquidClient
 from models import (
     Config,
     HyperliquidConfig,
@@ -25,11 +25,11 @@ from models import (
 )
 
 
-class FakeAPI(BackendAPI):
+class FakeAPI(HyperliquidClient):
     def __init__(self) -> None:
-        """Avoid real BackendAPI setup in tests."""
+        """Avoid real HyperliquidClient setup in tests."""
 
-    def get_available_coins(self) -> list[str]:
+    def get_available_coins(self, market_type: str = "all") -> list[str]:
         return ["BTC", "ETH", "SOL"]
 
     def get_ticker(self, coin: str) -> Mock:
@@ -423,7 +423,7 @@ def test_do_order_submits_non_trigger_limit_order(capsys: pytest.CaptureFixture[
     backend_api.__exit__ = Mock(return_value=None)
 
     with (
-        patch("cli.interactive_cli.BackendAPI", return_value=backend_api),
+        patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api),
         patch("cli.interactive_cli.OrderWizard", return_value=wizard),
         patch("cli.interactive_cli.OrderFormatter.format", return_value="formatted"),
     ):
@@ -453,7 +453,7 @@ def test_do_order_submits_trigger_market_order(capsys: pytest.CaptureFixture[str
     backend_api.__exit__ = Mock(return_value=None)
 
     with (
-        patch("cli.interactive_cli.BackendAPI", return_value=backend_api),
+        patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api),
         patch("cli.interactive_cli.OrderWizard", return_value=wizard),
         patch("cli.interactive_cli.OrderFormatter.format", return_value="formatted"),
     ):
@@ -475,7 +475,7 @@ def test_do_order_submits_quick_market_order(capsys: pytest.CaptureFixture[str])
     backend_api.__exit__ = Mock(return_value=None)
 
     with (
-        patch("cli.interactive_cli.BackendAPI", return_value=backend_api),
+        patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api),
         patch("cli.interactive_cli.OrderFormatter.format", return_value="formatted"),
     ):
         cli.do_order("buy eth 0.25")
@@ -503,7 +503,7 @@ def test_do_order_submits_quick_limit_order(capsys: pytest.CaptureFixture[str]) 
     backend_api.__exit__ = Mock(return_value=None)
 
     with (
-        patch("cli.interactive_cli.BackendAPI", return_value=backend_api),
+        patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api),
         patch("cli.interactive_cli.OrderFormatter.format", return_value="formatted"),
     ):
         cli.do_order("sell btc 0.01@105000")
@@ -579,7 +579,7 @@ def test_do_order_submits_quick_limit_order_with_tp_and_sl_and_displays_statuses
     backend_api.__enter__ = Mock(return_value=api)
     backend_api.__exit__ = Mock(return_value=None)
 
-    with patch("cli.interactive_cli.BackendAPI", return_value=backend_api):
+    with patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api):
         cli.do_order("buy btc 2@75000 --tp 80000 --sl 60000")
 
     api.submit_limit_order.assert_called_once_with(
@@ -682,7 +682,7 @@ def test_do_order_submits_quick_sell_order_tp_sl_children_as_buy_reduce_only(
     backend_api.__enter__ = Mock(return_value=api)
     backend_api.__exit__ = Mock(return_value=None)
 
-    with patch("cli.interactive_cli.BackendAPI", return_value=backend_api):
+    with patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api):
         cli.do_order("sell eth 1 --tp 2500 --sl 3200")
 
     assert api.submit_market_order.call_args_list == [
@@ -740,7 +740,7 @@ def test_do_order_does_not_submit_child_triggers_when_primary_quick_order_fails(
     backend_api.__enter__ = Mock(return_value=api)
     backend_api.__exit__ = Mock(return_value=None)
 
-    with patch("cli.interactive_cli.BackendAPI", return_value=backend_api):
+    with patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api):
         cli.do_order("buy btc 2@75000 --tp 80000 --sl 60000")
 
     api.submit_limit_order.assert_called_once()
@@ -799,7 +799,7 @@ def test_do_order_reports_partial_trigger_failures_and_continues(
     backend_api.__enter__ = Mock(return_value=api)
     backend_api.__exit__ = Mock(return_value=None)
 
-    with patch("cli.interactive_cli.BackendAPI", return_value=backend_api):
+    with patch("cli.interactive_cli.HyperliquidClient", return_value=backend_api):
         cli.do_order("buy eth 1 --tp 3000 --sl 2000")
 
     assert api.submit_market_order.call_count == 3

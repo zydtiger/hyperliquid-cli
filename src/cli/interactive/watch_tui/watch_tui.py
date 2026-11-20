@@ -37,12 +37,17 @@ from .watch_helpers import (
 class WatchScreenControl:
     """State and formatting helpers for the Textual watch app."""
 
-    def __init__(self, coin: str):
+    def __init__(
+        self,
+        coin: str,
+        initial_interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+        initial_depth: int = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
+    ):
         self.coin = coin
         self.snapshot: WatchSnapshot | None = None
         self.error_message: str | None = None
-        self.current_interval_index = WATCH_INTERVAL_ORDER.index(DEFAULT_WATCH_INTERVAL)
-        self.order_book_depth = DEFAULT_WATCH_ORDER_BOOK_DEPTH
+        self.current_interval_index = WATCH_INTERVAL_ORDER.index(initial_interval)
+        self.order_book_depth = initial_depth
 
     def current_interval(self) -> WatchInterval:
         return WATCH_INTERVAL_ORDER[self.current_interval_index]
@@ -100,7 +105,7 @@ class WatchScreenControl:
         if self.error_message:
             return f"Last fetch error: {self.error_message}"
         if self.snapshot is None:
-            return "Polling backend every 500ms"
+            return "Waiting for live market updates..."
         updated_at = datetime.fromtimestamp(self.snapshot.updated_at / 1000).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
@@ -262,11 +267,13 @@ class WatchTUI:
         coin: str,
         snapshot_fetcher: Callable[[str, WatchInterval, int], WatchSnapshot],
         poll_interval_seconds: float = 0.5,
+        initial_interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+        initial_depth: int = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     ):
         self.coin = coin
         self.snapshot_fetcher = snapshot_fetcher
         self.poll_interval_seconds = poll_interval_seconds
-        self.control = WatchScreenControl(coin)
+        self.control = WatchScreenControl(coin, initial_interval, initial_depth)
 
     def run(self) -> None:
         self._build_app().run()

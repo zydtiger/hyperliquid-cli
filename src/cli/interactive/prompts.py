@@ -17,7 +17,7 @@ DEFAULT_SIZE_DECIMALS = 2
 
 
 class MarketDataSource(Protocol):
-    """The market data these prompts read, rather than a whole backend client."""
+    """The market data these prompts read."""
 
     def get_available_coins(self) -> list[str]:
         """Return every tradable coin symbol."""
