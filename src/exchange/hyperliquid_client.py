@@ -26,6 +26,7 @@ from models.config import Config
 from models.leverage import LeverageResult
 from models.margin import IsolatedMarginUpdateResult
 from models.order import LimitOrder, MarketOrder, OrderHistoryEntry, OrderInfo, OrderResult
+from models.portfolio import PortfolioSnapshot
 
 from . import (
     account_ops,
@@ -33,6 +34,7 @@ from . import (
     order_change_ops,
     order_query_ops,
     order_submit_ops,
+    portfolio,
     position_ops,
 )
 from .helpers import build_spot_symbol_map, normalize_spot_order_symbol, resolve_spot_symbol
@@ -153,6 +155,19 @@ class HyperliquidClient:
     def get_positions(self) -> list[PositionInfo]:
         """Get current open positions."""
         return account_ops.get_positions(self)
+
+    def get_portfolio(
+        self,
+        *,
+        include_open_orders: bool = True,
+        include_today: bool = True,
+    ) -> PortfolioSnapshot:
+        """Get a USD-enriched portfolio snapshot across perps, spot, staking, and vaults."""
+        return portfolio.get_portfolio(
+            self,
+            include_open_orders=include_open_orders,
+            include_today=include_today,
+        )
 
     def get_order_status(self, order_id: int) -> OrderInfo:
         """Get the status and details of an order by its ID."""
