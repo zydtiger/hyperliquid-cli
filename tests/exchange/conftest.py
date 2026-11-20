@@ -12,8 +12,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
-from backend.exchange.hyperliquid_connection import HyperliquidConnection
+from exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_connection import HyperliquidConnection
 from models.api import (
     BalanceInfo,
     SpotBalance,
@@ -62,6 +62,7 @@ def mock_connection() -> Mock:
     """Create a mock HyperliquidConnection."""
     connection = Mock(spec=HyperliquidConnection)
     connection.info = Mock()
+    connection.ws_info = Mock()
     connection.exchange = Mock()
     return connection
 
@@ -80,7 +81,7 @@ def mock_retry_operation() -> Callable:
 def client(mock_config: Config, mock_connection: Mock) -> HyperliquidClient:
     """Create a HyperliquidClient instance with mocked dependencies."""
     with patch(
-        "backend.exchange.hyperliquid_client.HyperliquidConnection",
+        "exchange.hyperliquid_client.HyperliquidConnection",
         return_value=mock_connection,
     ):
         return HyperliquidClient(mock_config)
@@ -552,7 +553,7 @@ def expected_balance_info() -> BalanceInfo:
 # Open orders fixtures for get_open_orders tests
 @pytest.fixture
 def sample_open_orders_response() -> list[dict[str, Any]]:
-    """Sample response from open_orders API."""
+    """Sample response from frontend_open_orders API."""
     return [
         {
             "coin": "ETH",
@@ -562,15 +563,27 @@ def sample_open_orders_response() -> list[dict[str, Any]]:
             "oid": 222605232959,
             "timestamp": 1762271506632,
             "origSz": "0.003",
+            "reduceOnly": False,
+            "orderType": "Limit",
+            "tif": "Gtc",
+            "isTrigger": False,
+            "triggerPx": "0.0",
+            "triggerCondition": "N/A",
         },
         {
             "coin": "BTC",
-            "side": "S",
+            "side": "A",
             "limitPx": "50000.0",
             "sz": "0.05",
             "oid": 222605232960,
             "timestamp": 1762271506633,
             "origSz": "0.1",
+            "reduceOnly": False,
+            "orderType": "Limit",
+            "tif": "Gtc",
+            "isTrigger": False,
+            "triggerPx": "0.0",
+            "triggerCondition": "N/A",
         },
         {
             "coin": "SOL",
@@ -580,6 +593,12 @@ def sample_open_orders_response() -> list[dict[str, Any]]:
             "oid": 222605232961,
             "timestamp": 1762271506634,
             "origSz": "2.0",
+            "reduceOnly": False,
+            "orderType": "Limit",
+            "tif": "Gtc",
+            "isTrigger": False,
+            "triggerPx": "0.0",
+            "triggerCondition": "N/A",
         },
     ]
 

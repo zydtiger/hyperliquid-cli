@@ -11,6 +11,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+MarketType = Literal["all", "perp", "spot"]
 PnlWindow = Literal["1d", "3d", "7d", "1m", "3m", "6m", "1y", "all"]
 PNL_WINDOW_ORDER: tuple[PnlWindow, ...] = ("1d", "3d", "7d", "1m", "3m", "6m", "1y", "all")
 DEFAULT_PNL_WINDOW: PnlWindow = "7d"
@@ -124,6 +125,14 @@ class PositionInfo(BaseModel):
         ),
     )
     cum_funding: Decimal = Field(..., description="Cumulative funding payments")
+    position_value: Decimal | None = Field(None, description="Notional position value in USD")
+    liquidation_price: Decimal | None = Field(None, description="Estimated liquidation price")
+    return_on_equity: Decimal | None = Field(None, description="Return on equity ratio")
+    max_leverage: int | None = Field(None, description="Maximum allowed leverage for the market")
+    funding_since_open: Decimal | None = Field(
+        None,
+        description="Cumulative funding payments since position opened",
+    )
 
 
 class SpotBalance(BaseModel):

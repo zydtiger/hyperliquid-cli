@@ -30,8 +30,6 @@ dependencies = [
     "typer>=0.27.2",
     "pydantic>=2.13.5",
     "PyYAML>=6.0.0",
-    "fastapi>=0.141.1",
-    "uvicorn[standard]>=0.54.0",
     "httpx>=0.28.1",
     "textual>=8.2.8",
 ]
@@ -47,7 +45,6 @@ dev = [
 
 [project.scripts]
 hyperliquid-cli = "cli:main"
-hyperliquid-backend = "backend:main"
 
 [project.urls]
 Homepage = "https://github.com/zydtiger/hyperliquid-cli"

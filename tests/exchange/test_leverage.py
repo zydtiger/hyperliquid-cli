@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
 from models.api import LeverageType, PositionInfo
 
 

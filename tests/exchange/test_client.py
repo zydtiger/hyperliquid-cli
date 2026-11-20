@@ -1,15 +1,16 @@
 """
 Test cases for HyperliquidClient core functionality.
 
-This module provides comprehensive tests for client initialization
-and connection testing functionality.
+Tests client initialization, context manager cleanup, account address
+enforcement, and connection testing functionality.
 """
 
 from unittest.mock import Mock, patch
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
+from models.api import ExchangeError
 from models.config import Config
 
 
@@ -17,25 +18,56 @@ class TestHyperliquidClientInitialization:
     """Test cases for HyperliquidClient initialization."""
 
     def test_initialization(self, mock_config: Config, mock_connection: Mock) -> None:
-        """Test that HyperliquidClient initializes correctly."""
+        """Test that HyperliquidClient initializes correctly without opening WS."""
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=mock_connection,
         ) as mock_conn_class:
             client = HyperliquidClient(mock_config)
 
             assert client.config == mock_config
             assert client.connection == mock_connection
+            assert client._watch_registry is None
             mock_conn_class.assert_called_once_with(mock_config)
 
     def test_initialization_with_connection_error(self, mock_config: Config) -> None:
         """Test initialization when HyperliquidConnection fails."""
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             side_effect=Exception("Connection failed"),
         ):
             with pytest.raises(Exception, match="Connection failed"):
                 HyperliquidClient(mock_config)
+
+    def test_context_manager_calls_close(self, mock_config: Config, mock_connection: Mock) -> None:
+        """Test HyperliquidClient closes connection on context manager exit."""
+        with (
+            patch(
+                "exchange.hyperliquid_client.HyperliquidConnection",
+                return_value=mock_connection,
+            ),
+            HyperliquidClient(mock_config) as client,
+        ):
+            assert client.connection is mock_connection
+
+        mock_connection.close.assert_called_once_with()
+
+    def test_require_account_address_returns_configured_address(
+        self, client: HyperliquidClient
+    ) -> None:
+        """Test require_account_address returns configured Ethereum address."""
+        assert client.require_account_address() == "0x1234567890123456789012345678901234567890"
+
+    def test_require_account_address_raises_when_missing(self, mock_connection: Mock) -> None:
+        """Test require_account_address raises ExchangeError when address is unset."""
+        with patch(
+            "exchange.hyperliquid_client.HyperliquidConnection",
+            return_value=mock_connection,
+        ):
+            client = HyperliquidClient(Config())
+
+        with pytest.raises(ExchangeError, match="Account address is required"):
+            client.require_account_address()
 
 
 class TestHyperliquidClientConnection:

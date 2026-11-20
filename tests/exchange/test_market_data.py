@@ -12,7 +12,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
 from models.api import CoinMetadata, ExchangeError, Ticker
 
 
@@ -67,6 +67,50 @@ class TestHyperliquidClientAvailableCoins:
         result = client.get_available_coins()
 
         assert result == ["BTC", "ETH", "SOL", "UBTC/USDC"]
+
+    def test_get_available_coins_perp_only(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+        sample_meta_response: dict[str, Any],
+    ) -> None:
+        """market_type='perp' returns perp coins without loading spot metadata."""
+        mock_info = mock_connection.info
+        mock_info.meta.return_value = sample_meta_response
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_available_coins("perp")
+
+        assert result == ["BTC", "ETH", "SOL"]
+        mock_info.spot_meta.assert_not_called()
+
+    def test_get_available_coins_spot_only(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        mock_retry_operation: Callable,
+    ) -> None:
+        """market_type='spot' returns resolved spot pairs without calling perp meta."""
+        mock_info = mock_connection.info
+        mock_info.spot_meta.return_value = {
+            "universe": [{"tokens": [0, 1], "name": "@1", "index": 1}],
+            "tokens": [
+                {"name": "UBTC", "szDecimals": 5},
+                {"name": "USDC", "szDecimals": 6},
+            ],
+        }
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_available_coins("spot")
+
+        assert result == ["UBTC/USDC"]
+        mock_info.meta.assert_not_called()
+
+    def test_get_available_coins_invalid_market_type(self, client: HyperliquidClient) -> None:
+        """Invalid market_type raises ValueError immediately."""
+        with pytest.raises(ValueError, match="Invalid market_type"):
+            client.get_available_coins("futures")  # type: ignore[arg-type]
 
     def test_get_available_coins_empty_universe(
         self,

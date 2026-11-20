@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Any
 from unittest.mock import patch
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
 from models.config import Config
 from models.order import (
     LimitOrder,
@@ -38,7 +38,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         """Test successful market buy order submission with resting status."""
         # Re-create client with config that has slippage
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -79,7 +79,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         """Test successful market buy order submission with filled status."""
         # Re-create client with config that has slippage
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -120,7 +120,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         """Test market order submission with error status."""
         # Re-create client with config that has slippage
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -153,7 +153,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         """Test successful market sell order submission with resting status."""
         # Re-create client with config that has slippage
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -194,7 +194,7 @@ class TestHyperliquidClientSubmitMarketOrder:
         """Test market order submission when API returns error status."""
         # Re-create client with config that has slippage
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -225,7 +225,7 @@ class TestHyperliquidClientSubmitMarketOrder:
     ) -> None:
         """Test market order submission resolves spot pair symbols to raw ids."""
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -281,7 +281,7 @@ class TestHyperliquidClientSubmitMarketOrder:
     ) -> None:
         """Test trigger market stop order submission uses exchange.order."""
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -341,7 +341,7 @@ class TestHyperliquidClientSubmitMarketOrder:
     ) -> None:
         """Test trigger market take order error handling."""
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)
@@ -380,7 +380,7 @@ class TestHyperliquidClientSubmitMarketOrder:
     ) -> None:
         """Test trigger market order malformed response fallback."""
         with patch(
-            "backend.exchange.hyperliquid_client.HyperliquidConnection",
+            "exchange.hyperliquid_client.HyperliquidConnection",
             return_value=client.connection,
         ):
             client = HyperliquidClient(mock_config_with_slippage)

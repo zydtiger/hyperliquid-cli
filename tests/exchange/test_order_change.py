@@ -12,7 +12,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
 from models.api import ExchangeError
 from models.order import (
     OrderResult,
@@ -961,7 +961,7 @@ class TestHyperliquidClientCancelOrder:
     ) -> None:
         """Test successful cancellation of all open orders."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
-        mock_connection.info.open_orders.return_value = sample_open_orders_response
+        mock_connection.info.frontend_open_orders.return_value = sample_open_orders_response
 
         # Mock the get_order_status calls
         def mock_query_order_by_oid(user_address: str, order_id: int) -> dict[str, Any]:
@@ -992,7 +992,7 @@ class TestHyperliquidClientCancelOrder:
     ) -> None:
         """Test cancel_all when no open orders exist."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
-        mock_connection.info.open_orders.return_value = sample_open_orders_empty_response
+        mock_connection.info.frontend_open_orders.return_value = sample_open_orders_empty_response
 
         result = client.cancel_order("all")
 
@@ -1019,7 +1019,7 @@ class TestHyperliquidClientCancelOrder:
     ) -> None:
         """Test cancel_all with some order cancellation failures."""
         mock_connection.retry_operation.side_effect = mock_retry_operation
-        mock_connection.info.open_orders.return_value = sample_open_orders_response
+        mock_connection.info.frontend_open_orders.return_value = sample_open_orders_response
 
         # Mock the get_order_status calls
         def mock_query_order_by_oid(user_address: str, order_id: int) -> dict[str, Any]:

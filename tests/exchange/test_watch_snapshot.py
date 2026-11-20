@@ -7,8 +7,8 @@ from decimal import Decimal
 from typing import Any
 from unittest.mock import Mock
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
-from backend.exchange.watch_snapshot import LiveWatchRegistry
+from exchange.hyperliquid_client import HyperliquidClient
+from exchange.watch_snapshot import LiveWatchRegistry
 from models.api import (
     DEFAULT_WATCH_ORDER_BOOK_DEPTH,
     MAX_WATCH_ORDER_BOOK_DEPTH,
@@ -422,3 +422,75 @@ def test_watch_registry_keeps_spot_open_interest_as_none_on_asset_updates() -> N
     snapshot = registry.get_snapshot("UBTC/USDC", "5m")
 
     assert snapshot.open_interest is None
+
+
+def test_get_watch_snapshot_once_uses_rest_only_without_websocket(
+    client: HyperliquidClient,
+    mock_connection: Mock,
+    mock_retry_operation: Callable,
+) -> None:
+    """One-shot REST snapshot should never create a WebSocket watch registry."""
+    mock_info = mock_connection.info
+    mock_info.meta.return_value = {
+        "universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]
+    }
+    mock_info.meta_and_asset_ctxs.return_value = (
+        {"universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]},
+        [{"markPx": "50000.0", "funding": "0.0001", "openInterest": "2.0"}],
+    )
+    mock_info.l2_snapshot.return_value = {
+        "time": 1_234_567,
+        "levels": [
+            [{"px": "49999", "sz": "1.5"}, {"px": "49998", "sz": "2.0"}],
+            [{"px": "50001", "sz": "1.2"}, {"px": "50002", "sz": "3.0"}],
+        ],
+    }
+    mock_info.candles_snapshot.return_value = [
+        _raw_candle(900_000, 300_000, "49900", "50100", "49800", "50000"),
+    ]
+    mock_connection.retry_operation.side_effect = mock_retry_operation
+
+    snapshot = client.get_watch_snapshot_once("btc", interval="5m", depth=1)
+
+    assert snapshot.coin == "BTC"
+    assert snapshot.interval == "5m"
+    assert snapshot.mark_price == Decimal("50000.0")
+    assert snapshot.open_interest == Decimal("100000.0")
+    assert snapshot.size_decimals == 5
+    assert snapshot.order_book_depth == 1
+    assert len(snapshot.bids) == 1
+    assert len(snapshot.asks) == 1
+    assert snapshot.bids[0].price == Decimal("49999")
+    assert snapshot.asks[0].price == Decimal("50001")
+    assert len(snapshot.candles) == 2
+    assert snapshot.candles[-1].is_closed is False
+    assert client._watch_registry is None
+    mock_info.subscribe.assert_not_called()
+    mock_connection.ws_info.subscribe.assert_not_called()
+
+
+def test_get_watch_snapshot_lazily_uses_ws_info(
+    client: HyperliquidClient,
+    mock_connection: Mock,
+    mock_retry_operation: Callable,
+) -> None:
+    """Live get_watch_snapshot should lazily bind LiveWatchRegistry to connection.ws_info."""
+    mock_connection.info.meta.return_value = {
+        "universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]
+    }
+    mock_connection.info.meta_and_asset_ctxs.return_value = (
+        {"universe": [{"name": "BTC", "maxLeverage": 50, "szDecimals": 5}]},
+        [{"markPx": "50000.0", "funding": "0.0001", "openInterest": "2.0"}],
+    )
+    mock_connection.ws_info.l2_snapshot.return_value = {"time": 1_000, "levels": [[], []]}
+    mock_connection.ws_info.candles_snapshot.return_value = []
+    mock_connection.ws_info.subscribe.return_value = 1
+    mock_connection.retry_operation.side_effect = mock_retry_operation
+
+    snapshot = client.get_watch_snapshot("BTC", "5m")
+
+    assert snapshot.coin == "BTC"
+    assert snapshot.size_decimals == 5
+    assert client._watch_registry is not None
+    assert mock_connection.ws_info.subscribe.call_count == 2
+    mock_connection.info.subscribe.assert_not_called()

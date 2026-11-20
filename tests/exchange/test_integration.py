@@ -8,11 +8,11 @@ scenarios for the HyperliquidClient class.
 from collections.abc import Callable
 from decimal import Decimal
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
 from models.api import CoinMetadata, ExchangeError, Ticker
 from models.order import OrderInfo, OrderSide, OrderStatus, OrderTif, OrderType
 
@@ -60,9 +60,7 @@ class TestHyperliquidClientIntegration:
             if func.__name__ == "_get_metadata":
                 return expected_metadata
             if func.__name__ == "_get_positions":
-                # Mock positions with expected ticker
-                with patch.object(client, "get_ticker", return_value=expected_ticker):
-                    return func()
+                return func()
             return func()
 
         mock_connection.retry_operation.side_effect = mock_retry_operation_integration

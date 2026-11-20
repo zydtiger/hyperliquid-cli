@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
 from models.api import (
     BalanceInfo,
     ExchangeError,
@@ -20,8 +20,8 @@ from models.api import (
     PositionInfo,
     StakingDelegation,
     StakingStatus,
-    Ticker,
 )
+from models.config import Config
 
 
 class TestHyperliquidClientPositions:
@@ -36,44 +36,20 @@ class TestHyperliquidClientPositions:
         sample_asset_ctxs_response: list[dict[str, Any]],
         mock_retry_operation: Callable,
     ) -> None:
-        """Test successful positions retrieval."""
+        """Test successful positions retrieval with single meta_and_asset_ctxs call."""
         mock_info = mock_connection.info
         mock_info.user_state.return_value = sample_user_state_response
         mock_info.meta_and_asset_ctxs.return_value = (
             sample_meta_response,
             sample_asset_ctxs_response,
         )
-
-        # Mock get_ticker to return different data for different coins
-        eth_ticker = Ticker(
-            coin="ETH",
-            mark_price=Decimal("3000.0"),
-            funding_rate=Decimal("-0.0002"),
-            open_interest=Decimal("5000.0"),
-        )
-        btc_ticker = Ticker(
-            coin="BTC",
-            mark_price=Decimal("50000.0"),
-            funding_rate=Decimal("0.0001"),
-            open_interest=Decimal("1000.0"),
-        )
-
-        def mock_get_ticker(coin: str) -> Ticker:
-            if coin == "ETH":
-                return eth_ticker
-            if coin == "BTC":
-                return btc_ticker
-            raise ExchangeError(f"Coin '{coin}' not found")
-
-        # Use the fixture for retry operation and patch get_ticker for positions call
-        with patch.object(client, "get_ticker", side_effect=mock_get_ticker):
-            mock_connection.retry_operation.side_effect = mock_retry_operation
+        mock_connection.retry_operation.side_effect = mock_retry_operation
 
         result = client.get_positions()
 
         assert len(result) == 2  # Should ignore zero-sized position
+        mock_info.meta_and_asset_ctxs.assert_called_once_with()
 
-        # Expected ETH position
         expected_eth_position = PositionInfo(
             coin="ETH",
             size=Decimal("0.003"),
@@ -85,23 +61,31 @@ class TestHyperliquidClientPositions:
             margin_used=Decimal("0.411524"),
             removable_margin=Decimal("0"),
             cum_funding=Decimal("87.082076"),
+            position_value=Decimal("11.4921"),
+            liquidation_price=Decimal("3768.9034013605"),
+            return_on_equity=Decimal("-0.0988065212"),
+            max_leverage=25,
+            funding_since_open=Decimal("0.0"),
         )
 
-        # Expected BTC position
         expected_btc_position = PositionInfo(
             coin="BTC",
             size=Decimal("0.001"),
             entry_price=Decimal("49000.0"),
-            mark_price=Decimal("50000.0"),  # From sample_asset_ctxs_response
+            mark_price=Decimal("50000.0"),
             unrealized_pnl=Decimal("1.0"),
             leverage=10,
             leverage_type=LeverageType.CROSS,
             margin_used=Decimal("4.9"),
             removable_margin=None,
             cum_funding=Decimal("120.5"),
+            position_value=Decimal("49.0"),
+            liquidation_price=Decimal("44100.0"),
+            return_on_equity=Decimal("0.0204081632"),
+            max_leverage=50,
+            funding_since_open=Decimal("0.5"),
         )
 
-        # Assert positions match expected values (order may vary)
         positions_by_coin = {p.coin: p for p in result}
         assert positions_by_coin["ETH"] == expected_eth_position
         assert positions_by_coin["BTC"] == expected_btc_position
@@ -218,20 +202,67 @@ class TestHyperliquidClientPositions:
         )
         mock_connection.retry_operation.side_effect = mock_retry_operation
 
-        with patch.object(
-            client,
-            "get_ticker",
-            return_value=Ticker(
-                coin="ETH",
-                mark_price=Decimal("3000.0"),
-                funding_rate=Decimal("-0.0002"),
-                open_interest=Decimal("5000.0"),
-            ),
-        ):
-            result = client.get_positions()
+        result = client.get_positions()
 
         assert len(result) == 1
         assert result[0].removable_margin == Decimal("10.0")
+        assert result[0].position_value == Decimal("100.0")
+        assert result[0].liquidation_price == Decimal("3200.0")
+        mock_info.meta_and_asset_ctxs.assert_called_once_with()
+
+    def test_get_positions_handles_null_optional_fields(
+        self,
+        client: HyperliquidClient,
+        mock_connection: Mock,
+        sample_meta_response: dict[str, Any],
+        sample_asset_ctxs_response: list[dict[str, Any]],
+        mock_retry_operation: Callable,
+    ) -> None:
+        """Test positions allow null liquidationPx and missing optional fields."""
+        mock_info = mock_connection.info
+        mock_info.user_state.return_value = {
+            "assetPositions": [
+                {
+                    "type": "oneWay",
+                    "position": {
+                        "coin": "ETH",
+                        "szi": "0.1",
+                        "leverage": {"type": "cross", "value": 5},
+                        "entryPx": "3000.0",
+                        "positionValue": "300.0",
+                        "unrealizedPnl": "0.0",
+                        "liquidationPx": None,
+                        "marginUsed": "60.0",
+                        "cumFunding": {"allTime": "1.5"},
+                    },
+                }
+            ]
+        }
+        mock_info.meta_and_asset_ctxs.return_value = (
+            sample_meta_response,
+            sample_asset_ctxs_response,
+        )
+        mock_connection.retry_operation.side_effect = mock_retry_operation
+
+        result = client.get_positions()
+
+        assert len(result) == 1
+        assert result[0].liquidation_price is None
+        assert result[0].return_on_equity is None
+        assert result[0].max_leverage is None
+        assert result[0].funding_since_open is None
+
+    def test_get_positions_requires_account_address(self, mock_connection: Mock) -> None:
+        """Account methods fail immediately when account_address is unset."""
+        with patch(
+            "exchange.hyperliquid_client.HyperliquidConnection",
+            return_value=mock_connection,
+        ):
+            client = HyperliquidClient(Config())
+
+        with pytest.raises(ExchangeError, match="Account address is required"):
+            client.get_positions()
+        mock_connection.retry_operation.assert_not_called()
 
     def test_get_positions_with_retry_failure(
         self, client: HyperliquidClient, mock_connection: Mock

@@ -1,5 +1,5 @@
 """
-Live watch snapshot registry backed by Hyperliquid websocket subscriptions.
+Live and one-shot watch snapshot helpers for Hyperliquid markets.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ class LiveWatchRegistry:
             )
 
     def close(self) -> None:
-        """Unsubscribe active coin watchers when the backend shuts down."""
+        """Unsubscribe active coin watchers when the client shuts down."""
         with self._lock:
             states = list(self._states.values())
             self._states.clear()
@@ -220,6 +220,43 @@ class LiveWatchRegistry:
             return
         with suppress(Exception):
             self._info.unsubscribe(subscription, subscription_id)
+
+
+def build_watch_snapshot_once(
+    info: Any,
+    ticker_fetcher: Callable[[str], Ticker],
+    coin: str,
+    interval: WatchInterval = DEFAULT_WATCH_INTERVAL,
+    depth: int = DEFAULT_WATCH_ORDER_BOOK_DEPTH,
+    size_decimals: int = 0,
+    clock_ms: Callable[[], int] | None = None,
+) -> WatchSnapshot:
+    """Build a one-shot REST watch snapshot without opening any WebSocket."""
+    now_ms = (clock_ms or _current_time_ms)()
+    effective_depth = max(min(depth, MAX_WATCH_ORDER_BOOK_DEPTH), MIN_WATCH_ORDER_BOOK_DEPTH)
+    ticker = ticker_fetcher(coin)
+    book = info.l2_snapshot(coin)
+    bids, asks = parse_l2_book(book)
+
+    current_open_time = interval_open_time(now_ms, interval)
+    start_time = current_open_time - (SNAPSHOT_LOOKBACK_CANDLES * WATCH_INTERVAL_MS[interval])
+    raw_candles = info.candles_snapshot(coin, interval, start_time, now_ms)
+    interval_state = seed_interval_state(raw_candles, interval, ticker.mark_price, now_ms)
+
+    return WatchSnapshot(
+        coin=coin,
+        interval=interval,
+        mark_price=ticker.mark_price,
+        open_interest=ticker.open_interest,
+        updated_at=now_ms,
+        candles=list(interval_state.candles),
+        bids=bids[:effective_depth],
+        asks=asks[:effective_depth],
+        size_decimals=size_decimals,
+        order_book_depth=effective_depth,
+        default_interval=DEFAULT_WATCH_INTERVAL,
+        supported_intervals=list(WATCH_INTERVAL_ORDER),
+    )
 
 
 def _current_time_ms() -> int:

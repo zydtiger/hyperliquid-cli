@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from backend.exchange.hyperliquid_client import HyperliquidClient
+from exchange.hyperliquid_client import HyperliquidClient
 from models.api import DEFAULT_PNL_WINDOW, PNL_WINDOW_ORDER, ExchangeError
 
 
