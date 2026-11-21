@@ -26,7 +26,7 @@ from .json_output import (
 try:
     CLI_VERSION = version("hyperliquid-cli")
 except PackageNotFoundError:
-    CLI_VERSION = "0.2.0"
+    CLI_VERSION = "0.3.0"
 
 default_config_path = Path.home() / ".hyperliquid-cli" / "config.yaml"
 
