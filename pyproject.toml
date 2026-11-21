@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=84.0.0", "wheel"]
+requires = ["setuptools>=84.2.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -26,9 +26,9 @@ dependencies = [
     "eth-account>=0.13.0",
     "prompt_toolkit>=3.0.53",
     "requests>=2.34.2",
-    "python-dotenv>=1.2.3",
-    "typer>=0.27.2",
-    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.4",
+    "typer>=0.29.1",
+    "pydantic>=2.14.3",
     "PyYAML>=6.0.0",
     "httpx>=0.28.1",
     "textual>=8.2.8",
@@ -36,10 +36,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
+    "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
-    "ruff>=0.16.9",
-    "mypy>=2.3.1",
+    "ruff>=0.17.5",
+    "mypy>=2.4.1",
     "types-PyYAML>=6.0.0",
 ]
 
